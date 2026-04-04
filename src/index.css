@@ -1,0 +1,45 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    direction: rtl;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    @apply bg-parchment-50 text-stone-800;
+    font-family: 'Noto Sans Arabic', sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Quran text */
+  .font-quran {
+    font-family: 'Amiri Quran', 'Amiri', serif;
+    font-feature-settings: "kern" 1, "liga" 1, "calt" 1;
+  }
+
+  /* Prevent text selection on interactive elements */
+  button {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+}
+
+@layer utilities {
+  /* Safe area padding for notched phones */
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+}
+
+/* Smooth scrolling */
+* {
+  scroll-behavior: smooth;
+}
+
+/* Better touch on mobile */
+input, button, select {
+  touch-action: manipulation;
+}
