@@ -1,5 +1,5 @@
-// v1.1
-import { useEffect, useRef, useState, useCallback } from 'react'
+// v1.2
+import { useEffect, useRef, useState } from 'react'
 import type { MushafPageData, MushafLine, MushafWord, TrackingState } from './types'
 import './MushafPage.css'
 
@@ -19,54 +19,76 @@ const JUZ_NAMES: Record<number, string> = {
 }
 
 // ---------------------------------------------------------------------------
-// Arabic-Indic numerals helper
+// Arabic-Indic numerals
 // ---------------------------------------------------------------------------
 const toArabicIndic = (n: number): string =>
   String(n).split('').map(d => String.fromCharCode(0x0660 + +d)).join('')
 
 // ---------------------------------------------------------------------------
-// Font injection — dynamically load QCF per-page font
+// Font injection — QCF per-page woff2 (v1.2: ttf → woff2)
 // ---------------------------------------------------------------------------
-const FONT_TIMEOUT_MS = 2000
-const _injectedFonts = new Set<number>()
+// Each page uses its own font-family name so browser caches each independently.
+// Falls back to 'Scheherazade New' / serif when woff2 not loaded yet.
 
-function injectPageFont(pageNumber: number, onFail: () => void): void {
-  if (_injectedFonts.has(pageNumber)) return
-  _injectedFonts.add(pageNumber)
+const _injectedPages = new Set<number>()
+let _bsmlInjected = false
 
-  const fontUrl = `/fonts/pages/QCF_P${String(pageNumber).padStart(3, '0')}.ttf`
-  const styleId = `qcf-font-${pageNumber}`
-  if (document.getElementById(styleId)) return
+function injectPageFont(
+  pageNumber: number,
+  onFail: () => void,
+): string {
+  const pageStr   = String(pageNumber).padStart(3, '0')
+  const fontFamily = `QCFPage${pageStr}`
+  const fontUrl    = `/fonts/pages/QCF_P${pageStr}.woff2`
+  const styleId    = `qcf-font-page-${pageStr}`
 
-  const style = document.createElement('style')
-  style.id = styleId
-  style.textContent = `
-    @font-face {
-      font-family: 'QCFPageFont';
-      src: url('${fontUrl}') format('truetype');
-      font-display: block;
-    }
-  `
-  document.head.appendChild(style)
-
-  // Check if font actually loads within timeout
-  if ('FontFace' in window) {
-    const ff = new FontFace('QCFPageFont', `url('${fontUrl}')`)
-    const timer = setTimeout(onFail, FONT_TIMEOUT_MS)
-    ff.load().then(() => {
-      clearTimeout(timer)
-      // Font loaded OK — remove any existing fallback warning
-    }).catch(() => {
-      clearTimeout(timer)
-      onFail()
-    })
-  } else {
-    setTimeout(onFail, FONT_TIMEOUT_MS)
+  if (!document.getElementById(styleId)) {
+    const style = document.createElement('style')
+    style.id = styleId
+    style.textContent = `
+      @font-face {
+        font-family: '${fontFamily}';
+        src: url('${fontUrl}') format('woff2');
+        font-display: swap;
+      }
+    `
+    document.head.appendChild(style)
   }
+
+  // Inject BSML font once
+  if (!_bsmlInjected && !document.getElementById('qcf-font-bsml')) {
+    _bsmlInjected = true
+    const bsmlStyle = document.createElement('style')
+    bsmlStyle.id = 'qcf-font-bsml'
+    bsmlStyle.textContent = `
+      @font-face {
+        font-family: 'QCF_BSML';
+        src: url('/fonts/pages/QCF_BSML.woff2') format('woff2');
+        font-display: swap;
+      }
+    `
+    document.head.appendChild(bsmlStyle)
+  }
+
+  // Verify the font actually loads (2 s timeout → fallback)
+  if (!_injectedPages.has(pageNumber)) {
+    _injectedPages.add(pageNumber)
+    if ('FontFace' in window) {
+      const ff = new FontFace(fontFamily, `url('${fontUrl}') format('woff2')`)
+      const timer = setTimeout(onFail, 2000)
+      ff.load()
+        .then(() => clearTimeout(timer))
+        .catch(() => { clearTimeout(timer); onFail() })
+    } else {
+      setTimeout(onFail, 2000)
+    }
+  }
+
+  return fontFamily
 }
 
 // ---------------------------------------------------------------------------
-// Surah name rendering (SurahNameV4 ligature system)
+// Surah name banner (SurahNameV4 ligature font)
 // ---------------------------------------------------------------------------
 function SurahBanner({ surahNumber }: { surahNumber: number | null }) {
   if (!surahNumber) return null
@@ -79,24 +101,25 @@ function SurahBanner({ surahNumber }: { surahNumber: number | null }) {
 }
 
 // ---------------------------------------------------------------------------
-// Word component
+// Word token
 // ---------------------------------------------------------------------------
 interface WordProps {
   word: MushafWord
   isCurrent: boolean
   isError: boolean
-  useFallbackFont: boolean
+  fontFamily: string          // per-page QCF font family name
+  useFallbackFont: boolean    // true → show uthmani Unicode text instead of QPC glyph
   onWordClick?: (wordKey: string) => void
 }
 
-function WordToken({ word, isCurrent, isError, useFallbackFont, onWordClick }: WordProps) {
+function WordToken({ word, isCurrent, isError, fontFamily, useFallbackFont, onWordClick }: WordProps) {
   const classes = [
     'mushaf-word',
     isCurrent ? 'word-current' : '',
     isError   ? 'word-error'   : '',
   ].filter(Boolean).join(' ')
 
-  // Use uthmani text when QCF font not available
+  // QPC glyph codes only render with the per-page font; fallback to uthmani Unicode
   const display = useFallbackFont ? word.text : (word.text_qpc || word.text)
 
   return (
@@ -104,6 +127,7 @@ function WordToken({ word, isCurrent, isError, useFallbackFont, onWordClick }: W
       className={classes}
       data-word-key={word.word_key}
       data-word-index={word.word_index}
+      style={{ fontFamily: useFallbackFont ? undefined : `'${fontFamily}', 'Scheherazade New', serif` }}
       onClick={() => onWordClick?.(word.word_key)}
       dir="rtl"
     >
@@ -113,28 +137,31 @@ function WordToken({ word, isCurrent, isError, useFallbackFont, onWordClick }: W
 }
 
 // ---------------------------------------------------------------------------
-// Line component
+// Line row
 // ---------------------------------------------------------------------------
 interface LineProps {
   line: MushafLine
   tracking: TrackingState
+  fontFamily: string
   useFallbackFont: boolean
   onWordClick?: (wordKey: string) => void
 }
 
-function MushafLineRow({ line, tracking, useFallbackFont, onWordClick }: LineProps) {
+function MushafLineRow({ line, tracking, fontFamily, useFallbackFont, onWordClick }: LineProps) {
   const isActiveAyah = line.words.some(w =>
     tracking.active_ayah_words.includes(w.word_key)
   )
   const lineClasses = [
     'mushaf-line',
+    line.line_type === 'basmallah' ? 'basmallah-line' : '',
+    line.line_type === 'ayah' ? 'ayah-line' : '',
     line.is_centered ? 'centered' : '',
     isActiveAyah ? 'ayah-active' : '',
   ].filter(Boolean).join(' ')
 
   if (line.line_type === 'surah_name') {
     return (
-      <div className={lineClasses}>
+      <div className={`mushaf-line centered ${isActiveAyah ? 'ayah-active' : ''}`}>
         <SurahBanner surahNumber={line.surah_number} />
       </div>
     )
@@ -143,9 +170,10 @@ function MushafLineRow({ line, tracking, useFallbackFont, onWordClick }: LinePro
   if (line.line_type === 'basmallah') {
     return (
       <div className={lineClasses}>
-        <div className="mushaf-basmallah" dir="rtl">
+        {/* QCF_BSML renders the Basmallah as a single ligature glyph */}
+        <span className="mushaf-basmallah-text" dir="rtl">
           بِسۡمِ ٱللَّهِ ٱلرَّحۡمَـٰنِ ٱلرَّحِيمِ
-        </div>
+        </span>
       </div>
     )
   }
@@ -159,6 +187,7 @@ function MushafLineRow({ line, tracking, useFallbackFont, onWordClick }: LinePro
           word={word}
           isCurrent={tracking.current_word_key === word.word_key}
           isError={tracking.error_word_keys.includes(word.word_key)}
+          fontFamily={fontFamily}
           useFallbackFont={useFallbackFont}
           onWordClick={onWordClick}
         />
@@ -177,7 +206,7 @@ function LoadingSkeleton() {
         <div
           key={i}
           className="mushaf-skeleton-line"
-          style={{ width: i === 0 ? '60%' : `${75 + Math.random() * 20}%`, margin: '6px auto' }}
+          style={{ width: i === 0 ? '60%' : `${75 + (i * 7) % 20}%`, margin: '6px auto' }}
         />
       ))}
     </div>
@@ -194,13 +223,14 @@ export interface MushafPageProps {
 }
 
 export default function MushafPage({ pageNumber, tracking, onWordClick }: MushafPageProps) {
-  const [pageData, setPageData]   = useState<MushafPageData | null>(null)
-  const [loading, setLoading]     = useState(true)
-  const [error, setError]         = useState<string | null>(null)
+  const [pageData, setPageData]         = useState<MushafPageData | null>(null)
+  const [loading, setLoading]           = useState(true)
+  const [error, setError]               = useState<string | null>(null)
   const [fontFallback, setFontFallback] = useState(false)
+  const [fontFamily, setFontFamily]     = useState('Scheherazade New')
   const abortRef = useRef<AbortController | null>(null)
 
-  // Fetch page data
+  // Fetch page data + inject font
   useEffect(() => {
     setLoading(true)
     setError(null)
@@ -219,8 +249,8 @@ export default function MushafPage({ pageNumber, tracking, onWordClick }: Mushaf
       .then(data => {
         setPageData(data)
         setLoading(false)
-        // Inject per-page font
-        injectPageFont(pageNumber, () => setFontFallback(true))
+        const ff = injectPageFont(pageNumber, () => setFontFallback(true))
+        setFontFamily(ff)
       })
       .catch(err => {
         if (err.name === 'AbortError') return
@@ -231,9 +261,8 @@ export default function MushafPage({ pageNumber, tracking, onWordClick }: Mushaf
     return () => ctrl.abort()
   }, [pageNumber])
 
-  // Derive page header info
-  const juzName = pageData?.juz_number ? (JUZ_NAMES[pageData.juz_number] ?? `الجزء ${pageData.juz_number}`) : ''
-  const surahNumber = pageData?.lines?.find(l => l.line_type === 'ayah' && l.surah_number)?.surah_number ?? null
+  // Page header info
+  const juzName       = pageData?.juz_number ? (JUZ_NAMES[pageData.juz_number] ?? `الجزء ${pageData.juz_number}`) : ''
   const surahHeaderLine = pageData?.lines?.find(l => l.line_type === 'surah_name')
 
   if (loading) return <LoadingSkeleton />
@@ -249,19 +278,23 @@ export default function MushafPage({ pageNumber, tracking, onWordClick }: Mushaf
   if (!pageData) return null
 
   return (
-    <div className="mushaf-page" dir="rtl">
+    <div
+      className="mushaf-page"
+      dir="rtl"
+      style={{ '--qcf-page-font': `'${fontFamily}'` } as React.CSSProperties}
+    >
 
-      {/* ── Header ────────────────────────────────────────────────────── */}
+      {/* ── Header ──────────────────────────────────────────────────── */}
       <div className="mushaf-header">
         <span className="mushaf-header-juz">{juzName}</span>
-        {surahHeaderLine && surahHeaderLine.surah_number && (
+        {surahHeaderLine?.surah_number && (
           <span className="mushaf-header-surah">
             سُورَةٌ {surahHeaderLine.surah_number}
           </span>
         )}
       </div>
 
-      {/* ── Frame + lines ─────────────────────────────────────────────── */}
+      {/* ── Frame + lines ───────────────────────────────────────────── */}
       <div className="mushaf-frame">
         <div className="mushaf-frame-inner">
           {pageData.lines.map(line => (
@@ -269,6 +302,7 @@ export default function MushafPage({ pageNumber, tracking, onWordClick }: Mushaf
               key={line.line_number}
               line={line}
               tracking={tracking}
+              fontFamily={fontFamily}
               useFallbackFont={fontFallback}
               onWordClick={onWordClick}
             />
@@ -276,12 +310,12 @@ export default function MushafPage({ pageNumber, tracking, onWordClick }: Mushaf
         </div>
       </div>
 
-      {/* ── Fallback font warning ──────────────────────────────────────── */}
-      {fontFallback && (
-        <div className="mushaf-font-warning">⚠ خط احتياطي — خط QCF غير متوفر</div>
-      )}
+      {/* ── Fallback font warning (only when woff2 fails to load) ──────── */}
+      <div className={`mushaf-font-warning${fontFallback ? ' visible' : ''}`}>
+        ⚠ خط احتياطي — خط QCF غير محمَّل
+      </div>
 
-      {/* ── Page number ───────────────────────────────────────────────── */}
+      {/* ── Page number ─────────────────────────────────────────────── */}
       <div className="mushaf-page-number">
         ─ {toArabicIndic(pageNumber)} ─
       </div>

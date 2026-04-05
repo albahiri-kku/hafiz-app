@@ -122,6 +122,18 @@
   background: rgba(255, 215, 0, 0.08);
 }
 
+/* QCF per-page font applied via inline style (--qcf-page-font CSS var) */
+.mushaf-line.ayah-line {
+  font-family: var(--qcf-page-font), 'Scheherazade New', serif;
+}
+
+/* Basmallah: QCF_BSML ligature font */
+.mushaf-line.basmallah-line {
+  font-family: 'QCF_BSML', 'Scheherazade New', serif;
+  font-size: 1.4em;
+  justify-content: center;
+}
+
 /* ── Surah name banner ─────────────────────────────────────────────────── */
 
 .mushaf-surah-banner {
@@ -137,14 +149,14 @@
   width: 100%;
 }
 
-/* ── Basmallah line ────────────────────────────────────────────────────── */
+/* ── Basmallah text (inside basmallah-line) ────────────────────────────── */
 
-.mushaf-basmallah {
+.mushaf-basmallah-text {
   text-align: center;
   width: 100%;
-  font-size: 24px;
   color: #1a0e00;
   direction: rtl;
+  /* Font is set on parent .basmallah-line */
 }
 
 /* ── Words ─────────────────────────────────────────────────────────────── */
@@ -182,7 +194,7 @@
   margin-bottom: 4px;
 }
 
-/* ── Font fallback warning ─────────────────────────────────────────────── */
+/* ── Font fallback warning (only shown if woff2 fails to load) ─────────── */
 
 .mushaf-font-warning {
   font-size: 11px;
@@ -192,6 +204,13 @@
   margin-bottom: 4px;
   font-family: sans-serif;
   direction: rtl;
+  /* Hidden by default — fonts now available via woff2 */
+  display: none;
+}
+
+/* Un-hide only when React sets fontFallback=true */
+.mushaf-font-warning.visible {
+  display: block;
 }
 
 /* ── Loading skeleton ──────────────────────────────────────────────────── */

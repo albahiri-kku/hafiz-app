@@ -52,6 +52,14 @@ export default defineConfig({
         target: 'http://localhost:8000',
         changeOrigin: true,
       },
+      '/mushaf': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+      },
+      '/fonts': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+      },
     },
   },
 })
