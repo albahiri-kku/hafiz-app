@@ -220,6 +220,8 @@ export interface MushafPageProps {
   pageNumber: number
   tracking: TrackingState
   onWordClick?: (wordKey: string) => void
+  onPageChange?: (pageNumber: number) => void
+  onSessionStop?: () => void
 }
 
 export default function MushafPage({ pageNumber, tracking, onWordClick }: MushafPageProps) {

@@ -4,6 +4,7 @@ import type {
 } from './types/hafiz'
 import { api } from './services/api'
 import { useContinuousRecorder } from './hooks/useAudioRecorder'
+import { useRecitationSession } from './hooks/useRecitationSession'
 import StartScreen from './components/StartScreen'
 import Header from './components/Header'
 import AyahDisplay from './components/AyahDisplay'
@@ -27,6 +28,14 @@ export default function App() {
   const [evalError, setEvalError]   = useState<string | null>(null)
   const [currentWordIndex, setCurrentWordIndex] = useState(-1)
   const [mushafPage, setMushafPage] = useState(1)
+
+  // ─── Word-level tracking session (Mushaf viewer) ──────────────────────────
+  const {
+    trackingState: mushafTracking,
+    startSession:  startTrackingSession,
+    syncState:     syncTrackingState,
+    endSession:    endTrackingSession,
+  } = useRecitationSession()
 
   // Refs for use inside callbacks to avoid stale closures
   const sessionIdRef = useRef('')
@@ -166,14 +175,16 @@ export default function App() {
   }, [stop])
 
   // ─── Mushaf browse handlers ───────────────────────────────────────────────
-  const handleBrowseMushaf = useCallback(() => {
+  const handleBrowseMushaf = useCallback(async () => {
     setMushafPage(1)
     setPhase('mushaf_browse')
-  }, [])
+    try { await startTrackingSession(1) } catch { /* non-fatal */ }
+  }, [startTrackingSession])
 
-  const handleMushafBack = useCallback(() => {
+  const handleMushafBack = useCallback(async () => {
+    try { await endTrackingSession() } catch { /* non-fatal */ }
     setPhase('start')
-  }, [])
+  }, [endTrackingSession])
 
   // ─── Render ───────────────────────────────────────────────────────────────
   if (phase === 'start') {
@@ -188,11 +199,6 @@ export default function App() {
   }
 
   if (phase === 'mushaf_browse') {
-    const emptyTracking: TrackingState = {
-      current_word_key: null,
-      error_word_keys: [],
-      active_ayah_words: [],
-    }
     return (
       <div className="min-h-screen bg-parchment-50 flex flex-col" dir="rtl">
         {/* Toolbar */}
@@ -229,7 +235,12 @@ export default function App() {
         <div className="flex-1 overflow-y-auto py-4 px-2">
           <MushafPage
             pageNumber={mushafPage}
-            tracking={emptyTracking}
+            tracking={mushafTracking}
+            onPageChange={(p) => {
+              setMushafPage(p)
+              syncTrackingState({ ...mushafTracking }).catch(() => {})
+            }}
+            onSessionStop={handleMushafBack}
           />
         </div>
       </div>

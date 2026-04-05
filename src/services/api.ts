@@ -1,5 +1,5 @@
 import type { AyahData, EvaluationResponse, SessionStartResponse } from '../types/hafiz'
-import type { MushafPageData } from '../components/MushafPage/types'
+import type { MushafPageData, TrackingState } from '../components/MushafPage/types'
 
 // In dev, Vite proxies /api → localhost:8000
 // In production (Lovable / tunnel), set VITE_API_BASE_URL
@@ -44,4 +44,86 @@ export const api = {
       body: form,
     })
   },
+}
+
+// ---------------------------------------------------------------------------
+// Tracking API — word-level Tajweed session for the Mushaf viewer
+// ---------------------------------------------------------------------------
+
+export interface TrackingSessionState {
+  session_id: string
+  tracking_state: TrackingState
+}
+
+export interface WordReport {
+  word_key: string
+  word_index: number
+  applicable_rules: string[]
+  is_correct: boolean
+  overall_severity: string
+  tracking_decision: string
+  violations: Array<{
+    engine: string
+    rule_name: string
+    expected: string
+    detected: string
+    confidence: number
+    severity: string
+    description: string
+  }>
+}
+
+export const trackingApi = {
+  startSession: (
+    currentPage: number,
+    activeAyahWords: string[] = [],
+    currentWordKey?: string,
+  ): Promise<TrackingSessionState> =>
+    request<TrackingSessionState>('/api/v1/tracking/session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        current_page: currentPage,
+        active_ayah_words: activeAyahWords,
+        current_word_key: currentWordKey ?? null,
+      }),
+    }),
+
+  evaluate: (
+    sessionId: string,
+    trackingState: TrackingState,
+    audioFeatures?: Record<string, unknown>,
+  ): Promise<{ tracking_state: TrackingState; word_report: WordReport | null }> =>
+    request('/api/v1/tracking/session/' + sessionId + '/evaluate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        current_word_key:  trackingState.current_word_key,
+        error_word_keys:   trackingState.error_word_keys,
+        active_ayah_words: trackingState.active_ayah_words,
+        audio_features:    audioFeatures ?? null,
+      }),
+    }),
+
+  repeat: (
+    sessionId: string,
+    wordKey?: string,
+  ): Promise<{ tracking_state: TrackingState }> =>
+    request('/api/v1/tracking/session/' + sessionId + '/repeat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ word_key: wordKey ?? null }),
+    }),
+
+  getState: (sessionId: string): Promise<TrackingSessionState> =>
+    request<TrackingSessionState>('/api/v1/tracking/session/' + sessionId + '/state'),
+
+  end: (sessionId: string): Promise<{ session_id: string; summary: Record<string, unknown>; word_reports: WordReport[] }> =>
+    request('/api/v1/tracking/session/' + sessionId + '/end', { method: 'POST' }),
+
+  getReport: (sessionId: string): Promise<{ session_id: string; summary: Record<string, unknown>; word_reports: WordReport[] }> =>
+    request('/api/v1/tracking/session/' + sessionId + '/report'),
+
+  deleteSession: (sessionId: string): Promise<{ deleted: boolean }> =>
+    request('/api/v1/tracking/session/' + sessionId, { method: 'DELETE' }),
 }
