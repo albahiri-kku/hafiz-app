@@ -1,0 +1,441 @@
+/* LandingPage.css — Hafiz landing page styles */
+
+:root {
+  --hafiz-green-dark: #1a2a1a;
+  --hafiz-green-mid:  #2d4a2d;
+  --hafiz-gold:       #C8860A;
+  --hafiz-gold-light: #F0C050;
+  --hafiz-cream:      #F5F0E8;
+}
+
+/* ── Reset / base ───────────────────────────────────────────────────────── */
+
+.lp {
+  font-family: 'Traditional Arabic', 'Amiri', 'Scheherazade New', system-ui, serif;
+  direction: rtl;
+  background: var(--hafiz-cream);
+  color: var(--hafiz-green-dark);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── Navbar ─────────────────────────────────────────────────────────────── */
+
+.lp-nav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 5vw;
+  height: 60px;
+  background: var(--hafiz-green-dark);
+  border-bottom: 2px solid var(--hafiz-gold);
+}
+
+.lp-nav-logo {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: var(--hafiz-gold-light);
+  letter-spacing: 0.02em;
+  text-decoration: none;
+}
+
+.lp-nav-links {
+  display: flex;
+  gap: 1.5rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.lp-nav-links a {
+  color: var(--hafiz-cream);
+  text-decoration: none;
+  font-size: 1rem;
+  opacity: 0.85;
+  transition: opacity 0.2s, color 0.2s;
+}
+
+.lp-nav-links a:hover {
+  opacity: 1;
+  color: var(--hafiz-gold-light);
+}
+
+.lp-nav-cta {
+  background: var(--hafiz-gold);
+  color: var(--hafiz-green-dark) !important;
+  padding: 6px 18px;
+  border-radius: 20px;
+  font-weight: bold;
+  opacity: 1 !important;
+  transition: background 0.2s !important;
+}
+
+.lp-nav-cta:hover {
+  background: var(--hafiz-gold-light) !important;
+}
+
+/* ── Hero ───────────────────────────────────────────────────────────────── */
+
+.lp-hero {
+  min-height: calc(100vh - 60px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 60px 5vw 80px;
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(200,134,10,0.12) 0%, transparent 60%),
+    linear-gradient(170deg, var(--hafiz-green-dark) 0%, #0f1f0f 100%);
+  color: var(--hafiz-cream);
+  position: relative;
+  overflow: hidden;
+}
+
+.lp-hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60' viewBox='0 0 60 60'%3E%3Cpath d='M30 5 L35 25 L55 25 L40 37 L46 57 L30 45 L14 57 L20 37 L5 25 L25 25 Z' fill='none' stroke='rgba(200,134,10,0.07)' stroke-width='1'/%3E%3C/svg%3E") repeat;
+  pointer-events: none;
+}
+
+.lp-hero-badge {
+  display: inline-block;
+  padding: 4px 14px;
+  border: 1px solid var(--hafiz-gold);
+  border-radius: 20px;
+  color: var(--hafiz-gold-light);
+  font-size: 0.9rem;
+  margin-bottom: 24px;
+  letter-spacing: 0.05em;
+}
+
+.lp-hero-title {
+  font-size: clamp(2.8rem, 8vw, 5.5rem);
+  font-weight: 900;
+  color: var(--hafiz-gold-light);
+  margin: 0 0 16px;
+  line-height: 1.1;
+  text-shadow: 0 2px 20px rgba(200,134,10,0.3);
+}
+
+.lp-hero-subtitle {
+  font-size: clamp(1.1rem, 3vw, 1.5rem);
+  color: rgba(245,240,232,0.85);
+  max-width: 600px;
+  margin: 0 auto 40px;
+  line-height: 1.7;
+}
+
+.lp-hero-actions {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.lp-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--hafiz-gold);
+  color: var(--hafiz-green-dark);
+  font-family: inherit;
+  font-size: 1.1rem;
+  font-weight: bold;
+  padding: 14px 32px;
+  border: none;
+  border-radius: 30px;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+  box-shadow: 0 4px 20px rgba(200,134,10,0.35);
+}
+
+.lp-btn-primary:hover {
+  background: var(--hafiz-gold-light);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 28px rgba(200,134,10,0.5);
+}
+
+.lp-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  color: var(--hafiz-cream);
+  font-family: inherit;
+  font-size: 1.1rem;
+  padding: 14px 28px;
+  border: 1px solid rgba(245,240,232,0.35);
+  border-radius: 30px;
+  cursor: pointer;
+  text-decoration: none;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.lp-btn-secondary:hover {
+  border-color: var(--hafiz-gold);
+  background: rgba(200,134,10,0.1);
+}
+
+.lp-hero-scroll {
+  position: absolute;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: rgba(245,240,232,0.4);
+  font-size: 1.5rem;
+  animation: bounce 2s infinite;
+}
+
+@keyframes bounce {
+  0%, 100% { transform: translateX(-50%) translateY(0); }
+  50%       { transform: translateX(-50%) translateY(8px); }
+}
+
+/* ── Section base ───────────────────────────────────────────────────────── */
+
+.lp-section {
+  padding: 80px 5vw;
+}
+
+.lp-section-label {
+  text-align: center;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--hafiz-gold);
+  margin-bottom: 12px;
+}
+
+.lp-section-title {
+  text-align: center;
+  font-size: clamp(1.7rem, 4vw, 2.5rem);
+  font-weight: 800;
+  color: var(--hafiz-green-dark);
+  margin: 0 0 16px;
+}
+
+.lp-section-desc {
+  text-align: center;
+  color: #4a5a4a;
+  max-width: 560px;
+  margin: 0 auto 56px;
+  line-height: 1.7;
+  font-size: 1.05rem;
+}
+
+/* ── Features ───────────────────────────────────────────────────────────── */
+
+.lp-features {
+  background: var(--hafiz-cream);
+}
+
+.lp-features-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 24px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.lp-feature-card {
+  background: #fff;
+  border: 1px solid rgba(200,134,10,0.2);
+  border-radius: 16px;
+  padding: 28px 24px;
+  text-align: center;
+  transition: box-shadow 0.2s, transform 0.2s;
+}
+
+.lp-feature-card:hover {
+  box-shadow: 0 8px 32px rgba(200,134,10,0.15);
+  transform: translateY(-4px);
+}
+
+.lp-feature-icon {
+  font-size: 2.2rem;
+  margin-bottom: 16px;
+}
+
+.lp-feature-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--hafiz-green-dark);
+  margin: 0 0 10px;
+}
+
+.lp-feature-desc {
+  font-size: 0.95rem;
+  color: #4a5a4a;
+  line-height: 1.65;
+  margin: 0;
+}
+
+/* ── Steps ──────────────────────────────────────────────────────────────── */
+
+.lp-steps {
+  background: linear-gradient(150deg, var(--hafiz-green-dark) 0%, #0f1f0f 100%);
+  color: var(--hafiz-cream);
+}
+
+.lp-steps .lp-section-title {
+  color: var(--hafiz-gold-light);
+}
+
+.lp-steps .lp-section-desc {
+  color: rgba(245,240,232,0.75);
+}
+
+.lp-steps-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  max-width: 700px;
+  margin: 0 auto;
+}
+
+.lp-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+  padding: 28px 0;
+  border-bottom: 1px solid rgba(200,134,10,0.15);
+}
+
+.lp-step:last-child {
+  border-bottom: none;
+}
+
+.lp-step-num {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--hafiz-gold);
+  color: var(--hafiz-green-dark);
+  font-weight: 900;
+  font-size: 1.1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lp-step-body {
+  flex: 1;
+}
+
+.lp-step-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--hafiz-gold-light);
+  margin: 0 0 6px;
+}
+
+.lp-step-desc {
+  font-size: 0.95rem;
+  color: rgba(245,240,232,0.75);
+  margin: 0;
+  line-height: 1.6;
+}
+
+/* ── Stats strip ────────────────────────────────────────────────────────── */
+
+.lp-stats {
+  background: var(--hafiz-gold);
+  padding: 40px 5vw;
+}
+
+.lp-stats-inner {
+  display: flex;
+  justify-content: center;
+  gap: clamp(32px, 8vw, 80px);
+  flex-wrap: wrap;
+  max-width: 900px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.lp-stat-num {
+  font-size: clamp(2rem, 5vw, 3rem);
+  font-weight: 900;
+  color: var(--hafiz-green-dark);
+  display: block;
+}
+
+.lp-stat-label {
+  font-size: 0.9rem;
+  color: rgba(26,42,26,0.7);
+}
+
+/* ── CTA ────────────────────────────────────────────────────────────────── */
+
+.lp-cta {
+  background: var(--hafiz-cream);
+  text-align: center;
+}
+
+.lp-cta-box {
+  max-width: 640px;
+  margin: 0 auto;
+  background: linear-gradient(140deg, var(--hafiz-green-dark), #0f1f0f);
+  border: 1px solid var(--hafiz-gold);
+  border-radius: 24px;
+  padding: 60px 40px;
+}
+
+.lp-cta-title {
+  font-size: clamp(1.6rem, 4vw, 2.2rem);
+  color: var(--hafiz-gold-light);
+  font-weight: 800;
+  margin: 0 0 16px;
+}
+
+.lp-cta-desc {
+  color: rgba(245,240,232,0.8);
+  line-height: 1.7;
+  margin: 0 0 32px;
+  font-size: 1rem;
+}
+
+/* ── Footer ─────────────────────────────────────────────────────────────── */
+
+.lp-footer {
+  background: var(--hafiz-green-dark);
+  border-top: 2px solid var(--hafiz-gold);
+  padding: 32px 5vw;
+  text-align: center;
+}
+
+.lp-footer-text {
+  color: rgba(245,240,232,0.5);
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.lp-footer-text a {
+  color: var(--hafiz-gold);
+  text-decoration: none;
+}
+
+/* ── Responsive ─────────────────────────────────────────────────────────── */
+
+@media (max-width: 600px) {
+  .lp-nav-links {
+    display: none;
+  }
+
+  .lp-step {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .lp-cta-box {
+    padding: 40px 24px;
+  }
+}

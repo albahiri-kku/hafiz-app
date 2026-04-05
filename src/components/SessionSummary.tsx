@@ -1,5 +1,5 @@
 import type { SessionStats, AyahResult } from '../types/hafiz'
-import { SURAH_NAMES, labelToArabic } from '../types/hafiz'
+import { SURAH_NAMES } from '../types/hafiz'
 
 interface Props {
   stats: SessionStats

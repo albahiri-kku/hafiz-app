@@ -2,8 +2,8 @@ import type { AyahData, EvaluationResponse, SessionStartResponse } from '../type
 import type { MushafPageData, TrackingState } from '../components/MushafPage/types'
 
 // In dev, Vite proxies /api → localhost:8000
-// In production (Lovable / tunnel), set VITE_API_BASE_URL
-const API_BASE = import.meta.env.VITE_API_BASE_URL ?? ''
+// In production, set VITE_API_URL (e.g. https://api.hafiz.app)
+const API_BASE = import.meta.env.VITE_API_URL ?? ''
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, init)

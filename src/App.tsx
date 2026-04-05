@@ -11,7 +11,6 @@ import AyahDisplay from './components/AyahDisplay'
 import MicButton from './components/MicButton'
 import SessionSummary from './components/SessionSummary'
 import MushafPage from './components/MushafPage'
-import type { TrackingState } from './components/MushafPage/types'
 
 const EMPTY_STATS: SessionStats = {
   totalAyahs: 0, correct: 0, errors: 0, reviews: 0, holds: 0, history: [],
