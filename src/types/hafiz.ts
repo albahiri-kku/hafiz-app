@@ -57,7 +57,7 @@ export interface EvaluationResponse {
 }
 
 export type RecitationMode = 'tilawa' | 'hifz'
-export type AppPhase = 'start' | 'reciting' | 'summary'
+export type AppPhase = 'start' | 'reciting' | 'summary' | 'mushaf_browse'
 export type RecordingState = 'idle' | 'recording' | 'processing'
 
 export interface AyahResult {

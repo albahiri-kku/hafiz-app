@@ -1,4 +1,5 @@
 import type { AyahData, EvaluationResponse, SessionStartResponse } from '../types/hafiz'
+import type { MushafPageData } from '../components/MushafPage/types'
 
 // In dev, Vite proxies /api → localhost:8000
 // In production (Lovable / tunnel), set VITE_API_BASE_URL
@@ -27,6 +28,12 @@ export const api = {
 
   getAyah: (ayahCode: string) =>
     request<AyahData>(`/api/v1/quran/ayah/${ayahCode}`),
+
+  getMushafPage: (pageNumber: number): Promise<MushafPageData> =>
+    request<MushafPageData>(`/mushaf/page/${pageNumber}`),
+
+  getFontUrl: (pageNumber: number): string =>
+    `${API_BASE}/fonts/pages/QCF_P${String(pageNumber).padStart(3, '0')}.ttf`,
 
   evaluate: async (sessionId: string, audioBlob: Blob): Promise<EvaluationResponse> => {
     const form = new FormData()

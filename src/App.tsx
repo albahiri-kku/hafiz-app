@@ -9,6 +9,8 @@ import Header from './components/Header'
 import AyahDisplay from './components/AyahDisplay'
 import MicButton from './components/MicButton'
 import SessionSummary from './components/SessionSummary'
+import MushafPage from './components/MushafPage'
+import type { TrackingState } from './components/MushafPage/types'
 
 const EMPTY_STATS: SessionStats = {
   totalAyahs: 0, correct: 0, errors: 0, reviews: 0, holds: 0, history: [],
@@ -24,6 +26,7 @@ export default function App() {
   const [startError, setStartError] = useState<string | null>(null)
   const [evalError, setEvalError]   = useState<string | null>(null)
   const [currentWordIndex, setCurrentWordIndex] = useState(-1)
+  const [mushafPage, setMushafPage] = useState(1)
 
   // Refs for use inside callbacks to avoid stale closures
   const sessionIdRef = useRef('')
@@ -162,14 +165,74 @@ export default function App() {
     setCurrentWordIndex(-1)
   }, [stop])
 
+  // ─── Mushaf browse handlers ───────────────────────────────────────────────
+  const handleBrowseMushaf = useCallback(() => {
+    setMushafPage(1)
+    setPhase('mushaf_browse')
+  }, [])
+
+  const handleMushafBack = useCallback(() => {
+    setPhase('start')
+  }, [])
+
   // ─── Render ───────────────────────────────────────────────────────────────
   if (phase === 'start') {
     return (
       <StartScreen
         onStart={handleStart}
+        onBrowseMushaf={handleBrowseMushaf}
         loading={startLoading}
         error={startError}
       />
+    )
+  }
+
+  if (phase === 'mushaf_browse') {
+    const emptyTracking: TrackingState = {
+      current_word_key: null,
+      error_word_keys: [],
+      active_ayah_words: [],
+    }
+    return (
+      <div className="min-h-screen bg-parchment-50 flex flex-col" dir="rtl">
+        {/* Toolbar */}
+        <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-stone-200 sticky top-0 z-10">
+          <button
+            onClick={handleMushafBack}
+            className="font-ui text-sm text-stone-600 hover:text-stone-800 transition-colors"
+          >
+            ← رجوع
+          </button>
+          <span className="font-ui text-sm font-semibold text-stone-700">المصحف الشريف</span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setMushafPage(p => Math.max(1, p - 1))}
+              disabled={mushafPage <= 1}
+              className="px-3 py-1 rounded-lg bg-stone-100 hover:bg-stone-200 font-ui text-sm disabled:opacity-40 transition"
+            >
+              ‹
+            </button>
+            <span className="font-ui text-xs text-stone-500 min-w-[3rem] text-center">
+              {mushafPage} / 604
+            </span>
+            <button
+              onClick={() => setMushafPage(p => Math.min(604, p + 1))}
+              disabled={mushafPage >= 604}
+              className="px-3 py-1 rounded-lg bg-stone-100 hover:bg-stone-200 font-ui text-sm disabled:opacity-40 transition"
+            >
+              ›
+            </button>
+          </div>
+        </div>
+
+        {/* Mushaf page */}
+        <div className="flex-1 overflow-y-auto py-4 px-2">
+          <MushafPage
+            pageNumber={mushafPage}
+            tracking={emptyTracking}
+          />
+        </div>
+      </div>
     )
   }
 

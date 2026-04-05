@@ -1,0 +1,243 @@
+/* v1.1 — MushafPage styles */
+
+/* ── Font Declarations ─────────────────────────────────────────────────── */
+
+@font-face {
+  font-family: 'SurahNameV4';
+  src: url('/fonts/surah-name-v4.ttf') format('truetype');
+  font-display: block;
+}
+
+/* QCF per-page font — injected dynamically by the component for each page */
+/* See: MushafPage/index.tsx injectPageFont() */
+
+/* ── Page wrapper ──────────────────────────────────────────────────────── */
+
+.mushaf-page {
+  width: 100%;
+  max-width: 600px;
+  margin: 0 auto;
+  background: #fff;
+  font-size: 22px;
+  direction: rtl;
+  font-family: 'QCFPageFont', 'KFGQPC Uthman Taha Naskh', 'Scheherazade New', 'Traditional Arabic', serif;
+  box-sizing: border-box;
+  padding: 0 8px;
+}
+
+/* ── Header (above frame) ──────────────────────────────────────────────── */
+
+.mushaf-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 12px;
+  font-family: 'Traditional Arabic', 'Scheherazade New', serif;
+  font-size: 13px;
+  color: #4a3000;
+  direction: rtl;
+}
+
+.mushaf-header-juz {
+  text-align: right;
+}
+
+.mushaf-header-surah {
+  text-align: left;
+}
+
+/* ── Ornamental frame ──────────────────────────────────────────────────── */
+
+.mushaf-frame {
+  border: 3px solid #8B4513;
+  outline: 1px solid #C8860A;
+  outline-offset: -6px;
+  padding: 12px 16px;
+  position: relative;
+  background: #fff;
+}
+
+.mushaf-frame::before,
+.mushaf-frame::after {
+  content: '❖';
+  position: absolute;
+  color: #C8860A;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.mushaf-frame::before {
+  top: 3px;
+  right: 4px;
+}
+
+.mushaf-frame::after {
+  top: 3px;
+  left: 4px;
+}
+
+/* Bottom corners via pseudo-elements on inner child */
+.mushaf-frame-inner {
+  position: relative;
+}
+
+.mushaf-frame-inner::before,
+.mushaf-frame-inner::after {
+  content: '❖';
+  position: absolute;
+  color: #C8860A;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.mushaf-frame-inner::before {
+  bottom: -10px;
+  right: 4px;
+}
+
+.mushaf-frame-inner::after {
+  bottom: -10px;
+  left: 4px;
+}
+
+/* ── Lines ─────────────────────────────────────────────────────────────── */
+
+.mushaf-line {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  min-height: 1.8em;
+  padding: 2px 0;
+  direction: rtl;
+  border-radius: 2px;
+  transition: background 0.15s;
+}
+
+.mushaf-line.centered {
+  justify-content: center;
+}
+
+.mushaf-line.ayah-active {
+  background: rgba(255, 215, 0, 0.08);
+}
+
+/* ── Surah name banner ─────────────────────────────────────────────────── */
+
+.mushaf-surah-banner {
+  background: linear-gradient(135deg, #f5e6c8, #e8c878, #f5e6c8);
+  border: 1px solid #C8860A;
+  border-radius: 4px;
+  padding: 4px 20px;
+  text-align: center;
+  font-family: 'SurahNameV4', serif;
+  font-size: 28px;
+  direction: ltr;  /* ligature order is LTR in the font */
+  color: #2a1800;
+  width: 100%;
+}
+
+/* ── Basmallah line ────────────────────────────────────────────────────── */
+
+.mushaf-basmallah {
+  text-align: center;
+  width: 100%;
+  font-size: 24px;
+  color: #1a0e00;
+  direction: rtl;
+}
+
+/* ── Words ─────────────────────────────────────────────────────────────── */
+
+.mushaf-word {
+  cursor: pointer;
+  border-radius: 3px;
+  padding: 0 1px;
+  transition: background 0.15s;
+  display: inline-block;
+}
+
+.mushaf-word:hover {
+  background: rgba(180, 140, 0, 0.12);
+}
+
+.mushaf-word.word-current {
+  background: rgba(255, 215, 0, 0.40);
+  box-shadow: 0 0 0 1px rgba(200, 160, 0, 0.4);
+}
+
+.mushaf-word.word-error {
+  background: rgba(220, 50, 50, 0.20);
+  color: #CC0000;
+}
+
+/* ── Page number footer ────────────────────────────────────────────────── */
+
+.mushaf-page-number {
+  text-align: center;
+  font-family: 'Traditional Arabic', 'Scheherazade New', serif;
+  font-size: 14px;
+  color: #4a3000;
+  margin-top: 8px;
+  margin-bottom: 4px;
+}
+
+/* ── Font fallback warning ─────────────────────────────────────────────── */
+
+.mushaf-font-warning {
+  font-size: 11px;
+  color: #a05000;
+  text-align: center;
+  padding: 2px 6px;
+  margin-bottom: 4px;
+  font-family: sans-serif;
+  direction: rtl;
+}
+
+/* ── Loading skeleton ──────────────────────────────────────────────────── */
+
+.mushaf-skeleton {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 8px;
+}
+
+.mushaf-skeleton-line {
+  background: linear-gradient(90deg, #f0e8d8 25%, #e8dcc8 50%, #f0e8d8 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+  border-radius: 4px;
+  height: 28px;
+  margin: 6px 0;
+}
+
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ── Mobile ─────────────────────────────────────────────────────────────── */
+
+@media (max-width: 600px) {
+  .mushaf-page {
+    font-size: 18px;
+    padding: 0 4px;
+  }
+  .mushaf-frame {
+    padding: 8px 10px;
+    outline-offset: -4px;
+  }
+  .mushaf-surah-banner {
+    font-size: 22px;
+    padding: 4px 10px;
+  }
+  .mushaf-basmallah {
+    font-size: 20px;
+  }
+}
+
+@media (max-width: 360px) {
+  .mushaf-page {
+    font-size: 16px;
+  }
+}

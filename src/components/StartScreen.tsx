@@ -4,6 +4,7 @@ import { SURAH_NAMES } from '../types/hafiz'
 
 interface Props {
   onStart: (ayahCode: string | undefined, mode: RecitationMode) => void
+  onBrowseMushaf: () => void
   loading: boolean
   error: string | null
 }
@@ -24,7 +25,7 @@ const SURAH_LENGTHS: Record<number, number> = {
   111:5,112:4,113:5,114:6,
 }
 
-export default function StartScreen({ onStart, loading, error }: Props) {
+export default function StartScreen({ onStart, onBrowseMushaf, loading, error }: Props) {
   const [mode, setMode] = useState<RecitationMode>('tilawa')
   const [autoDetect, setAutoDetect] = useState(false)
   const [surah, setSurah] = useState(1)
@@ -134,7 +135,15 @@ export default function StartScreen({ onStart, loading, error }: Props) {
         </button>
       </div>
 
-      <p className="mt-6 font-ui text-xs text-stone-400 text-center">
+      {/* Browse Mushaf link */}
+      <button
+        onClick={onBrowseMushaf}
+        className="mt-4 font-ui text-sm text-emerald-700 hover:text-emerald-600 underline underline-offset-2 transition-colors"
+      >
+        تصفح المصحف ←
+      </button>
+
+      <p className="mt-3 font-ui text-xs text-stone-400 text-center">
         يتطلب إذن الميكروفون
       </p>
     </div>
