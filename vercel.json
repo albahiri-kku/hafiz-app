@@ -1,12 +1,15 @@
 {
   "rewrites": [
-    { "source": "/((?!api|mushaf|fonts).*)", "destination": "/index.html" }
+    {"source": "/(.*)", "destination": "/index.html"}
   ],
   "headers": [
     {
       "source": "/fonts/(.*)",
       "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
       ]
     }
   ]
