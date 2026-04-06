@@ -27,6 +27,13 @@ export interface WordError {
   got: string
 }
 
+export interface WordTimestamp {
+  word: string
+  start_sec: number
+  end_sec: number
+  probability?: number
+}
+
 export interface WordProbeDetails {
   coverage_mode: string
   word_count_expected: number
@@ -52,6 +59,7 @@ export interface EvaluationResponse {
   asr_text: string | null
   expected_next_ayah_code: string | null
   word_errors: WordError[] | null
+  word_timestamps: WordTimestamp[] | null
   word_probe_verdict: string | null
   word_probe_details: WordProbeDetails | null
 }

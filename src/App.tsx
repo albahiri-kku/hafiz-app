@@ -58,19 +58,53 @@ export default function App() {
     return () => clearTimeout(t)
   }, [recordPhase, currentWordIndex, result, ayahData])
 
+  // ─── Replay word highlight at actual Whisper timing (max REPLAY_MAX_MS) ──
+  const replayTimersRef = useRef<ReturnType<typeof setTimeout>[]>([])
+
+  function _clearReplayTimers() {
+    replayTimersRef.current.forEach(clearTimeout)
+    replayTimersRef.current = []
+  }
+
+  function _replayWordTimestamps(
+    wts: NonNullable<EvaluationResponse['word_timestamps']>,
+    wordCount: number,
+    afterMs: number,
+    onDone: () => void,
+  ) {
+    _clearReplayTimers()
+    if (wts.length === 0) { onDone(); return }
+
+    const REPLAY_MAX_MS = 1400
+    const first = wts[0].start_sec
+    const last  = wts[wts.length - 1].end_sec
+    const span  = Math.max(last - first, 0.1)
+    const scale = REPLAY_MAX_MS / span   // compress to fit in REPLAY_MAX_MS
+
+    wts.forEach((wt, i) => {
+      if (i >= wordCount) return   // don't index past reference words
+      const delay = afterMs + (wt.start_sec - first) * scale
+      replayTimersRef.current.push(
+        setTimeout(() => setCurrentWordIndex(i), delay)
+      )
+    })
+
+    const totalDelay = afterMs + REPLAY_MAX_MS + 80
+    replayTimersRef.current.push(setTimeout(onDone, totalDelay))
+  }
+
   // ─── Chunk evaluation callback ────────────────────────────────────────────
   function handleChunkReady(blob: Blob) {
     const sid  = sessionIdRef.current
     const ayah = ayahDataRef.current
     if (!sid || !ayah) { resume(); return }
 
+    _clearReplayTimers()
     setEvalError(null)
     setCurrentWordIndex(-1)   // freeze word highlight during analysis
 
     api.evaluate(sid, blob)
       .then((evalResult) => {
-        setResult(evalResult)
-
         const action = evalResult.action ?? 'HOLD'
         setStats((prev) => ({
           ...prev,
@@ -94,10 +128,21 @@ export default function App() {
           ],
         }))
 
+        // Replay word highlight at actual Whisper timing before showing verdict
+        const wts = evalResult.word_timestamps
+        const showVerdict = () => setResult(evalResult)
+
+        if (wts && wts.length > 0 && ayah.words.length > 0) {
+          _replayWordTimestamps(wts, ayah.words.length, 0, showVerdict)
+        } else {
+          showVerdict()
+        }
+
         if (action === 'ADVANCE') {
           // Brief green flash → load next ayah → resume recording
           const nextCode = evalResult.expected_next_ayah_code ?? ayah.next_ayah_code
           setTimeout(async () => {
+            _clearReplayTimers()
             if (!nextCode) {
               stop()
               setPhase('summary')
@@ -118,6 +163,7 @@ export default function App() {
         } else {
           // REPEAT / REVIEW / HOLD — show inline error 3 s, then resume same ayah
           setTimeout(() => {
+            _clearReplayTimers()
             setResult(null)
             setCurrentWordIndex(0)
             resume()
