@@ -1,7 +1,10 @@
-// v1.2
+// v1.3
 import { useEffect, useRef, useState } from 'react'
 import type { MushafPageData, MushafLine, MushafWord, TrackingState } from './types'
 import './MushafPage.css'
+
+const _API_BASE = import.meta.env.VITE_API_URL ?? ''
+const _API_KEY  = import.meta.env.VITE_API_KEY  ?? ''
 
 // ---------------------------------------------------------------------------
 // Juz names (1–30)
@@ -243,7 +246,10 @@ export default function MushafPage({ pageNumber, tracking, onWordClick }: Mushaf
     const ctrl = new AbortController()
     abortRef.current = ctrl
 
-    fetch(`/mushaf/page/${pageNumber}`, { signal: ctrl.signal })
+    fetch(`${_API_BASE}/mushaf/page/${pageNumber}`, {
+      signal: ctrl.signal,
+      headers: _API_KEY ? { 'X-API-Key': _API_KEY } : {},
+    })
       .then(res => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
         return res.json() as Promise<MushafPageData>

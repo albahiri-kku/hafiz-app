@@ -2,11 +2,19 @@ import type { AyahData, EvaluationResponse, SessionStartResponse } from '../type
 import type { MushafPageData, TrackingState } from '../components/MushafPage/types'
 
 // In dev, Vite proxies /api → localhost:8000
-// In production, set VITE_API_URL (e.g. https://api.hafiz.app)
-const API_BASE = import.meta.env.VITE_API_URL ?? ''
+// In production, set VITE_API_URL (e.g. https://hafiz-production.up.railway.app)
+const API_BASE   = import.meta.env.VITE_API_URL ?? ''
+const API_KEY    = import.meta.env.VITE_API_KEY  ?? ''
+
+function authHeaders(): HeadersInit {
+  return API_KEY ? { 'X-API-Key': API_KEY } : {}
+}
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, init)
+  const res = await fetch(`${API_BASE}${path}`, {
+    ...init,
+    headers: { ...authHeaders(), ...(init?.headers ?? {}) },
+  })
   if (!res.ok) {
     let msg = `HTTP ${res.status}`
     try { msg = (await res.json()).detail ?? msg } catch { /* ignore */ }
