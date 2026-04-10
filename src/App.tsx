@@ -1,9 +1,11 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import type {
-  RecitationMode, AppPhase, AyahData, EvaluationResponse, SessionStats, AyahResult
+  RecitationMode, AppPhase, AyahData, EvaluationResponse, SessionStats
 } from './types/hafiz'
 import { api } from './services/api'
 import { useContinuousRecorder } from './hooks/useAudioRecorder'
+import { useLiveRecitation } from './hooks/useLiveRecitation'
+import type { StreamResponse } from './hooks/useLiveRecitation'
 import { useRecitationSession } from './hooks/useRecitationSession'
 import StartScreen from './components/StartScreen'
 import Header from './components/Header'
@@ -12,6 +14,9 @@ import MicButton from './components/MicButton'
 import SessionSummary from './components/SessionSummary'
 import MushafPage from './components/MushafPage'
 
+const API_BASE = import.meta.env.VITE_API_URL ?? ''
+const API_KEY  = import.meta.env.VITE_API_KEY  ?? ''
+
 const EMPTY_STATS: SessionStats = {
   totalAyahs: 0, correct: 0, errors: 0, reviews: 0, holds: 0, history: [],
 }
@@ -19,6 +24,7 @@ const EMPTY_STATS: SessionStats = {
 export default function App() {
   const [phase, setPhase]           = useState<AppPhase>('start')
   const [mode, setMode]             = useState<RecitationMode>('tilawa')
+  const [sessionId, setSessionId]   = useState('')
   const [ayahData, setAyahData]     = useState<AyahData | null>(null)
   const [result, setResult]         = useState<EvaluationResponse | null>(null)
   const [stats, setStats]           = useState<SessionStats>(EMPTY_STATS)
@@ -41,139 +47,59 @@ export default function App() {
   const ayahDataRef  = useRef<AyahData | null>(null)
   useEffect(() => { ayahDataRef.current = ayahData }, [ayahData])
 
-  // ─── Continuous recorder ──────────────────────────────────────────────────
-  const { phase: recordPhase, audioLevel, silenceCountdown, start, resume, stop } =
-    useContinuousRecorder({
-      silenceThresholdDb: -45,
-      silenceDurationMs:  5000,
-      onChunkReady: handleChunkReady,
-    })
+  // Word correctness tracking (per-ayah, reset on advance)
+  const correctWordsRef = useRef<Set<string>>(new Set())
+  const wrongWordsRef   = useRef<Set<string>>(new Set())
 
-  // ─── Word highlight: advance every 700 ms while recording, no result yet ──
-  useEffect(() => {
-    if (recordPhase !== 'recording' || result || !ayahData) return
-    if (currentWordIndex < 0) return
-    if (currentWordIndex >= ayahData.words.length - 1) return
-    const t = setTimeout(() => setCurrentWordIndex((i) => i + 1), 700)
-    return () => clearTimeout(t)
-  }, [recordPhase, currentWordIndex, result, ayahData])
+  // ─── Stream result handler ref — populated after liveStop is available ────
+  const streamResultRef = useRef<(r: StreamResponse) => void>(() => {})
 
-  // ─── Replay word highlight at actual Whisper timing (max REPLAY_MAX_MS) ──
-  const replayTimersRef = useRef<ReturnType<typeof setTimeout>[]>([])
+  // ─── Live recitation hook ─────────────────────────────────────────────────
+  const { active, start: liveStart, stop: liveStop } = useLiveRecitation({
+    sessionId,
+    apiBase: API_BASE,
+    apiKey:  API_KEY || undefined,
+    onResult: (r) => streamResultRef.current(r),
+    onError:  (err) => setEvalError(err.message),
+  })
 
-  function _clearReplayTimers() {
-    replayTimersRef.current.forEach(clearTimeout)
-    replayTimersRef.current = []
-  }
+  // Wire the actual handler every render — captures latest liveStop / ayahDataRef
+  streamResultRef.current = (r: StreamResponse) => {
+    if (r.status === 'word_evaluated' && r.word_result) {
+      const wr      = r.word_result
+      const wordLoc = ayahDataRef.current?.words[wr.word_index]?.word_location
+                      ?? String(wr.word_index)
+      if (wr.correct) {
+        correctWordsRef.current.add(wordLoc)
+        setStats((prev) => ({ ...prev, correct: prev.correct + 1 }))
+      } else {
+        wrongWordsRef.current.add(wordLoc)
+        setStats((prev) => ({ ...prev, errors: prev.errors + 1 }))
+      }
+      setCurrentWordIndex(wr.word_index)
 
-  function _replayWordTimestamps(
-    wts: NonNullable<EvaluationResponse['word_timestamps']>,
-    wordCount: number,
-    afterMs: number,
-    onDone: () => void,
-  ) {
-    _clearReplayTimers()
-    if (wts.length === 0) { onDone(); return }
+    } else if (r.status === 'ayah_complete') {
+      const nextCode = r.next_ayah_code
+      if (!nextCode) {
+        liveStop()
+        setPhase('summary')
+        return
+      }
+      api.getAyah(nextCode)
+        .then((data) => {
+          correctWordsRef.current = new Set()
+          wrongWordsRef.current   = new Set()
+          ayahDataRef.current     = data
+          setAyahData(data)
+          setResult(null)
+          setCurrentWordIndex(0)
+        })
+        .catch((e) => setEvalError(e instanceof Error ? e.message : 'خطأ في تحميل الآية'))
 
-    const REPLAY_MAX_MS = 1400
-    const first = wts[0].start_sec
-    const last  = wts[wts.length - 1].end_sec
-    const span  = Math.max(last - first, 0.1)
-    const scale = REPLAY_MAX_MS / span   // compress to fit in REPLAY_MAX_MS
-
-    wts.forEach((wt, i) => {
-      if (i >= wordCount) return   // don't index past reference words
-      const delay = afterMs + (wt.start_sec - first) * scale
-      replayTimersRef.current.push(
-        setTimeout(() => setCurrentWordIndex(i), delay)
-      )
-    })
-
-    const totalDelay = afterMs + REPLAY_MAX_MS + 80
-    replayTimersRef.current.push(setTimeout(onDone, totalDelay))
-  }
-
-  // ─── Chunk evaluation callback ────────────────────────────────────────────
-  function handleChunkReady(blob: Blob) {
-    const sid  = sessionIdRef.current
-    const ayah = ayahDataRef.current
-    if (!sid || !ayah) { resume(); return }
-
-    _clearReplayTimers()
-    setEvalError(null)
-    setCurrentWordIndex(-1)   // freeze word highlight during analysis
-
-    api.evaluate(sid, blob)
-      .then((evalResult) => {
-        const action = evalResult.action ?? 'HOLD'
-        setStats((prev) => ({
-          ...prev,
-          totalAyahs: prev.totalAyahs + 1,
-          correct:  prev.correct  + (action === 'ADVANCE' ? 1 : 0),
-          errors:   prev.errors   + (action === 'REPEAT'  ? 1 : 0),
-          reviews:  prev.reviews  + (action === 'REVIEW'  ? 1 : 0),
-          holds:    prev.holds    + (action === 'HOLD'    ? 1 : 0),
-          history: [
-            ...prev.history,
-            {
-              ayah_code:   ayah.ayah_code,
-              surah:       ayah.surah,
-              ayah:        ayah.ayah,
-              final_label: evalResult.final_label ?? '',
-              action,
-              asr_text:    evalResult.asr_text ?? '',
-              confidence:  evalResult.confidence ?? 0,
-              word_errors: evalResult.word_errors ?? [],
-            } satisfies AyahResult,
-          ],
-        }))
-
-        // Replay word highlight at actual Whisper timing before showing verdict
-        const wts = evalResult.word_timestamps
-        const showVerdict = () => setResult(evalResult)
-
-        if (wts && wts.length > 0 && ayah.words.length > 0) {
-          _replayWordTimestamps(wts, ayah.words.length, 0, showVerdict)
-        } else {
-          showVerdict()
-        }
-
-        if (action === 'ADVANCE') {
-          // Brief green flash → load next ayah → resume recording
-          const nextCode = evalResult.expected_next_ayah_code ?? ayah.next_ayah_code
-          setTimeout(async () => {
-            _clearReplayTimers()
-            if (!nextCode) {
-              stop()
-              setPhase('summary')
-              return
-            }
-            try {
-              const data = await api.getAyah(nextCode)
-              ayahDataRef.current = data
-              setAyahData(data)
-              setResult(null)
-              setCurrentWordIndex(0)
-              resume()
-            } catch (e) {
-              setEvalError(e instanceof Error ? e.message : 'خطأ في تحميل الآية')
-              resume()
-            }
-          }, 1500)
-        } else {
-          // REPEAT / REVIEW / HOLD — show inline error 3 s, then resume same ayah
-          setTimeout(() => {
-            _clearReplayTimers()
-            setResult(null)
-            setCurrentWordIndex(0)
-            resume()
-          }, 3000)
-        }
-      })
-      .catch((e) => {
-        setEvalError(e instanceof Error ? e.message : 'خطأ في التقييم')
-        resume()
-      })
+    } else if (r.status === 'session_ended') {
+      liveStop()
+      setPhase('summary')
+    }
   }
 
   // ─── Start session ────────────────────────────────────────────────────────
@@ -184,40 +110,46 @@ export default function App() {
     try {
       const session = await api.startSession(ayahCode)
       sessionIdRef.current = session.session_id
+      setSessionId(session.session_id)
 
       const startCode = session.ayah_code ?? ayahCode ?? '001001'
       const data = await api.getAyah(startCode)
-      ayahDataRef.current = data
+      ayahDataRef.current     = data
+      correctWordsRef.current = new Set()
+      wrongWordsRef.current   = new Set()
       setAyahData(data)
       setResult(null)
       setStats(EMPTY_STATS)
       setPhase('reciting')
 
-      await start()
+      await liveStart()
       setCurrentWordIndex(0)
     } catch (e) {
       setStartError(e instanceof Error ? e.message : 'حدث خطأ في بدء الجلسة')
     } finally {
       setStartLoading(false)
     }
-  }, [start])
+  }, [liveStart])
 
   // ─── End session ──────────────────────────────────────────────────────────
   const handleEndSession = useCallback(() => {
-    stop()
+    liveStop()
     setPhase('summary')
-  }, [stop])
+  }, [liveStop])
 
   const handleRestart = useCallback(() => {
-    stop()
+    liveStop()
     setPhase('start')
     setResult(null)
     setAyahData(null)
-    sessionIdRef.current = ''
-    ayahDataRef.current  = null
+    sessionIdRef.current    = ''
+    ayahDataRef.current     = null
+    correctWordsRef.current = new Set()
+    wrongWordsRef.current   = new Set()
+    setSessionId('')
     setStats(EMPTY_STATS)
     setCurrentWordIndex(-1)
-  }, [stop])
+  }, [liveStop])
 
   // ─── Mushaf browse handlers ───────────────────────────────────────────────
   const handleBrowseMushaf = useCallback(async () => {
@@ -321,7 +253,7 @@ export default function App() {
           words={ayahData.words}
           mode={mode}
           result={result}
-          isRecording={recordPhase === 'recording'}
+          isRecording={active}
           currentWordIndex={currentWordIndex}
         />
       ) : (
@@ -332,9 +264,9 @@ export default function App() {
 
       {/* Recording status strip */}
       <MicButton
-        phase={recordPhase}
-        audioLevel={audioLevel}
-        silenceCountdown={silenceCountdown}
+        phase={active ? 'recording' : 'idle'}
+        audioLevel={0}
+        silenceCountdown={0}
       />
 
       {/* Stats bar */}
