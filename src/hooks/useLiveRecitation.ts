@@ -64,6 +64,10 @@ export function useLiveRecitation({ sessionId, apiBase, apiKey, onResult, onErro
     }
   }, [sessionId, apiBase, apiKey, onResult, onError])
 
+  // Ref so the interval always calls the latest sendChunk (picks up sessionId changes)
+  const sendChunkRef = React.useRef(sendChunk)
+  React.useEffect(() => { sendChunkRef.current = sendChunk }, [sendChunk])
+
   const start = React.useCallback(async () => {
     const token = ++tokenRef.current
     const stream = await navigator.mediaDevices.getUserMedia({
@@ -88,9 +92,10 @@ export function useLiveRecitation({ sessionId, apiBase, apiKey, onResult, onErro
     processor.connect(ctx.destination)
     await new Promise(r => setTimeout(r, 500))
     pcmBufferRef.current = new Float32Array(0)
-    intervalRef.current  = setInterval(sendChunk, SEND_INTERVAL_MS)
+    // Use sendChunkRef.current() so interval always sees latest sessionId
+    intervalRef.current  = setInterval(() => sendChunkRef.current(), SEND_INTERVAL_MS)
     setActive(true)
-  }, [sendChunk])
+  }, [])
 
   const stop = React.useCallback(() => {
     tokenRef.current++
