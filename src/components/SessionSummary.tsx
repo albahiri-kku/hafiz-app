@@ -25,10 +25,12 @@ function ActionBadge({ action }: { action: string }) {
 }
 
 function errorTypeLabel(t: string | null): string {
-  if (t === 'SUBSTITUTION') return 'نطق خاطئ'
-  if (t === 'VAD_MISSED')   return 'كلمة فائتة'
-  if (t === 'ASR_FAILED')   return 'لم يُسمع'
-  if (t === 'TIMEOUT')      return 'انتهت المهلة'
+  if (t === 'SUBSTITUTION')  return 'نطق خاطئ'
+  if (t === 'pronunciation') return 'نطق خاطئ'
+  if (t === 'VAD_MISSED')    return 'كلمة فائتة'
+  if (t === 'omission')      return 'كلمة فائتة'
+  if (t === 'ASR_FAILED')    return 'لم يُسمع'
+  if (t === 'TIMEOUT')       return 'انتهت المهلة'
   return 'صحيح'
 }
 
