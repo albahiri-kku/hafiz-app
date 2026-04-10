@@ -3,7 +3,6 @@ import type {
   RecitationMode, AppPhase, AyahData, EvaluationResponse, SessionStats
 } from './types/hafiz'
 import { api } from './services/api'
-import { useContinuousRecorder } from './hooks/useAudioRecorder'
 import { useLiveRecitation } from './hooks/useLiveRecitation'
 import type { StreamResponse } from './hooks/useLiveRecitation'
 import { useRecitationSession } from './hooks/useRecitationSession'
@@ -59,8 +58,8 @@ export default function App() {
     sessionId,
     apiBase: API_BASE,
     apiKey:  API_KEY || undefined,
-    onResult: (r) => streamResultRef.current(r),
-    onError:  (err) => setEvalError(err.message),
+    onResult: (r: StreamResponse) => streamResultRef.current(r),
+    onError:  (err: Error) => setEvalError(err.message),
   })
 
   // Wire the actual handler every render — captures latest liveStop / ayahDataRef
