@@ -1,9 +1,16 @@
 import type { SessionStats, AyahResult } from '../types/hafiz'
 import { SURAH_NAMES } from '../types/hafiz'
 
+interface WordErrorEntry {
+  expected:   string
+  heard:      string
+  error_type: string | null
+}
+
 interface Props {
-  stats: SessionStats
-  onRestart: () => void
+  stats:       SessionStats
+  wordErrors?: WordErrorEntry[]
+  onRestart:   () => void
 }
 
 function ayahLabel(r: AyahResult) {
@@ -17,7 +24,15 @@ function ActionBadge({ action }: { action: string }) {
   return <span className="text-amber-600 text-xs font-ui">~ مراجعة</span>
 }
 
-export default function SessionSummary({ stats, onRestart }: Props) {
+function errorTypeLabel(t: string | null): string {
+  if (t === 'SUBSTITUTION') return 'نطق خاطئ'
+  if (t === 'VAD_MISSED')   return 'كلمة فائتة'
+  if (t === 'ASR_FAILED')   return 'لم يُسمع'
+  if (t === 'TIMEOUT')      return 'انتهت المهلة'
+  return 'صحيح'
+}
+
+export default function SessionSummary({ stats, wordErrors, onRestart }: Props) {
   const { totalAyahs, correct, errors, reviews, history } = stats
   const accuracy = totalAyahs > 0 ? Math.round((correct / totalAyahs) * 100) : 0
 
@@ -70,6 +85,35 @@ export default function SessionSummary({ stats, onRestart }: Props) {
           </div>
         </div>
       )}
+
+      {/* Word errors table */}
+      <div className="mx-4 mt-3 bg-white rounded-2xl shadow-sm p-4">
+        <h2 className="font-ui font-semibold text-stone-700 mb-3">تفاصيل الأخطاء</h2>
+        {!wordErrors || wordErrors.length === 0 ? (
+          <p className="font-ui text-sm text-stone-400 text-center py-2">لا توجد أخطاء</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm font-ui" dir="rtl">
+              <thead>
+                <tr className="border-b border-stone-100">
+                  <th className="text-right py-1.5 pr-1 text-stone-500 font-medium">المطلوب</th>
+                  <th className="text-right py-1.5 pr-1 text-stone-500 font-medium">المسموع</th>
+                  <th className="text-right py-1.5 pr-1 text-stone-500 font-medium">نوع الخطأ</th>
+                </tr>
+              </thead>
+              <tbody>
+                {wordErrors.map((e, i) => (
+                  <tr key={i} className="border-b border-stone-50 last:border-0">
+                    <td className="py-1.5 pr-1 font-quran text-stone-800">{e.expected}</td>
+                    <td className="py-1.5 pr-1 font-quran text-red-600">{e.heard}</td>
+                    <td className="py-1.5 pr-1 text-amber-700">{errorTypeLabel(e.error_type)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
 
       {/* Restart */}
       <div className="p-4 mt-auto">

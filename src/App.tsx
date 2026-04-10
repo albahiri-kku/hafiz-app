@@ -32,6 +32,7 @@ export default function App() {
   const [evalError, setEvalError]   = useState<string | null>(null)
   const [currentWordIndex, setCurrentWordIndex] = useState(-1)
   const [mushafPage, setMushafPage] = useState(1)
+  const [wordErrors, setWordErrors] = useState<Array<{expected: string, heard: string, error_type: string | null}>>([])
 
   // ─── Word-level tracking session (Mushaf viewer) ──────────────────────────
   const {
@@ -74,6 +75,7 @@ export default function App() {
       } else {
         wrongWordsRef.current.add(wordLoc)
         setStats((prev) => ({ ...prev, errors: prev.errors + 1 }))
+        setWordErrors((prev) => [...prev, { expected: wr.expected, heard: wr.heard ?? '—', error_type: wr.error_type }])
       }
       setCurrentWordIndex(wr.word_index)
 
@@ -119,6 +121,7 @@ export default function App() {
       setAyahData(data)
       setResult(null)
       setStats(EMPTY_STATS)
+      setWordErrors([])
       setPhase('reciting')
 
       await liveStart()
@@ -147,6 +150,7 @@ export default function App() {
     wrongWordsRef.current   = new Set()
     setSessionId('')
     setStats(EMPTY_STATS)
+    setWordErrors([])
     setCurrentWordIndex(-1)
   }, [liveStop])
 
@@ -224,7 +228,7 @@ export default function App() {
   }
 
   if (phase === 'summary') {
-    return <SessionSummary stats={stats} onRestart={handleRestart} />
+    return <SessionSummary stats={stats} wordErrors={wordErrors} onRestart={handleRestart} />
   }
 
   return (
@@ -267,6 +271,16 @@ export default function App() {
         audioLevel={0}
         silenceCountdown={0}
       />
+
+      {/* End session button */}
+      <div className="flex justify-center pb-1">
+        <button
+          onClick={handleEndSession}
+          className="font-ui text-sm text-stone-500 hover:text-red-500 transition-colors px-4 py-2"
+        >
+          إنهاء الجلسة ←
+        </button>
+      </div>
 
       {/* Stats bar */}
       <div className="bg-white border-t border-stone-100 px-6 py-2 flex justify-around">
