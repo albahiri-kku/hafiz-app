@@ -65,19 +65,24 @@ export default function App() {
 
   // Wire the actual handler every render — captures latest liveStop / ayahDataRef
   streamResultRef.current = (r: StreamResponse) => {
-    if (r.status === 'word_evaluated' && r.word_result) {
-      const wr      = r.word_result
-      const wordLoc = ayahDataRef.current?.words[wr.word_index]?.word_location
-                      ?? String(wr.word_index)
-      if (wr.correct) {
-        correctWordsRef.current.add(wordLoc)
-        setStats((prev) => ({ ...prev, correct: prev.correct + 1 }))
-      } else {
-        wrongWordsRef.current.add(wordLoc)
-        setStats((prev) => ({ ...prev, errors: prev.errors + 1 }))
-        setWordErrors((prev) => [...prev, { expected: wr.expected, heard: wr.heard ?? '—', error_type: wr.error_type }])
+    if (r.status === 'word_evaluated') {
+      // استخدم word_results (الكل) إذا توفر، وإلا word_result (الأخير فقط)
+      const allWords = (r.word_results && r.word_results.length > 0)
+        ? r.word_results
+        : r.word_result ? [r.word_result] : []
+      for (const wr of allWords) {
+        const wordLoc = ayahDataRef.current?.words[wr.word_index]?.word_location
+                        ?? String(wr.word_index)
+        if (wr.correct) {
+          correctWordsRef.current.add(wordLoc)
+          setStats((prev) => ({ ...prev, correct: prev.correct + 1 }))
+        } else {
+          wrongWordsRef.current.add(wordLoc)
+          setStats((prev) => ({ ...prev, errors: prev.errors + 1 }))
+          setWordErrors((prev) => [...prev, { expected: wr.expected, heard: wr.heard ?? '—', error_type: wr.error_type }])
+        }
+        setCurrentWordIndex(wr.word_index)
       }
-      setCurrentWordIndex(wr.word_index)
 
     } else if (r.status === 'ayah_complete') {
       const nextCode = r.next_ayah_code

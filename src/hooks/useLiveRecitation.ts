@@ -11,6 +11,7 @@ export interface WordResult {
 export interface StreamResponse {
   status:          'listening' | 'word_evaluated' | 'ayah_complete' | 'silence_detected' | 'session_ended'
   word_result:     WordResult | null
+  word_results?:   WordResult[]        // جميع النتائج إذا انتهت أكثر من كلمة في drain واحد
   word_index:      number
   summary?:        Record<string, unknown>
   next_ayah_code?: string
