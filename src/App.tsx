@@ -33,6 +33,8 @@ export default function App() {
   const [currentWordIndex, setCurrentWordIndex] = useState(-1)
   const [mushafPage, setMushafPage] = useState(1)
   const [wordErrors, setWordErrors] = useState<Array<{expected: string, heard: string, error_type: string | null}>>([])
+  const [wordColorMap, setWordColorMap] = useState<Record<number, 'correct' | 'error' | 'unheard'>>({})
+
 
   // ─── Word-level tracking session (Mushaf viewer) ──────────────────────────
   const {
@@ -76,10 +78,13 @@ export default function App() {
         if (wr.correct) {
           correctWordsRef.current.add(wordLoc)
           setStats((prev) => ({ ...prev, correct: prev.correct + 1 }))
+          setWordColorMap((prev) => ({ ...prev, [wr.word_index]: 'correct' }))
         } else {
           wrongWordsRef.current.add(wordLoc)
           setStats((prev) => ({ ...prev, errors: prev.errors + 1 }))
           setWordErrors((prev) => [...prev, { expected: wr.expected, heard: wr.heard ?? '—', error_type: wr.error_type }])
+          const _color = (wr.error_type === 'ASR_FAILED' || !wr.heard) ? 'unheard' as const : 'error' as const
+          setWordColorMap((prev) => ({ ...prev, [wr.word_index]: _color }))
         }
         setCurrentWordIndex(wr.word_index)
       }
@@ -99,6 +104,7 @@ export default function App() {
           setAyahData(data)
           setResult(null)
           setCurrentWordIndex(0)
+          setWordColorMap({})
         })
         .catch((e) => setEvalError(e instanceof Error ? e.message : 'خطأ في تحميل الآية'))
 
@@ -127,6 +133,7 @@ export default function App() {
       setResult(null)
       setStats(EMPTY_STATS)
       setWordErrors([])
+      setWordColorMap({})
       setPhase('reciting')
 
       await liveStart()
@@ -156,6 +163,7 @@ export default function App() {
     setSessionId('')
     setStats(EMPTY_STATS)
     setWordErrors([])
+    setWordColorMap({})
     setCurrentWordIndex(-1)
   }, [liveStop])
 
@@ -263,6 +271,7 @@ export default function App() {
           result={result}
           isRecording={active}
           currentWordIndex={currentWordIndex}
+          wordColorMap={wordColorMap}
         />
       ) : (
         <div className="flex-1 flex items-center justify-center">

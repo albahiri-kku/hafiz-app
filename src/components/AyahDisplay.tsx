@@ -6,16 +6,20 @@ interface Props {
   result: EvaluationResponse | null
   isRecording: boolean
   currentWordIndex?: number   // array index of word being recited; -1 = none
+  wordColorMap?: Record<number, 'correct' | 'error' | 'unheard'>  // streaming per-word colors
 }
 
-type WordStatus = 'default' | 'active' | 'error' | 'near' | 'correct'
+type WordStatus = 'default' | 'active' | 'error' | 'near' | 'correct' | 'unheard'
 
 function getWordStatus(
   word: QuranWord,
   wordArrayIndex: number,
   result: EvaluationResponse | null,
   currentWordIndex: number,
+  wordColorMap: Record<number, 'correct' | 'error' | 'unheard'> = {},
 ): WordStatus {
+  // Streaming per-word color takes priority over batch result
+  if (wordColorMap[wordArrayIndex]) return wordColorMap[wordArrayIndex]
   // Active word highlight during recording (no result yet)
   if (!result && wordArrayIndex === currentWordIndex) return 'active'
   if (!result) return 'default'
@@ -48,6 +52,7 @@ function WordToken({ word, status, hidden }: {
     correct: 'text-emerald-700 bg-emerald-50 rounded px-0.5',
     near:    'text-amber-700 bg-amber-50 rounded px-0.5',
     error:   'text-red-700 bg-red-50 rounded px-0.5 border-b-2 border-red-400',
+    unheard: 'text-orange-400 bg-orange-50 rounded px-0.5 border-b-2 border-orange-300 border-dashed',
   }
 
   if (hidden) {
@@ -71,7 +76,7 @@ function WordToken({ word, status, hidden }: {
   )
 }
 
-export default function AyahDisplay({ words, mode, result, isRecording, currentWordIndex = -1 }: Props) {
+export default function AyahDisplay({ words, mode, result, isRecording, currentWordIndex = -1, wordColorMap = {} }: Props) {
   const isHifz = mode === 'hifz'
 
   return (
@@ -91,7 +96,7 @@ export default function AyahDisplay({ words, mode, result, isRecording, currentW
         lang="ar"
       >
         {words.map((word, idx) => {
-          const status = getWordStatus(word, idx, result, currentWordIndex)
+          const status = getWordStatus(word, idx, result, currentWordIndex, wordColorMap)
           // In hifz mode, hide words unless they have an error (show correction)
           const hidden = isHifz && result === null
           return (
