@@ -69,6 +69,23 @@ export function useLiveRecitation({ sessionId, apiBase, apiKey, onResult, onErro
   const sendChunkRef = React.useRef(sendChunk)
   React.useEffect(() => { sendChunkRef.current = sendChunk }, [sendChunk])
 
+  // fire-and-forget raw sender used for flush — no onResult/onError, no size check
+  const sendChunkRaw = React.useCallback(async (samples: Float32Array) => {
+    const form = new FormData()
+    form.append('session_id',  sessionId)
+    form.append('encoding',    'f32le')
+    form.append('sample_rate', '16000')
+    form.append('audio_chunk', new Blob([samples.buffer], { type: 'application/octet-stream' }))
+    const headers: Record<string, string> = {}
+    if (apiKey) headers['X-API-Key'] = apiKey
+    await fetch(`${apiBase}/api/v1/recitation/stream`, {
+      method: 'POST', headers, body: form,
+    }).catch(() => {})
+  }, [sessionId, apiBase, apiKey])
+
+  const sendChunkRawRef = React.useRef(sendChunkRaw)
+  React.useEffect(() => { sendChunkRawRef.current = sendChunkRaw }, [sendChunkRaw])
+
   const start = React.useCallback(async () => {
     const token = ++tokenRef.current
     const stream = await navigator.mediaDevices.getUserMedia({
@@ -99,6 +116,19 @@ export function useLiveRecitation({ sessionId, apiBase, apiKey, onResult, onErro
   }, [])
 
   const stop = React.useCallback(() => {
+    // flush: أرسل ما تبقى في الـ buffer + chunk صمت لإغلاق VAD
+    const flushAndSilence = async () => {
+      const buf = pcmBufferRef.current
+      // أرسل ما تبقى في الـ buffer إذا كان فيه صوت
+      if (buf.length > 0) {
+        await sendChunkRawRef.current(buf)
+      }
+      // أرسل chunk صمت (3200 عينة = 200ms) لإغلاق VAD
+      const silence = new Float32Array(3200)
+      await sendChunkRawRef.current(silence)
+    }
+    flushAndSilence().catch(() => {})
+
     tokenRef.current++
     if (intervalRef.current) clearInterval(intervalRef.current)
     streamRef.current?.getTracks().forEach(t => t.stop())
