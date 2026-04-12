@@ -33,6 +33,9 @@ export function useLiveRecitation({ sessionId, apiBase, apiKey, onResult, onErro
   const audioCtxRef  = React.useRef<AudioContext | null>(null)
   const sendingRef   = React.useRef(false)
   const tokenRef     = React.useRef(0)
+  // ref يُحدَّث دائماً بـ onResult الأحدث — يُستخدم في flush بعد stop()
+  const onResultRef  = React.useRef(onResult)
+  React.useEffect(() => { onResultRef.current = onResult }, [onResult])
 
   const SEND_INTERVAL_MS  = 800
   const SAMPLES_PER_CHUNK = 12800
@@ -119,15 +122,29 @@ export function useLiveRecitation({ sessionId, apiBase, apiKey, onResult, onErro
     // flush: أرسل ما تبقى في الـ buffer + chunk صمت لإغلاق VAD
     const flushAndSilence = async () => {
       const buf = pcmBufferRef.current
-      // أرسل ما تبقى في الـ buffer إذا كان فيه صوت
+      // أرسل ما تبقى في الـ buffer (بدون معالجة الرد — آخر صوت فعلي)
       if (buf.length > 0) {
         await sendChunkRawRef.current(buf)
       }
-      // أرسل 6 chunks صمت (6 × 800ms = 4.8s) لتصريف جميع الكلمات المتبقية
-      // كل كلمة تحتاج chunk واحدة على الأقل لإطلاق REF_TIMEOUT
+      // أرسل 6 chunks صمت مع معالجة الردود — لتصريف الكلمات المتبقية وتحديث التقرير
       const silence = new Float32Array(12800) // 800ms @ 16kHz
       for (let i = 0; i < 6; i++) {
-        await sendChunkRawRef.current(silence)
+        try {
+          const form = new FormData()
+          form.append('session_id',  sessionId)
+          form.append('encoding',    'f32le')
+          form.append('sample_rate', '16000')
+          form.append('audio_chunk', new Blob([silence.buffer as ArrayBuffer], { type: 'application/octet-stream' }))
+          const headers: Record<string, string> = {}
+          if (apiKey) headers['X-API-Key'] = apiKey
+          const res = await fetch(`${apiBase}/api/v1/recitation/stream`, {
+            method: 'POST', headers, body: form,
+          })
+          if (!res.ok) break
+          const data: StreamResponse = await res.json()
+          onResultRef.current(data)
+          if (data.status === 'session_ended' || data.status === 'ayah_complete') break
+        } catch { break }
       }
     }
     flushAndSilence().catch(() => {})

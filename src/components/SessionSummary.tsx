@@ -25,13 +25,12 @@ function ActionBadge({ action }: { action: string }) {
 }
 
 function errorTypeLabel(t: string | null): string {
-  if (t === 'SUBSTITUTION')  return 'نطق خاطئ'
-  if (t === 'pronunciation') return 'نطق خاطئ'
-  if (t === 'VAD_MISSED')    return 'كلمة فائتة'
-  if (t === 'omission')      return 'كلمة فائتة'
-  if (t === 'ASR_FAILED')    return 'لم يُسمع'
-  if (t === 'TIMEOUT')       return 'انتهت المهلة'
-  return 'صحيح'
+  if (!t) return 'غير معروف'
+  if (t === 'SUBSTITUTION' || t === 'pronunciation') return 'نطق خاطئ'
+  if (t.startsWith('VAD_MISSED') || t === 'omission') return 'كلمة فائتة'
+  if (t === 'ASR_FAILED') return 'لم يُسمع'
+  if (t === 'TIMEOUT') return 'انتهت المهلة'
+  return t
 }
 
 export default function SessionSummary({ stats, wordErrors, onRestart }: Props) {
@@ -107,7 +106,9 @@ export default function SessionSummary({ stats, wordErrors, onRestart }: Props) 
                 {wordErrors.map((e, i) => (
                   <tr key={i} className="border-b border-stone-50 last:border-0">
                     <td className="py-1.5 pr-1 font-quran text-stone-800">{e.expected}</td>
-                    <td className="py-1.5 pr-1 font-quran text-red-600">{e.heard}</td>
+                    <td className="py-1.5 pr-1 font-quran text-red-600">
+                      {e.heard && e.heard !== '—' ? e.heard : <span className="text-stone-400 text-xs font-ui">—</span>}
+                    </td>
                     <td className="py-1.5 pr-1 text-amber-700">{errorTypeLabel(e.error_type)}</td>
                   </tr>
                 ))}
