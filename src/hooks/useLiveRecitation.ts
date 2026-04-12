@@ -164,5 +164,9 @@ export function useLiveRecitation({ sessionId, apiBase, apiKey, onResult, onErro
     setActive(false)
   }, [])
 
-  return { active, start, stop }
+  const clearBuffer = React.useCallback(() => {
+    pcmBufferRef.current = new Float32Array(0)
+  }, [])
+
+  return { active, start, stop, clearBuffer }
 }

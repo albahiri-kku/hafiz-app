@@ -34,6 +34,7 @@ export default function App() {
   const [mushafPage, setMushafPage] = useState(1)
   const [wordErrors, setWordErrors] = useState<Array<{expected: string, heard: string, error_type: string | null}>>([])
   const [wordColorMap, setWordColorMap] = useState<Record<number, 'correct' | 'error' | 'unheard'>>({})
+  const [waitingForEval, setWaitingForEval] = useState(false)
 
 
   // ─── Word-level tracking session (Mushaf viewer) ──────────────────────────
@@ -57,7 +58,7 @@ export default function App() {
   const streamResultRef = useRef<(r: StreamResponse) => void>(() => {})
 
   // ─── Live recitation hook ─────────────────────────────────────────────────
-  const { active, start: liveStart, stop: liveStop } = useLiveRecitation({
+  const { active, start: liveStart, stop: liveStop, clearBuffer: liveClearBuffer } = useLiveRecitation({
     sessionId,
     apiBase: API_BASE,
     apiKey:  API_KEY || undefined,
@@ -87,6 +88,11 @@ export default function App() {
           setWordColorMap((prev) => ({ ...prev, [wr.word_index]: _color }))
         }
         setCurrentWordIndex(wr.word_index)
+        // إذا كانت آخر كلمة في الآية → انتظر تأكيد ayah_complete من الخادم
+        const totalWords = ayahDataRef.current?.words.length ?? 0
+        if (totalWords > 0 && wr.word_index >= totalWords - 1) {
+          setWaitingForEval(true)
+        }
       }
 
     } else if (r.status === 'ayah_complete') {
@@ -96,6 +102,9 @@ export default function App() {
         setPhase('summary')
         return
       }
+      // مسح البفر قبل تحميل الآية التالية — يمنع نزيف الصوت من الآية القادمة
+      liveClearBuffer()
+      setWaitingForEval(false)
       api.getAyah(nextCode)
         .then((data) => {
           correctWordsRef.current = new Set()
@@ -109,6 +118,7 @@ export default function App() {
         .catch((e) => setEvalError(e instanceof Error ? e.message : 'خطأ في تحميل الآية'))
 
     } else if (r.status === 'session_ended') {
+      setWaitingForEval(false)
       liveStop()
       setPhase('summary')
     }
@@ -165,6 +175,7 @@ export default function App() {
     setWordErrors([])
     setWordColorMap({})
     setCurrentWordIndex(-1)
+    setWaitingForEval(false)
   }, [liveStop])
 
   // ─── Mushaf browse handlers ───────────────────────────────────────────────
@@ -276,6 +287,14 @@ export default function App() {
       ) : (
         <div className="flex-1 flex items-center justify-center">
           <div className="font-ui text-stone-400 text-sm animate-pulse">جارٍ التحميل…</div>
+        </div>
+      )}
+
+      {/* Waiting-for-eval indicator */}
+      {waitingForEval && (
+        <div className="mx-4 mb-1 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 flex items-center gap-2">
+          <span className="inline-block w-3 h-3 rounded-full bg-amber-400 animate-pulse" />
+          <p className="font-ui text-xs text-amber-700">جارٍ التقييم… استعد للآية التالية</p>
         </div>
       )}
 
