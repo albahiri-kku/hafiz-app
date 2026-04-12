@@ -75,7 +75,7 @@ export function useLiveRecitation({ sessionId, apiBase, apiKey, onResult, onErro
     form.append('session_id',  sessionId)
     form.append('encoding',    'f32le')
     form.append('sample_rate', '16000')
-    form.append('audio_chunk', new Blob([samples.buffer], { type: 'application/octet-stream' }))
+    form.append('audio_chunk', new Blob([samples.buffer as ArrayBuffer], { type: 'application/octet-stream' }))
     const headers: Record<string, string> = {}
     if (apiKey) headers['X-API-Key'] = apiKey
     await fetch(`${apiBase}/api/v1/recitation/stream`, {
