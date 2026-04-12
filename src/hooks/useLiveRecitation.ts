@@ -123,9 +123,12 @@ export function useLiveRecitation({ sessionId, apiBase, apiKey, onResult, onErro
       if (buf.length > 0) {
         await sendChunkRawRef.current(buf)
       }
-      // أرسل chunk صمت (3200 عينة = 200ms) لإغلاق VAD
-      const silence = new Float32Array(3200)
-      await sendChunkRawRef.current(silence)
+      // أرسل 6 chunks صمت (6 × 800ms = 4.8s) لتصريف جميع الكلمات المتبقية
+      // كل كلمة تحتاج chunk واحدة على الأقل لإطلاق REF_TIMEOUT
+      const silence = new Float32Array(12800) // 800ms @ 16kHz
+      for (let i = 0; i < 6; i++) {
+        await sendChunkRawRef.current(silence)
+      }
     }
     flushAndSilence().catch(() => {})
 
