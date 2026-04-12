@@ -33,9 +33,15 @@ export function useLiveRecitation({ sessionId, apiBase, apiKey, onResult, onErro
   const audioCtxRef  = React.useRef<AudioContext | null>(null)
   const sendingRef   = React.useRef(false)
   const tokenRef     = React.useRef(0)
-  // ref يُحدَّث دائماً بـ onResult الأحدث — يُستخدم في flush بعد stop()
+  // refs تُحدَّث دائماً بآخر قيم — تُستخدم في flush بعد stop() (useCallback بـ [])
   const onResultRef  = React.useRef(onResult)
-  React.useEffect(() => { onResultRef.current = onResult }, [onResult])
+  const sessionIdRef = React.useRef(sessionId)
+  const apiBaseRef   = React.useRef(apiBase)
+  const apiKeyRef    = React.useRef(apiKey)
+  React.useEffect(() => { onResultRef.current  = onResult  }, [onResult])
+  React.useEffect(() => { sessionIdRef.current = sessionId }, [sessionId])
+  React.useEffect(() => { apiBaseRef.current   = apiBase   }, [apiBase])
+  React.useEffect(() => { apiKeyRef.current    = apiKey    }, [apiKey])
 
   const SEND_INTERVAL_MS  = 800
   const SAMPLES_PER_CHUNK = 12800
@@ -131,13 +137,13 @@ export function useLiveRecitation({ sessionId, apiBase, apiKey, onResult, onErro
       for (let i = 0; i < 6; i++) {
         try {
           const form = new FormData()
-          form.append('session_id',  sessionId)
+          form.append('session_id',  sessionIdRef.current)
           form.append('encoding',    'f32le')
           form.append('sample_rate', '16000')
           form.append('audio_chunk', new Blob([silence.buffer as ArrayBuffer], { type: 'application/octet-stream' }))
           const headers: Record<string, string> = {}
-          if (apiKey) headers['X-API-Key'] = apiKey
-          const res = await fetch(`${apiBase}/api/v1/recitation/stream`, {
+          if (apiKeyRef.current) headers['X-API-Key'] = apiKeyRef.current
+          const res = await fetch(`${apiBaseRef.current}/api/v1/recitation/stream`, {
             method: 'POST', headers, body: form,
           })
           if (!res.ok) break
