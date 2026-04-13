@@ -182,30 +182,34 @@ export function useLiveRecitation({ sessionId, apiBase, apiKey, onResult, onErro
 
     // flush: أرسل ما تبقى في الـ buffer + chunks صمت لتصريف الكلمات المتبقية
     const flushAndSilence = async () => {
-      if (remainingBuf.length > 0) {
-        await sendChunkRawRef.current(remainingBuf)
-      }
-      const silence = new Float32Array(12800) // 800ms @ 16kHz
-      for (let i = 0; i < 6; i++) {
-        // إذا تم استدعاء stop() مجدداً أثناء الـ flush — أوقف
-        if (tokenRef.current !== flushToken) break
-        try {
-          const form = new FormData()
-          form.append('session_id',  sessionIdRef.current)
-          form.append('encoding',    'f32le')
-          form.append('sample_rate', '16000')
-          form.append('audio_chunk', new Blob([silence.buffer as ArrayBuffer], { type: 'application/octet-stream' }))
-          const headers: Record<string, string> = {}
-          if (apiKeyRef.current) headers['X-API-Key'] = apiKeyRef.current
-          const res = await fetch(`${apiBaseRef.current}/api/v1/recitation/stream`, {
-            method: 'POST', headers, body: form,
-          })
-          if (!res.ok) break
-          const data: StreamResponse = await res.json()
-          onResultRef.current(data)
-          if (data.status === 'session_ended' || data.status === 'ayah_complete') break
-        } catch { break }
-      }
+      try {
+        if (remainingBuf.length > 0) {
+          await sendChunkRawRef.current(remainingBuf)
+        }
+        const silence = new Float32Array(12800) // 800ms @ 16kHz
+        for (let i = 0; i < 6; i++) {
+          // إذا تم استدعاء stop() مجدداً أثناء الـ flush — أوقف
+          if (tokenRef.current !== flushToken) break
+          // grace period: لا نُرسل صمتاً أثناء انتقال الآية
+          if (Date.now() < pauseUntilRef.current) break
+          try {
+            const form = new FormData()
+            form.append('session_id',  sessionIdRef.current)
+            form.append('encoding',    'f32le')
+            form.append('sample_rate', '16000')
+            form.append('audio_chunk', new Blob([silence.buffer as ArrayBuffer], { type: 'application/octet-stream' }))
+            const headers: Record<string, string> = {}
+            if (apiKeyRef.current) headers['X-API-Key'] = apiKeyRef.current
+            const res = await fetch(`${apiBaseRef.current}/api/v1/recitation/stream`, {
+              method: 'POST', headers, body: form,
+            })
+            if (!res.ok) break
+            const data: StreamResponse = await res.json()
+            onResultRef.current(data)
+            if (data.status === 'session_ended' || data.status === 'ayah_complete') break
+          } catch { break }
+        }
+      } catch { /* ignore — network or stop() race */ }
     }
     flushAndSilence().catch(() => {})
   }, [])
