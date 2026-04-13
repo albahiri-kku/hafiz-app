@@ -29,8 +29,9 @@ export function useLiveRecitation({ sessionId, apiBase, apiKey, onResult, onErro
   const [active, setActive] = React.useState(false)
   const intervalRef  = React.useRef<ReturnType<typeof setInterval> | null>(null)
   const pcmBufferRef = React.useRef<Float32Array>(new Float32Array(0))
-  const streamRef    = React.useRef<MediaStream | null>(null)
-  const audioCtxRef  = React.useRef<AudioContext | null>(null)
+  const streamRef      = React.useRef<MediaStream | null>(null)
+  const audioCtxRef    = React.useRef<AudioContext | null>(null)
+  const workletNodeRef = React.useRef<AudioWorkletNode | null>(null)
   const sendingRef   = React.useRef(false)
   const tokenRef     = React.useRef(0)
   // grace period بعد انتقال الآية — نوقف الإرسال حتى يبدأ المستخدم
@@ -108,22 +109,27 @@ export function useLiveRecitation({ sessionId, apiBase, apiKey, onResult, onErro
     streamRef.current   = stream
     const ctx           = new AudioContext({ sampleRate: 16000 })
     audioCtxRef.current = ctx
-    const source        = ctx.createMediaStreamSource(stream)
-    const processor     = ctx.createScriptProcessor(4096, 1, 1)
-    processor.onaudioprocess = (e) => {
+
+    // AudioWorklet — بديل ScriptProcessorNode (deprecated)
+    await ctx.audioWorklet.addModule('/hafiz-audio-processor.js')
+    const workletNode          = new AudioWorkletNode(ctx, 'hafiz-audio-processor')
+    workletNodeRef.current     = workletNode
+    workletNode.port.onmessage = (e: MessageEvent<Float32Array>) => {
       if (tokenRef.current !== token) return
-      const samples = e.inputBuffer.getChannelData(0)
+      const samples = e.data
       const prev    = pcmBufferRef.current
       const next    = new Float32Array(prev.length + samples.length)
       next.set(prev)
       next.set(samples, prev.length)
       pcmBufferRef.current = next
     }
-    source.connect(processor)
-    processor.connect(ctx.destination)
+    const source = ctx.createMediaStreamSource(stream)
+    source.connect(workletNode)
+    // لا نحتاج connect لـ destination — capture فقط، بدون playback
+
+    // انتظر 500ms لتجاهل الـ noise الأولي من الميكروفون
     await new Promise(r => setTimeout(r, 500))
     pcmBufferRef.current = new Float32Array(0)
-    // Use sendChunkRef.current() so interval always sees latest sessionId
     intervalRef.current  = setInterval(() => sendChunkRef.current(), SEND_INTERVAL_MS)
     setActive(true)
   }, [])
@@ -137,6 +143,11 @@ export function useLiveRecitation({ sessionId, apiBase, apiKey, onResult, onErro
     if (intervalRef.current) clearInterval(intervalRef.current)
     streamRef.current?.getTracks().forEach(t => t.stop())
     streamRef.current = null
+
+    // نظّف AudioWorkletNode
+    workletNodeRef.current?.port.close()
+    workletNodeRef.current?.disconnect()
+    workletNodeRef.current = null
 
     // أغلق AudioContext بأمان
     const ctx = audioCtxRef.current
