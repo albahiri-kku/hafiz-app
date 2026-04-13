@@ -114,7 +114,7 @@ export function useLiveRecitation({ sessionId, apiBase, apiKey, onResult, onErro
     streamRef.current = stream
     // أعد استخدام AudioContext إذا كان مفتوحاً — أنشئ واحداً جديداً فقط عند الحاجة
     if (!audioCtxRef.current || audioCtxRef.current.state === 'closed') {
-      audioCtxRef.current = new AudioContext()   // native rate — worklet يُعيد التشفير إلى 16kHz
+      audioCtxRef.current = new AudioContext({ sampleRate: 16000 })
     }
     const ctx = audioCtxRef.current
 
