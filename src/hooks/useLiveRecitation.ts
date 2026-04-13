@@ -125,16 +125,34 @@ export function useLiveRecitation({ sessionId, apiBase, apiKey, onResult, onErro
   }, [])
 
   const stop = React.useCallback(() => {
-    // flush: أرسل ما تبقى في الـ buffer + chunk صمت لإغلاق VAD
+    // منع الاستدعاء المزدوج — إذا كان AudioContext مغلقاً بالفعل فالـ stop سبق تنفيذه
+    if (!streamRef.current && !audioCtxRef.current) return
+
+    // أوقف الـ interval والـ stream فوراً قبل flush
+    const flushToken = ++tokenRef.current
+    if (intervalRef.current) clearInterval(intervalRef.current)
+    streamRef.current?.getTracks().forEach(t => t.stop())
+    streamRef.current = null
+
+    // أغلق AudioContext بأمان
+    const ctx = audioCtxRef.current
+    audioCtxRef.current = null
+    if (ctx && ctx.state !== 'closed') ctx.close().catch(() => {})
+
+    pcmBufferRef.current = new Float32Array(0)
+    sendingRef.current   = false
+    setActive(false)
+
+    // flush: أرسل ما تبقى في الـ buffer + chunks صمت لتصريف الكلمات المتبقية
     const flushAndSilence = async () => {
       const buf = pcmBufferRef.current
-      // أرسل ما تبقى في الـ buffer (بدون معالجة الرد — آخر صوت فعلي)
       if (buf.length > 0) {
         await sendChunkRawRef.current(buf)
       }
-      // أرسل 6 chunks صمت مع معالجة الردود — لتصريف الكلمات المتبقية وتحديث التقرير
       const silence = new Float32Array(12800) // 800ms @ 16kHz
       for (let i = 0; i < 6; i++) {
+        // إذا تم استدعاء stop() مجدداً أثناء الـ flush — أوقف
+        if (tokenRef.current !== flushToken) break
         try {
           const form = new FormData()
           form.append('session_id',  sessionIdRef.current)
@@ -154,14 +172,6 @@ export function useLiveRecitation({ sessionId, apiBase, apiKey, onResult, onErro
       }
     }
     flushAndSilence().catch(() => {})
-
-    tokenRef.current++
-    if (intervalRef.current) clearInterval(intervalRef.current)
-    streamRef.current?.getTracks().forEach(t => t.stop())
-    audioCtxRef.current?.close()
-    pcmBufferRef.current = new Float32Array(0)
-    sendingRef.current   = false
-    setActive(false)
   }, [])
 
   const clearBuffer = React.useCallback(() => {
