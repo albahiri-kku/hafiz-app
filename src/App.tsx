@@ -62,7 +62,7 @@ export default function App() {
   const streamResultRef = useRef<(r: StreamResponse) => void>(() => {})
 
   // ─── Live recitation hook ─────────────────────────────────────────────────
-  const { active, start: liveStart, stop: liveStop, clearBuffer: liveClearBuffer } = useLiveRecitation({
+  const { active, start: liveStart, stop: liveStop, clearBuffer: liveClearBuffer, pauseSending: livePauseSending } = useLiveRecitation({
     sessionId,
     apiBase: API_BASE,
     apiKey:  API_KEY || undefined,
@@ -121,8 +121,9 @@ export default function App() {
         setPhase('summary')
         return
       }
-      // مسح البفر قبل تحميل الآية التالية — يمنع نزيف الصوت من الآية القادمة
-      liveClearBuffer()
+      // توقف 2 ثانية قبل إرسال chunks للآية التالية
+      // يمنع SILENCE_GUARD من تصنيف أول كلمات الآية الجديدة كـ VAD_MISSED
+      livePauseSending(2000)
       if (waitingForEvalTimerRef.current) clearTimeout(waitingForEvalTimerRef.current)
       setWaitingForEval(false)
       api.getAyah(nextCode)

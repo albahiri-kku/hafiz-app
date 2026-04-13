@@ -33,6 +33,8 @@ export function useLiveRecitation({ sessionId, apiBase, apiKey, onResult, onErro
   const audioCtxRef  = React.useRef<AudioContext | null>(null)
   const sendingRef   = React.useRef(false)
   const tokenRef     = React.useRef(0)
+  // grace period بعد انتقال الآية — نوقف الإرسال حتى يبدأ المستخدم
+  const pauseUntilRef = React.useRef<number>(0)
   // refs تُحدَّث دائماً بآخر قيم — تُستخدم في flush بعد stop() (useCallback بـ [])
   const onResultRef  = React.useRef(onResult)
   const sessionIdRef = React.useRef(sessionId)
@@ -48,6 +50,8 @@ export function useLiveRecitation({ sessionId, apiBase, apiKey, onResult, onErro
 
   const sendChunk = React.useCallback(async () => {
     if (sendingRef.current) return
+    // grace period بعد انتقال الآية — لا نُرسل حتى ينتهي الوقت
+    if (Date.now() < pauseUntilRef.current) return
     const buf = pcmBufferRef.current
     if (buf.length < SAMPLES_PER_CHUNK) return
     const chunk = buf.slice(0, SAMPLES_PER_CHUNK)
@@ -178,5 +182,11 @@ export function useLiveRecitation({ sessionId, apiBase, apiKey, onResult, onErro
     pcmBufferRef.current = new Float32Array(0)
   }, [])
 
-  return { active, start, stop, clearBuffer }
+  // يُوقف إرسال الـ chunks لـ ms ميلي ثانية — يمنع SILENCE_GUARD من تخطي كلمات الآية الجديدة
+  const pauseSending = React.useCallback((ms: number) => {
+    pauseUntilRef.current = Date.now() + ms
+    pcmBufferRef.current  = new Float32Array(0)
+  }, [])
+
+  return { active, start, stop, clearBuffer, pauseSending }
 }
