@@ -36,6 +36,7 @@ export default function App() {
   const [wordColorMap, setWordColorMap] = useState<Record<number, 'correct' | 'error' | 'unheard'>>({})
   const [waitingForEval, setWaitingForEval] = useState(false)
   const [heardLog, setHeardLog] = useState<HeardEntry[]>([])
+  const heardLogRef   = useRef<HeardEntry[]>([])
   const sessionStartRef = useRef<number>(0)
   const waitingForEvalTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -78,14 +79,16 @@ export default function App() {
         : r.word_result ? [r.word_result] : []
       for (const wr of allWords) {
         const elapsed_sec = (Date.now() - sessionStartRef.current) / 1000
-        setHeardLog(prev => [...prev, {
+        const entry: HeardEntry = {
           word_index:  wr.word_index,
           expected:    wr.expected,
           heard:       wr.heard ?? '',
           correct:     wr.correct,
           error_type:  wr.error_type,
           elapsed_sec: Math.round(elapsed_sec * 10) / 10,
-        }])
+        }
+        heardLogRef.current = [...heardLogRef.current, entry]
+        setHeardLog(heardLogRef.current)
         const wordLoc = ayahDataRef.current?.words[wr.word_index]?.word_location
                         ?? String(wr.word_index)
         if (wr.correct) {
@@ -112,6 +115,7 @@ export default function App() {
 
     } else if (r.status === 'ayah_complete') {
       const nextCode = r.next_ayah_code
+      setStats(prev => ({ ...prev, totalAyahs: prev.totalAyahs + 1 }))
       if (!nextCode) {
         liveStop()
         setPhase('summary')
@@ -130,7 +134,7 @@ export default function App() {
           setResult(null)
           setCurrentWordIndex(-1)
           setWordColorMap({})
-          setHeardLog([])
+          // heardLog يتراكم عبر الآيات — لا نمسحه هنا
         })
         .catch((e) => setEvalError(e instanceof Error ? e.message : 'خطأ في تحميل الآية'))
 
@@ -162,6 +166,7 @@ export default function App() {
       setStats(EMPTY_STATS)
       setWordErrors([])
       setWordColorMap({})
+      heardLogRef.current = []
       setHeardLog([])
       sessionStartRef.current = Date.now()
       setPhase('reciting')
@@ -195,6 +200,7 @@ export default function App() {
     setStats(EMPTY_STATS)
     setWordErrors([])
     setWordColorMap({})
+    heardLogRef.current = []
     setHeardLog([])
     setCurrentWordIndex(-1)
     setWaitingForEval(false)
@@ -274,7 +280,7 @@ export default function App() {
   }
 
   if (phase === 'summary') {
-    return <SessionSummary stats={stats} wordErrors={wordErrors} heardLog={heardLog} onRestart={handleRestart} />
+    return <SessionSummary stats={stats} wordErrors={wordErrors} heardLog={heardLogRef.current} onRestart={handleRestart} />
   }
 
   return (

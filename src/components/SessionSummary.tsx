@@ -42,14 +42,17 @@ function heardLabel(entry: HeardEntry): { text: string; silent: boolean } {
 
 export default function SessionSummary({ stats, wordErrors, heardLog = [], onRestart }: Props) {
   const { totalAyahs, correct, errors, reviews, history } = stats
-  const accuracy = totalAyahs > 0 ? Math.round((correct / totalAyahs) * 100) : 0
+  const totalWords = correct + errors
+  const accuracy = totalWords > 0 ? Math.round((correct / totalWords) * 100) : 0
 
   return (
     <div className="min-h-screen bg-parchment-50 flex flex-col" dir="rtl">
       {/* Header */}
       <div className="bg-emerald-800 text-white px-6 py-8 text-center">
         <h1 className="font-quran text-3xl mb-1">ملخص الجلسة</h1>
-        <p className="font-ui text-emerald-200 text-sm">{totalAyahs} آية تمت تلاوتها</p>
+        <p className="font-ui text-emerald-200 text-sm">
+          {totalAyahs > 0 ? `${totalAyahs} آية` : `${totalWords} كلمة`} تمت تلاوتها
+        </p>
       </div>
 
       {/* Stats grid */}
