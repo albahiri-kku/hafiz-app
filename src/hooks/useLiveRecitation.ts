@@ -72,6 +72,11 @@ export function useLiveRecitation({ sessionId, apiBase, apiKey, onResult, onErro
       if (!res.ok) return
       const data: StreamResponse = await res.json()
       onResult(data)
+      // safety: إذا انتهت الجلسة — أوقف الـ interval فوراً بدون انتظار App.tsx
+      if (data.status === 'session_ended') {
+        if (intervalRef.current) clearInterval(intervalRef.current)
+        sendingRef.current = false
+      }
     } catch (e) {
       onError?.(e instanceof Error ? e : new Error(String(e)))
     } finally {
@@ -106,9 +111,12 @@ export function useLiveRecitation({ sessionId, apiBase, apiKey, onResult, onErro
       audio: { noiseSuppression: true, echoCancellation: true, autoGainControl: true },
       video: false,
     })
-    streamRef.current   = stream
-    const ctx           = new AudioContext({ sampleRate: 16000 })
-    audioCtxRef.current = ctx
+    streamRef.current = stream
+    // أعد استخدام AudioContext إذا كان مفتوحاً — أنشئ واحداً جديداً فقط عند الحاجة
+    if (!audioCtxRef.current || audioCtxRef.current.state === 'closed') {
+      audioCtxRef.current = new AudioContext({ sampleRate: 16000 })
+    }
+    const ctx = audioCtxRef.current
 
     // AudioWorklet — بديل ScriptProcessorNode (deprecated)
     await ctx.audioWorklet.addModule('/hafiz-audio-processor.js')
@@ -146,8 +154,8 @@ export function useLiveRecitation({ sessionId, apiBase, apiKey, onResult, onErro
   }, [])
 
   const stop = React.useCallback(() => {
-    // منع الاستدعاء المزدوج — إذا كان AudioContext مغلقاً بالفعل فالـ stop سبق تنفيذه
-    if (!streamRef.current && !audioCtxRef.current) return
+    // منع الاستدعاء المزدوج — إذا كان stream مغلقاً بالفعل فالـ stop سبق تنفيذه
+    if (!streamRef.current) return
 
     // أوقف الـ interval والـ stream فوراً قبل flush
     const flushToken = ++tokenRef.current
@@ -160,10 +168,12 @@ export function useLiveRecitation({ sessionId, apiBase, apiKey, onResult, onErro
     workletNodeRef.current?.disconnect()
     workletNodeRef.current = null
 
-    // أغلق AudioContext بأمان
+    // أغلق AudioContext مرة واحدة فقط — عند stop() النهائي
     const ctx = audioCtxRef.current
     audioCtxRef.current = null
-    if (ctx && ctx.state !== 'closed') ctx.close().catch(() => {})
+    if (ctx && ctx.state !== 'closed') {
+      ctx.close().catch(() => {})
+    }
 
     const remainingBuf = pcmBufferRef.current   // احفظ البفر قبل مسحه
     pcmBufferRef.current = new Float32Array(0)
