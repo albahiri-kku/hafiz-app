@@ -123,7 +123,7 @@ export default function App() {
       }
       // توقف 2 ثانية قبل إرسال chunks للآية التالية
       // يمنع SILENCE_GUARD من تصنيف أول كلمات الآية الجديدة كـ VAD_MISSED
-      livePauseSending(2000)
+      livePauseSending(600)
       if (waitingForEvalTimerRef.current) clearTimeout(waitingForEvalTimerRef.current)
       setWaitingForEval(false)
       api.getAyah(nextCode)
