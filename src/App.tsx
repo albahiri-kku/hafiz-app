@@ -62,7 +62,7 @@ export default function App() {
   const streamResultRef = useRef<(r: StreamResponse) => void>(() => {})
 
   // ─── Live recitation hook ─────────────────────────────────────────────────
-  const { active, start: liveStart, stop: liveStop, clearBuffer: liveClearBuffer, pauseSending: livePauseSending } = useLiveRecitation({
+  const { active, start: liveStart, stop: liveStop, pauseSending: livePauseSending } = useLiveRecitation({
     sessionId,
     apiBase: API_BASE,
     apiKey:  API_KEY || undefined,
