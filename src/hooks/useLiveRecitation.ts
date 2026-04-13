@@ -59,7 +59,7 @@ export function useLiveRecitation({ sessionId, apiBase, apiKey, onResult, onErro
     sendingRef.current = true
     try {
       const form = new FormData()
-      form.append('session_id',  sessionId)
+      form.append('session_id',  sessionIdRef.current)
       form.append('encoding',    'f32le')
       form.append('sample_rate', '16000')
       form.append('audio_chunk', new Blob([chunk.buffer], { type: 'application/octet-stream' }))
@@ -85,7 +85,7 @@ export function useLiveRecitation({ sessionId, apiBase, apiKey, onResult, onErro
   // fire-and-forget raw sender used for flush — no onResult/onError, no size check
   const sendChunkRaw = React.useCallback(async (samples: Float32Array) => {
     const form = new FormData()
-    form.append('session_id',  sessionId)
+    form.append('session_id',  sessionIdRef.current)
     form.append('encoding',    'f32le')
     form.append('sample_rate', '16000')
     form.append('audio_chunk', new Blob([samples.buffer as ArrayBuffer], { type: 'application/octet-stream' }))
