@@ -1,4 +1,4 @@
-import type { SessionStats, AyahResult } from '../types/hafiz'
+import type { SessionStats, AyahResult, HeardEntry } from '../types/hafiz'
 import { SURAH_NAMES } from '../types/hafiz'
 
 interface WordErrorEntry {
@@ -10,6 +10,7 @@ interface WordErrorEntry {
 interface Props {
   stats:       SessionStats
   wordErrors?: WordErrorEntry[]
+  heardLog?:   HeardEntry[]
   onRestart:   () => void
 }
 
@@ -33,7 +34,13 @@ function errorTypeLabel(t: string | null): string {
   return t
 }
 
-export default function SessionSummary({ stats, wordErrors, onRestart }: Props) {
+function heardLabel(entry: HeardEntry): { text: string; silent: boolean } {
+  if (entry.error_type === 'VAD_MISSED' || !entry.heard || entry.heard === '—')
+    return { text: 'صمت', silent: true }
+  return { text: entry.heard, silent: false }
+}
+
+export default function SessionSummary({ stats, wordErrors, heardLog = [], onRestart }: Props) {
   const { totalAyahs, correct, errors, reviews, history } = stats
   const accuracy = totalAyahs > 0 ? Math.round((correct / totalAyahs) * 100) : 0
 
@@ -117,6 +124,48 @@ export default function SessionSummary({ stats, wordErrors, onRestart }: Props) 
           </div>
         )}
       </div>
+
+      {/* Detailed heard log table */}
+      {heardLog.length > 0 && (
+        <div className="mx-4 mt-3 bg-white rounded-2xl shadow-sm p-4">
+          <h2 className="font-ui font-semibold text-stone-700 mb-3">سجل التلاوة التفصيلي</h2>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm font-ui" dir="rtl">
+              <thead>
+                <tr className="border-b border-stone-200 text-stone-500 font-medium text-xs">
+                  <th className="text-right py-2 pr-1 w-14">الثانية</th>
+                  <th className="text-right py-2 pr-2">المتوقع</th>
+                  <th className="text-right py-2 pr-2">المسموع</th>
+                  <th className="text-center py-2 w-10">النتيجة</th>
+                </tr>
+              </thead>
+              <tbody>
+                {heardLog.map((entry, i) => {
+                  const { text, silent } = heardLabel(entry)
+                  return (
+                    <tr key={i} className={`border-b border-stone-50 last:border-0 ${silent ? 'bg-stone-50/60' : ''}`}>
+                      <td className="py-1.5 pr-1 text-stone-400 text-xs tabular-nums">
+                        {entry.elapsed_sec.toFixed(1)}s
+                      </td>
+                      <td className="py-1.5 pr-2 font-quran text-stone-800 text-base">
+                        {entry.expected}
+                      </td>
+                      <td className={`py-1.5 pr-2 font-quran text-base ${
+                        silent ? 'text-stone-400 font-ui text-xs' : entry.correct ? 'text-emerald-600' : 'text-red-500'
+                      }`}>
+                        {silent ? '🔇 صمت' : text}
+                      </td>
+                      <td className="py-1.5 text-center text-base">
+                        {silent ? '—' : entry.correct ? '✅' : '❌'}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {/* Restart */}
       <div className="p-4 mt-auto">

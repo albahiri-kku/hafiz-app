@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import type {
-  RecitationMode, AppPhase, AyahData, EvaluationResponse, SessionStats
+  RecitationMode, AppPhase, AyahData, EvaluationResponse, SessionStats, HeardEntry
 } from './types/hafiz'
 import { api } from './services/api'
 import { useLiveRecitation } from './hooks/useLiveRecitation'
@@ -35,6 +35,9 @@ export default function App() {
   const [wordErrors, setWordErrors] = useState<Array<{expected: string, heard: string, error_type: string | null}>>([])
   const [wordColorMap, setWordColorMap] = useState<Record<number, 'correct' | 'error' | 'unheard'>>({})
   const [waitingForEval, setWaitingForEval] = useState(false)
+  const [heardLog, setHeardLog] = useState<HeardEntry[]>([])
+  const sessionStartRef = useRef<number>(0)
+  const waitingForEvalTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
 
   // ─── Word-level tracking session (Mushaf viewer) ──────────────────────────
@@ -74,6 +77,15 @@ export default function App() {
         ? r.word_results
         : r.word_result ? [r.word_result] : []
       for (const wr of allWords) {
+        const elapsed_sec = (Date.now() - sessionStartRef.current) / 1000
+        setHeardLog(prev => [...prev, {
+          word_index:  wr.word_index,
+          expected:    wr.expected,
+          heard:       wr.heard ?? '',
+          correct:     wr.correct,
+          error_type:  wr.error_type,
+          elapsed_sec: Math.round(elapsed_sec * 10) / 10,
+        }])
         const wordLoc = ayahDataRef.current?.words[wr.word_index]?.word_location
                         ?? String(wr.word_index)
         if (wr.correct) {
@@ -92,6 +104,9 @@ export default function App() {
         const totalWords = ayahDataRef.current?.words.length ?? 0
         if (totalWords > 0 && wr.word_index >= totalWords - 1) {
           setWaitingForEval(true)
+          // safety timeout — إذا لم يأتِ ayah_complete خلال 10s نُلغي المؤشر
+          if (waitingForEvalTimerRef.current) clearTimeout(waitingForEvalTimerRef.current)
+          waitingForEvalTimerRef.current = setTimeout(() => setWaitingForEval(false), 10_000)
         }
       }
 
@@ -104,6 +119,7 @@ export default function App() {
       }
       // مسح البفر قبل تحميل الآية التالية — يمنع نزيف الصوت من الآية القادمة
       liveClearBuffer()
+      if (waitingForEvalTimerRef.current) clearTimeout(waitingForEvalTimerRef.current)
       setWaitingForEval(false)
       api.getAyah(nextCode)
         .then((data) => {
@@ -112,12 +128,14 @@ export default function App() {
           ayahDataRef.current     = data
           setAyahData(data)
           setResult(null)
-          setCurrentWordIndex(0)
+          setCurrentWordIndex(-1)
           setWordColorMap({})
+          setHeardLog([])
         })
         .catch((e) => setEvalError(e instanceof Error ? e.message : 'خطأ في تحميل الآية'))
 
     } else if (r.status === 'session_ended') {
+      if (waitingForEvalTimerRef.current) clearTimeout(waitingForEvalTimerRef.current)
       setWaitingForEval(false)
       liveStop()
       setPhase('summary')
@@ -144,6 +162,8 @@ export default function App() {
       setStats(EMPTY_STATS)
       setWordErrors([])
       setWordColorMap({})
+      setHeardLog([])
+      sessionStartRef.current = Date.now()
       setPhase('reciting')
 
       await liveStart()
@@ -162,6 +182,7 @@ export default function App() {
   }, [liveStop])
 
   const handleRestart = useCallback(() => {
+    if (waitingForEvalTimerRef.current) clearTimeout(waitingForEvalTimerRef.current)
     liveStop()
     setPhase('start')
     setResult(null)
@@ -174,6 +195,7 @@ export default function App() {
     setStats(EMPTY_STATS)
     setWordErrors([])
     setWordColorMap({})
+    setHeardLog([])
     setCurrentWordIndex(-1)
     setWaitingForEval(false)
   }, [liveStop])
@@ -252,7 +274,7 @@ export default function App() {
   }
 
   if (phase === 'summary') {
-    return <SessionSummary stats={stats} wordErrors={wordErrors} onRestart={handleRestart} />
+    return <SessionSummary stats={stats} wordErrors={wordErrors} heardLog={heardLog} onRestart={handleRestart} />
   }
 
   return (
@@ -283,6 +305,7 @@ export default function App() {
           isRecording={active}
           currentWordIndex={currentWordIndex}
           wordColorMap={wordColorMap}
+          heardLog={heardLog}
         />
       ) : (
         <div className="flex-1 flex items-center justify-center">

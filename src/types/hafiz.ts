@@ -64,6 +64,15 @@ export interface EvaluationResponse {
   word_probe_details: WordProbeDetails | null
 }
 
+export interface HeardEntry {
+  word_index:  number
+  expected:    string
+  heard:       string        // "" أو "—" = صمت
+  correct:     boolean
+  error_type:  string | null
+  elapsed_sec: number        // ثوانٍ منذ بداية الجلسة
+}
+
 export type RecitationMode = 'tilawa' | 'hifz'
 export type AppPhase = 'start' | 'reciting' | 'summary' | 'mushaf_browse'
 export type RecordingState = 'idle' | 'recording' | 'processing'

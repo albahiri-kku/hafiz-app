@@ -1,12 +1,13 @@
-import type { QuranWord, WordError, RecitationMode, EvaluationResponse } from '../types/hafiz'
+import type { QuranWord, WordError, RecitationMode, EvaluationResponse, HeardEntry } from '../types/hafiz'
 
 interface Props {
   words: QuranWord[]
   mode: RecitationMode
   result: EvaluationResponse | null
   isRecording: boolean
-  currentWordIndex?: number   // array index of word being recited; -1 = none
-  wordColorMap?: Record<number, 'correct' | 'error' | 'unheard'>  // streaming per-word colors
+  currentWordIndex?: number
+  wordColorMap?: Record<number, 'correct' | 'error' | 'unheard'>
+  heardLog?: HeardEntry[]
 }
 
 type WordStatus = 'default' | 'active' | 'error' | 'near' | 'correct' | 'unheard'
@@ -76,7 +77,13 @@ function WordToken({ word, status, hidden }: {
   )
 }
 
-export default function AyahDisplay({ words, mode, result, isRecording, currentWordIndex = -1, wordColorMap = {} }: Props) {
+function heardText(entry: HeardEntry): string {
+  if (entry.error_type === 'VAD_MISSED') return 'صمت'
+  if (!entry.heard || entry.heard === '—') return 'صمت'
+  return entry.heard
+}
+
+export default function AyahDisplay({ words, mode, result, isRecording, currentWordIndex = -1, wordColorMap = {}, heardLog = [] }: Props) {
   const isHifz = mode === 'hifz'
 
   return (
@@ -135,6 +142,40 @@ export default function AyahDisplay({ words, mode, result, isRecording, currentW
         <p className="mt-3 text-xs text-stone-400 font-ui">
           {words.length} كلمة
         </p>
+      )}
+
+      {/* Live heard box */}
+      {isRecording && (
+        <div className="mt-4 w-full max-w-xl rounded-xl border border-stone-200 bg-stone-50 px-3 py-2">
+          <p className="font-ui text-xs text-stone-400 mb-1.5">ما سمعه النظام</p>
+          {heardLog.length === 0 ? (
+            <p className="font-ui text-xs text-stone-300 text-center py-1">في انتظار الكلام…</p>
+          ) : (
+            <div className="flex flex-wrap gap-x-2 gap-y-1.5" dir="rtl">
+              {heardLog.map((entry, i) => {
+                const text = heardText(entry)
+                const isSilent = text === 'صمت'
+                return (
+                  <span
+                    key={i}
+                    className={`inline-flex flex-col items-center font-ui text-xs leading-tight px-1.5 py-0.5 rounded-md border ${
+                      isSilent
+                        ? 'bg-stone-100 border-stone-300 text-stone-400'
+                        : entry.correct
+                          ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                          : 'bg-red-50 border-red-200 text-red-600'
+                    }`}
+                  >
+                    <span className="font-quran text-sm">{entry.expected}</span>
+                    <span className={`text-[10px] mt-0.5 ${isSilent ? 'text-stone-400' : entry.correct ? 'text-emerald-500' : 'text-red-400'}`}>
+                      {isSilent ? '🔇 صمت' : text}
+                    </span>
+                  </span>
+                )
+              })}
+            </div>
+          )}
+        </div>
       )}
     </div>
   )
