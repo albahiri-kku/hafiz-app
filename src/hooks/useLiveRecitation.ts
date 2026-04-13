@@ -46,8 +46,8 @@ export function useLiveRecitation({ sessionId, apiBase, apiKey, onResult, onErro
   React.useEffect(() => { apiBaseRef.current   = apiBase   }, [apiBase])
   React.useEffect(() => { apiKeyRef.current    = apiKey    }, [apiKey])
 
-  const SEND_INTERVAL_MS  = 500
-  const SAMPLES_PER_CHUNK = 8000
+  const SEND_INTERVAL_MS  = 1000
+  const SAMPLES_PER_CHUNK = 16000
 
   const sendChunk = React.useCallback(async () => {
     if (sendingRef.current) return
