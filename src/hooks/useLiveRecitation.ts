@@ -143,15 +143,15 @@ export function useLiveRecitation({ sessionId, apiBase, apiKey, onResult, onErro
     audioCtxRef.current = null
     if (ctx && ctx.state !== 'closed') ctx.close().catch(() => {})
 
+    const remainingBuf = pcmBufferRef.current   // احفظ البفر قبل مسحه
     pcmBufferRef.current = new Float32Array(0)
     sendingRef.current   = false
     setActive(false)
 
     // flush: أرسل ما تبقى في الـ buffer + chunks صمت لتصريف الكلمات المتبقية
     const flushAndSilence = async () => {
-      const buf = pcmBufferRef.current
-      if (buf.length > 0) {
-        await sendChunkRawRef.current(buf)
+      if (remainingBuf.length > 0) {
+        await sendChunkRawRef.current(remainingBuf)
       }
       const silence = new Float32Array(12800) // 800ms @ 16kHz
       for (let i = 0; i < 6; i++) {
