@@ -114,14 +114,25 @@ export function useLiveRecitation({ sessionId, apiBase, apiKey, onResult, onErro
     await ctx.audioWorklet.addModule('/hafiz-audio-processor.js')
     const workletNode          = new AudioWorkletNode(ctx, 'hafiz-audio-processor')
     workletNodeRef.current     = workletNode
-    workletNode.port.onmessage = (e: MessageEvent<Float32Array>) => {
+    workletNode.port.onmessage = (e: MessageEvent) => {
       if (tokenRef.current !== token) return
-      const samples = e.data
-      const prev    = pcmBufferRef.current
-      const next    = new Float32Array(prev.length + samples.length)
-      next.set(prev)
-      next.set(samples, prev.length)
-      pcmBufferRef.current = next
+      const payload = e.data instanceof Float32Array
+        ? { type: 'pcm', data: e.data }
+        : e.data as { type: string; data?: Float32Array }
+
+      if (payload.type === 'pcm') {
+        const samples = payload.data as Float32Array
+        const prev    = pcmBufferRef.current
+        const next    = new Float32Array(prev.length + samples.length)
+        next.set(prev)
+        next.set(samples, prev.length)
+        pcmBufferRef.current = next
+      } else if (payload.type === 'word_end') {
+        // إشارة نهاية كلمة من VAD — أرسل فوراً إذا لم نكن في grace period
+        if (Date.now() >= pauseUntilRef.current) {
+          sendChunkRef.current()
+        }
+      }
     }
     const source = ctx.createMediaStreamSource(stream)
     source.connect(workletNode)
