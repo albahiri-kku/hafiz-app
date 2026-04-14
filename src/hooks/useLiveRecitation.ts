@@ -36,6 +36,8 @@ export function useLiveRecitation({ sessionId, apiBase, apiKey, onResult, onErro
   const tokenRef     = React.useRef(0)
   // grace period بعد انتقال الآية — نوقف الإرسال حتى يبدأ المستخدم
   const pauseUntilRef = React.useRef<number>(0)
+  // حفظ sample rate الفعلي — يُحدَّث عند start() ويُستخدم في flush بعد stop()
+  const nativeSRRef   = React.useRef<number>(48000)
   // refs تُحدَّث دائماً بآخر قيم — تُستخدم في flush بعد stop() (useCallback بـ [])
   const onResultRef  = React.useRef(onResult)
   const sessionIdRef = React.useRef(sessionId)
@@ -93,7 +95,7 @@ export function useLiveRecitation({ sessionId, apiBase, apiKey, onResult, onErro
     const form = new FormData()
     form.append('session_id',  sessionIdRef.current)
     form.append('encoding',    'f32le')
-    form.append('sample_rate', '16000')
+    form.append('sample_rate', String(nativeSRRef.current))
     form.append('audio_chunk', new Blob([samples.buffer as ArrayBuffer], { type: 'application/octet-stream' }))
     const headers: Record<string, string> = {}
     if (apiKey) headers['X-API-Key'] = apiKey
@@ -117,6 +119,7 @@ export function useLiveRecitation({ sessionId, apiBase, apiKey, onResult, onErro
       audioCtxRef.current = new AudioContext()
     }
     const ctx = audioCtxRef.current
+    nativeSRRef.current = ctx.sampleRate
 
     // AudioWorklet — بديل ScriptProcessorNode (deprecated)
     await ctx.audioWorklet.addModule('/hafiz-audio-processor.js')
