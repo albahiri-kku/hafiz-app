@@ -47,7 +47,7 @@ export function useLiveRecitation({ sessionId, apiBase, apiKey, onResult, onErro
   React.useEffect(() => { apiKeyRef.current    = apiKey    }, [apiKey])
 
   const SEND_INTERVAL_MS  = 1000
-  const SAMPLES_PER_CHUNK = 16000
+  const SAMPLES_PER_CHUNK = Math.round((audioCtxRef.current?.sampleRate ?? 48000) * (SEND_INTERVAL_MS / 1000))
 
   const sendChunk = React.useCallback(async () => {
     if (sendingRef.current) return
