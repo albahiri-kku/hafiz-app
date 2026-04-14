@@ -62,7 +62,7 @@ export function useLiveRecitation({ sessionId, apiBase, apiKey, onResult, onErro
       const form = new FormData()
       form.append('session_id',  sessionIdRef.current)
       form.append('encoding',    'f32le')
-      form.append('sample_rate', '16000')
+      form.append('sample_rate', String(audioCtxRef.current?.sampleRate ?? 48000))
       form.append('audio_chunk', new Blob([chunk.buffer], { type: 'application/octet-stream' }))
       const headers: Record<string, string> = {}
       if (apiKey) headers['X-API-Key'] = apiKey
@@ -114,7 +114,7 @@ export function useLiveRecitation({ sessionId, apiBase, apiKey, onResult, onErro
     streamRef.current = stream
     // أعد استخدام AudioContext إذا كان مفتوحاً — أنشئ واحداً جديداً فقط عند الحاجة
     if (!audioCtxRef.current || audioCtxRef.current.state === 'closed') {
-      audioCtxRef.current = new AudioContext({ sampleRate: 16000 })
+      audioCtxRef.current = new AudioContext()
     }
     const ctx = audioCtxRef.current
 
