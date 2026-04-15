@@ -1,3 +1,4 @@
+import { useState, useMemo } from 'react'
 import type { EvaluateFileResponse, WordAlignmentEntry, AyahBoundaryWaqfEntry, TajweedEventEntry } from '../types/hafiz'
 import { SURAH_NAMES } from '../types/hafiz'
 
@@ -14,10 +15,11 @@ interface Props {
 
 function tajweedBadge(verdict: string | null) {
   if (!verdict) return { label: 'غير محدد', cls: 'bg-stone-100 text-stone-600 border-stone-200' }
-  if (verdict === 'TAJWEED_OK')       return { label: 'تجويد سليم', cls: 'bg-emerald-100 text-emerald-800 border-emerald-200' }
-  if (verdict === 'TAJWEED_PARTIAL')  return { label: 'تجويد جزئي', cls: 'bg-amber-100 text-amber-800 border-amber-200' }
-  if (verdict === 'TAJWEED_ERROR')    return { label: 'خطأ تجويدي', cls: 'bg-red-100 text-red-800 border-red-200' }
-  if (verdict === 'TAJWEED_UNCHECKED') return { label: 'لم يُتحقق', cls: 'bg-stone-100 text-stone-600 border-stone-200' }
+  if (verdict === 'TAJWEED_OK')       return { label: 'تجويد سليم',  cls: 'bg-emerald-100 text-emerald-800 border-emerald-200' }
+  if (verdict === 'TAJWEED_PARTIAL')  return { label: 'تجويد جزئي',  cls: 'bg-amber-100 text-amber-800 border-amber-200' }
+  if (verdict === 'TAJWEED_WARNING')  return { label: 'تحذير تجويدي', cls: 'bg-orange-100 text-orange-800 border-orange-200' }
+  if (verdict === 'TAJWEED_ERROR')    return { label: 'خطأ تجويدي',  cls: 'bg-red-100 text-red-800 border-red-200' }
+  if (verdict === 'TAJWEED_UNCHECKED') return { label: 'لم يُتحقق',  cls: 'bg-stone-100 text-stone-600 border-stone-200' }
   return { label: verdict, cls: 'bg-stone-100 text-stone-600 border-stone-200' }
 }
 
@@ -29,40 +31,243 @@ function maddBadge(verdict: string | null) {
   return { label: verdict, cls: 'text-stone-500' }
 }
 
+// ─── Arabic rule names ────────────────────────────────────────────────────────
+
+const RULE_AR: Record<string, string> = {
+  MADD_TABII:                  'مد طبيعي',
+  MADD_LAZIM:                  'مد لازم كلمي',
+  MADD_WAJIB_MUTTASIL:         'مد واجب متصل',
+  MADD_MUNFASIL:               'مد منفصل',
+  MADD_AARID_LISUKOON:         'مد عارض للسكون',
+  MADD_LIN:                    'مد لين',
+  NOON_SAKINAH_IZHAR:          'إظهار',
+  NOON_SAKINAH_IDGHAM:         'إدغام',
+  NOON_SAKINAH_IQLAB:          'إقلاب',
+  NOON_SAKINAH_IKHFAA:         'إخفاء',
+  MEEM_SAKINAH_IZHAR_SHAFAWI:  'إظهار شفوي',
+  MEEM_SAKINAH_IDGHAM_SHAFAWI: 'إدغام شفوي',
+  MEEM_SAKINAH_IKHFAA_SHAFAWI: 'إخفاء شفوي',
+  QALQALA:                     'قلقلة',
+  GHUNNA:                      'غنة',
+}
+
+// ─── Normalize Arabic ─────────────────────────────────────────────────────────
+
+function normAr(s: string | null | undefined): string {
+  return (s || '')
+    .replace(/[\u064B-\u0652\u0670\u0640]/g, '')
+    .replace(/[أإآ]/g, 'ا')
+    .replace(/ة/g, 'ه')
+    .trim()
+}
+
+// ─── Parse tajweed reason ─────────────────────────────────────────────────────
+
+interface ReasonInfo { kind: 'ok' | 'low' | 'high' | 'error' | 'pending'; label: string }
+
+function parseReason(ev: TajweedEventEntry): ReasonInfo {
+  const s = ev.tajweed_check_status
+  const r = ev.tajweed_check_reason || ''
+
+  if (s === 'OK') {
+    if (r.includes('TEXTUAL_ONLY')) return { kind: 'ok', label: 'مرجع نصي' }
+    return { kind: 'ok', label: 'صحيح' }
+  }
+  if (s === 'WARNING' || s === 'ERROR') {
+    const short = r.match(/word_dur=(\d+)ms\s*<\s*(\d+)ms/)
+    if (short) return { kind: 'low', label: `أقل من المطلوب (${short[1]}ms / ${short[2]}ms)` }
+    const long  = r.match(/word_dur=(\d+)ms\s*>>\s*(\d+)ms/)
+    if (long)  return { kind: 'high', label: `أعلى من المطلوب (${long[1]}ms)` }
+    if (r.includes('قصير'))     return { kind: 'low',  label: 'مد قصير' }
+    if (r.includes('excessive')) return { kind: 'high', label: 'مد مبالغ فيه' }
+    return { kind: s === 'ERROR' ? 'error' : 'low', label: r.slice(0, 50) }
+  }
+  if (s === 'PENDING_ACOUSTIC') return { kind: 'pending', label: 'تحتاج فحص صوتي' }
+  return { kind: 'pending', label: s }
+}
+
+// ─── Word tooltip ─────────────────────────────────────────────────────────────
+
+function WordTooltip({ entry, events }: { entry: WordAlignmentEntry; events: TajweedEventEntry[] }) {
+  const seen = new Set<string>()
+  const rows: React.ReactNode[] = []
+
+  // Alignment status row (if not plain MATCH)
+  if (entry.status === 'SUBSTITUTION') {
+    rows.push(
+      <div key="sub" className="flex items-center gap-1.5 pb-1.5 mb-1.5 border-b border-stone-100">
+        <span className="w-2 h-2 rounded-full bg-red-500 flex-shrink-0" />
+        <span className="text-stone-600 flex-1">المرجع:</span>
+        <span className="font-quran text-emerald-700 text-sm">{entry.reference_word}</span>
+      </div>
+    )
+  } else if (entry.status === 'LOW_CONFIDENCE_MATCH') {
+    rows.push(
+      <div key="lc" className="flex items-center gap-1.5 pb-1.5 mb-1.5 border-b border-stone-100">
+        <span className="w-2 h-2 rounded-full bg-yellow-400 flex-shrink-0" />
+        <span className="text-stone-600">ثقة {Math.round((entry.probability ?? 0) * 100)}%</span>
+        <span className="text-stone-400 mr-auto">— تحقق يدوياً</span>
+      </div>
+    )
+  } else if (entry.status === 'MISSED') {
+    rows.push(
+      <div key="miss" className="flex items-center gap-1.5 text-red-600 font-medium">
+        <span className="w-2 h-2 rounded-full bg-red-500 flex-shrink-0" />
+        <span>كلمة مفقودة</span>
+      </div>
+    )
+  } else if (entry.status === 'EXTRA') {
+    rows.push(
+      <div key="extra" className="flex items-center gap-1.5 text-stone-500">
+        <span className="w-2 h-2 rounded-full bg-stone-300 flex-shrink-0" />
+        <span>كلمة إضافية</span>
+      </div>
+    )
+  }
+
+  // Tajweed event rows
+  for (const ev of events) {
+    // Use applied_rule if available (waqf variant), else event_type
+    const ruleKey = ev.applied_rule ?? ev.event_type
+    // Skip duplicate rule+status combos (wasl + waqf entries for same occurrence)
+    const dedupKey = `${ruleKey}-${ev.tajweed_check_status}`
+    if (seen.has(dedupKey)) continue
+    seen.add(dedupKey)
+
+    const ruleName = RULE_AR[ruleKey] || ruleKey
+    const reason   = parseReason(ev)
+    const dotCls   = { ok: 'bg-emerald-500', low: 'bg-red-500', high: 'bg-amber-500', error: 'bg-red-700', pending: 'bg-stone-300' }[reason.kind]
+    const textCls  = { ok: 'text-emerald-700', low: 'text-red-600', high: 'text-amber-600', error: 'text-red-700', pending: 'text-stone-400' }[reason.kind]
+
+    rows.push(
+      <div key={dedupKey} className="flex items-center gap-2 py-0.5">
+        <span className={`w-2 h-2 rounded-full flex-shrink-0 ${dotCls}`} />
+        <span className="text-stone-700 flex-1 truncate">{ruleName}</span>
+        <span className={`text-xs ${textCls} shrink-0`}>{reason.label}</span>
+      </div>
+    )
+  }
+
+  if (rows.length === 0) {
+    rows.push(<p key="empty" className="text-stone-400 text-xs">لا أحكام مُفحوصة</p>)
+  }
+
+  return (
+    <div
+      className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50
+                 bg-white border border-stone-200 rounded-xl shadow-xl
+                 px-3 py-2.5 min-w-[13rem] max-w-xs text-xs font-ui text-right
+                 pointer-events-none select-none"
+      dir="rtl"
+    >
+      {/* Arrow */}
+      <div className="absolute -bottom-[7px] left-1/2 -translate-x-1/2
+                      w-3.5 h-3.5 bg-white border-b border-r border-stone-200 rotate-45" />
+      <div className="space-y-0.5">{rows}</div>
+    </div>
+  )
+}
+
 // ─── Word chip ────────────────────────────────────────────────────────────────
 
-function WordChip({ entry }: { entry: WordAlignmentEntry }) {
-  const cls = {
-    MATCH:                 'bg-emerald-100 text-emerald-800 border-emerald-200',
-    LOW_CONFIDENCE_MATCH:  'bg-yellow-100 text-yellow-800 border-yellow-300',
-    SUBSTITUTION:          'bg-amber-100 text-amber-800 border-amber-200',
-    EXTRA:                 'bg-stone-100 text-stone-500 border-stone-200 opacity-60',
-    MISSED:                'bg-red-100 text-red-700 border-red-200',
+function WordChip({ entry, events }: { entry: WordAlignmentEntry; events: TajweedEventEntry[] }) {
+  const [open, setOpen] = useState(false)
+
+  const chipCls = {
+    MATCH:                'bg-emerald-100 text-emerald-800 border-emerald-200',
+    LOW_CONFIDENCE_MATCH: 'bg-yellow-100 text-yellow-800 border-yellow-300',
+    SUBSTITUTION:         'bg-amber-100 text-amber-800 border-amber-200',
+    EXTRA:                'bg-stone-100 text-stone-500 border-stone-200 opacity-60',
+    MISSED:               'bg-red-100 text-red-700 border-red-200',
   }[entry.status] ?? 'bg-stone-100 text-stone-600 border-stone-200'
 
   const icon = {
-    MATCH:                 '',
-    LOW_CONFIDENCE_MATCH:  '?',
-    SUBSTITUTION:          '≠',
-    EXTRA:                 '+',
-    MISSED:                '—',
+    MATCH:                '',
+    LOW_CONFIDENCE_MATCH: '?',
+    SUBSTITUTION:         '≠',
+    EXTRA:                '+',
+    MISSED:               '—',
   }[entry.status] ?? ''
 
-  const word = entry.status === 'MISSED' ? entry.reference_word : entry.asr_word
+  const word       = entry.status === 'MISSED' ? entry.reference_word : entry.asr_word
+  const hasTooltip = events.length > 0 || entry.status !== 'MATCH'
 
-  const title = entry.status === 'SUBSTITUTION'
-    ? `المرجع: ${entry.reference_word}`
-    : entry.status === 'LOW_CONFIDENCE_MATCH'
-    ? `ثقة منخفضة (${Math.round((entry.probability ?? 0) * 100)}%) — قد تكون الكلمة مختلفة`
-    : undefined
+  // Tajweed summary indicator (dot on chip corner)
+  const hasTajweedIssue = events.some(e =>
+    e.tajweed_check_status === 'WARNING' || e.tajweed_check_status === 'ERROR'
+  )
+  const hasTajweedOk = events.some(e => e.tajweed_check_status === 'OK')
 
   return (
-    <span className={`inline-flex items-center gap-0.5 px-2 py-1 rounded-lg border font-quran text-base ${cls}`}
-          title={title}>
-      {icon && <span className="font-ui text-xs font-bold">{icon}</span>}
-      {word}
+    <span
+      className="relative inline-block"
+      onMouseEnter={() => hasTooltip && setOpen(true)}
+      onMouseLeave={() => setOpen(false)}
+      onClick={() => hasTooltip && setOpen(o => !o)}
+    >
+      <span
+        className={`inline-flex items-center gap-0.5 px-2 py-1 rounded-lg border font-quran text-base
+                    transition-shadow ${chipCls}
+                    ${hasTooltip ? 'cursor-pointer hover:shadow-sm hover:border-opacity-70' : ''}`}
+      >
+        {icon && <span className="font-ui text-xs font-bold mr-0.5">{icon}</span>}
+        {word}
+        {/* Small dot indicator for tajweed status */}
+        {(hasTajweedIssue || hasTajweedOk) && (
+          <span
+            className={`w-1.5 h-1.5 rounded-full ml-0.5 flex-shrink-0 self-start mt-1
+                        ${hasTajweedIssue ? 'bg-amber-500' : 'bg-emerald-400'}`}
+          />
+        )}
+      </span>
+
+      {open && hasTooltip && <WordTooltip entry={entry} events={events} />}
     </span>
   )
+}
+
+// ─── Build word→events map (consecutive-grouping dequeue) ───────────────────
+
+function buildEventsMap(
+  alignments: WordAlignmentEntry[],
+  tajweedEvents: TajweedEventEntry[]
+): Map<number, TajweedEventEntry[]> {
+  // Group consecutive same-word events → per-occurrence arrays
+  const groups = new Map<string, TajweedEventEntry[][]>()
+  let prevKey = ''
+  let curGroup: TajweedEventEntry[] = []
+
+  for (const ev of tajweedEvents) {
+    const k = normAr(ev.word_text)
+    if (k !== prevKey) {
+      if (curGroup.length > 0 && prevKey) {
+        if (!groups.has(prevKey)) groups.set(prevKey, [])
+        groups.get(prevKey)!.push(curGroup)
+      }
+      prevKey = k
+      curGroup = [ev]
+    } else {
+      curGroup.push(ev)
+    }
+  }
+  if (curGroup.length > 0 && prevKey) {
+    if (!groups.has(prevKey)) groups.set(prevKey, [])
+    groups.get(prevKey)!.push(curGroup)
+  }
+
+  // Match word_alignment entries to event groups (by occurrence order)
+  const pointers = new Map<string, number>()
+  const result   = new Map<number, TajweedEventEntry[]>()
+
+  for (const entry of alignments) {
+    const k          = normAr(entry.reference_word || entry.asr_word || '')
+    const wordGroups = groups.get(k) || []
+    const ptr        = pointers.get(k) || 0
+    result.set(entry.word_index, ptr < wordGroups.length ? wordGroups[ptr] : [])
+    pointers.set(k, ptr + 1)
+  }
+
+  return result
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
@@ -71,31 +276,30 @@ export default function ReportScreen({ report, surah, ayahStart, ayahEnd, onUplo
   const badge = tajweedBadge(report.tajweed_verdict)
   const madd  = maddBadge(report.madd_verdict)
 
-  const alignments = report.word_alignment ?? []
-  const matchCount    = alignments.filter(w => w.status === 'MATCH').length
-  const lowConfCount  = alignments.filter(w => w.status === 'LOW_CONFIDENCE_MATCH').length
-  const totalRef      = alignments.filter(w => w.status !== 'EXTRA').length
-  const accuracy      = totalRef > 0 ? Math.round((matchCount / totalRef) * 100) : null
+  const alignments   = report.word_alignment ?? []
+  const matchCount   = alignments.filter(w => w.status === 'MATCH').length
+  const lowConfCount = alignments.filter(w => w.status === 'LOW_CONFIDENCE_MATCH').length
+  const totalRef     = alignments.filter(w => w.status !== 'EXTRA').length
+  const accuracy     = totalRef > 0 ? Math.round((matchCount / totalRef) * 100) : null
+
+  const eventsMap = useMemo(
+    () => buildEventsMap(alignments, report.tajweed_events ?? []),
+    [alignments, report.tajweed_events]
+  )
 
   const surahName = SURAH_NAMES[surah] ?? `سورة ${surah}`
-  const range = ayahStart === ayahEnd ? `الآية ${ayahStart}` : `الآيات ${ayahStart}–${ayahEnd}`
+  const range     = ayahStart === ayahEnd ? `الآية ${ayahStart}` : `الآيات ${ayahStart}–${ayahEnd}`
 
   return (
     <div className="min-h-screen bg-parchment-50 flex flex-col" dir="rtl">
 
-      {/* Header bar */}
+      {/* Header */}
       <div className="sticky top-0 z-10 bg-white border-b border-stone-200 px-4 py-3 flex items-center justify-between">
-        <button
-          onClick={onHome}
-          className="font-ui text-sm text-stone-500 hover:text-stone-700 transition-colors"
-        >
+        <button onClick={onHome} className="font-ui text-sm text-stone-500 hover:text-stone-700 transition-colors">
           ← الرئيسية
         </button>
         <span className="font-ui text-sm font-semibold text-stone-700">تقرير التلاوة</span>
-        <button
-          onClick={onUploadAnother}
-          className="font-ui text-sm text-emerald-700 hover:text-emerald-600 transition-colors font-medium"
-        >
+        <button onClick={onUploadAnother} className="font-ui text-sm text-emerald-700 hover:text-emerald-600 transition-colors font-medium">
           ملف آخر
         </button>
       </div>
@@ -110,13 +314,10 @@ export default function ReportScreen({ report, surah, ayahStart, ayahEnd, onUplo
               <span className={`px-3 py-1 rounded-full border font-ui text-sm font-semibold ${badge.cls}`}>
                 {badge.label}
               </span>
-              {madd && (
-                <span className={`font-ui text-sm font-medium ${madd.cls}`}>{madd.label}</span>
-              )}
+              {madd && <span className={`font-ui text-sm font-medium ${madd.cls}`}>{madd.label}</span>}
             </div>
           </div>
 
-          {/* Key stats row */}
           <div className="flex gap-3 pt-1">
             {accuracy !== null && (
               <Stat label="دقة الكلمات" value={`${accuracy}%`}
@@ -140,15 +341,21 @@ export default function ReportScreen({ report, surah, ayahStart, ayahEnd, onUplo
         {/* Word alignment grid */}
         {alignments.length > 0 && (
           <div className="bg-white rounded-2xl shadow-sm p-4">
-            <p className="font-ui text-sm font-semibold text-stone-600 mb-3">
+            <p className="font-ui text-sm font-semibold text-stone-600 mb-1">
               كلمة بكلمة
               <span className="font-normal text-stone-400 mr-2 text-xs">
                 ({matchCount}/{totalRef} مطابق{lowConfCount > 0 ? ` · ${lowConfCount} ثقة منخفضة` : ''})
               </span>
             </p>
-            <div className="flex flex-wrap gap-1.5">
+            <p className="font-ui text-xs text-stone-400 mb-3">مرّر على الكلمة لرؤية أحكام التجويد</p>
+
+            <div className="flex flex-wrap gap-1.5 relative">
               {alignments.map((entry) => (
-                <WordChip key={entry.word_index} entry={entry} />
+                <WordChip
+                  key={entry.word_index}
+                  entry={entry}
+                  events={eventsMap.get(entry.word_index) ?? []}
+                />
               ))}
             </div>
 
@@ -156,28 +363,37 @@ export default function ReportScreen({ report, surah, ayahStart, ayahEnd, onUplo
             <div className="flex flex-wrap gap-3 mt-3 pt-3 border-t border-stone-100">
               {[
                 { cls: 'bg-emerald-100 text-emerald-800', label: 'مطابق' },
-                { cls: 'bg-yellow-100 text-yellow-800', label: 'ثقة منخفضة' },
-                { cls: 'bg-amber-100 text-amber-800', label: 'مختلف' },
-                { cls: 'bg-red-100 text-red-700', label: 'مفقود' },
+                { cls: 'bg-yellow-100 text-yellow-800',   label: 'ثقة منخفضة' },
+                { cls: 'bg-amber-100 text-amber-800',     label: 'مختلف' },
+                { cls: 'bg-red-100 text-red-700',         label: 'مفقود' },
                 { cls: 'bg-stone-100 text-stone-500 opacity-60', label: 'إضافي' },
-              ].map((item) => (
+              ].map(item => (
                 <span key={item.label} className="flex items-center gap-1">
                   <span className={`inline-block w-3 h-3 rounded ${item.cls}`} />
                   <span className="font-ui text-xs text-stone-500">{item.label}</span>
                 </span>
               ))}
+              {/* Dot legend */}
+              <span className="flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-amber-500 inline-block" />
+                <span className="font-ui text-xs text-stone-500">تحذير تجويدي</span>
+              </span>
+              <span className="flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block" />
+                <span className="font-ui text-xs text-stone-500">تجويد صحيح</span>
+              </span>
             </div>
           </div>
         )}
 
-        {/* Substitutions + Low-confidence detail */}
+        {/* Words needing review */}
         {alignments.some(w => w.status === 'SUBSTITUTION' || w.status === 'LOW_CONFIDENCE_MATCH') && (
           <div className="bg-white rounded-2xl shadow-sm p-4">
             <p className="font-ui text-sm font-semibold text-stone-600 mb-2">كلمات تحتاج مراجعة</p>
             <div className="space-y-2">
               {alignments
                 .filter(w => w.status === 'SUBSTITUTION' || w.status === 'LOW_CONFIDENCE_MATCH')
-                .map((entry) => (
+                .map(entry => (
                   <div key={entry.word_index} className="flex items-center gap-2 text-sm">
                     <span className={`font-quran ${entry.status === 'SUBSTITUTION' ? 'text-red-700' : 'text-yellow-700'}`}>
                       {entry.asr_word}
@@ -190,18 +406,17 @@ export default function ReportScreen({ report, surah, ayahStart, ayahEnd, onUplo
                         : `${entry.duration_ms}ms`}
                     </span>
                   </div>
-                ))
-              }
+                ))}
             </div>
           </div>
         )}
 
-        {/* Waqf boundary — الوقوف عند نهايات الآيات */}
+        {/* Waqf boundary */}
         {(report.ayah_boundary_waqf ?? []).length > 0 && (
           <div className="bg-white rounded-2xl shadow-sm p-4">
             <p className="font-ui text-sm font-semibold text-stone-600 mb-3">الوقوف</p>
             <div className="flex flex-wrap gap-2">
-              {(report.ayah_boundary_waqf as AyahBoundaryWaqfEntry[]).map((ev) => (
+              {(report.ayah_boundary_waqf as AyahBoundaryWaqfEntry[]).map(ev => (
                 <span
                   key={ev.ayah_code}
                   className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full border font-ui text-xs font-medium ${
@@ -218,7 +433,7 @@ export default function ReportScreen({ report, surah, ayahStart, ayahEnd, onUplo
           </div>
         )}
 
-        {/* Tajweed events summary */}
+        {/* Tajweed summary */}
         {(report.tajweed_event_count ?? 0) > 0 && (
           <div className="bg-white rounded-2xl shadow-sm p-4">
             <p className="font-ui text-sm font-semibold text-stone-600 mb-3">
@@ -247,30 +462,10 @@ export default function ReportScreen({ report, surah, ayahStart, ayahEnd, onUplo
                 </div>
               )}
             </div>
-            {/* Waqf/Wasl breakdown per event */}
-            {(report.tajweed_events ?? []).some((e: TajweedEventEntry) => e.waqf_variant) && (
-              <div className="mt-3 pt-3 border-t border-stone-100 space-y-1.5">
-                {(report.tajweed_events as TajweedEventEntry[])
-                  .filter(e => e.waqf_variant && e.tajweed_check_status === 'OK')
-                  .slice(0, 6)
-                  .map((ev, i) => (
-                    <div key={i} className="flex items-center gap-2 text-xs font-ui text-stone-500">
-                      <span className="font-quran text-sm text-stone-700">{ev.word_text}</span>
-                      <span>←</span>
-                      <span className={ev.is_waqf ? 'text-emerald-600' : 'text-stone-400'}>
-                        {ev.is_waqf ? (ev.waqf_variant === 'MADD_AARID_LISUKOON' ? 'مد عارض' : ev.waqf_variant) : 'مد طبيعي'}
-                      </span>
-                      {ev.word_dur_ms != null && (
-                        <span className="text-stone-300">{Math.round(ev.word_dur_ms)}ms</span>
-                      )}
-                    </div>
-                  ))}
-              </div>
-            )}
           </div>
         )}
 
-        {/* ASR text — للتحقق */}
+        {/* ASR text */}
         {report.asr_text && (
           <details className="bg-white rounded-2xl shadow-sm p-4">
             <summary className="font-ui text-sm font-semibold text-stone-600 cursor-pointer select-none">
@@ -282,7 +477,7 @@ export default function ReportScreen({ report, surah, ayahStart, ayahEnd, onUplo
           </details>
         )}
 
-        {/* Pipeline status note */}
+        {/* Pipeline status */}
         {report.pipeline_status !== 'EXACT' && (
           <div className="bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
             <p className="font-ui text-xs text-amber-700">
@@ -309,6 +504,7 @@ export default function ReportScreen({ report, surah, ayahStart, ayahEnd, onUplo
             العودة للرئيسية
           </button>
         </div>
+
       </div>
     </div>
   )
