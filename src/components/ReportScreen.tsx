@@ -33,24 +33,32 @@ function maddBadge(verdict: string | null) {
 
 function WordChip({ entry }: { entry: WordAlignmentEntry }) {
   const cls = {
-    MATCH:        'bg-emerald-100 text-emerald-800 border-emerald-200',
-    SUBSTITUTION: 'bg-amber-100 text-amber-800 border-amber-200',
-    EXTRA:        'bg-stone-100 text-stone-500 border-stone-200 opacity-60',
-    MISSED:       'bg-red-100 text-red-700 border-red-200',
+    MATCH:                 'bg-emerald-100 text-emerald-800 border-emerald-200',
+    LOW_CONFIDENCE_MATCH:  'bg-yellow-100 text-yellow-800 border-yellow-300',
+    SUBSTITUTION:          'bg-amber-100 text-amber-800 border-amber-200',
+    EXTRA:                 'bg-stone-100 text-stone-500 border-stone-200 opacity-60',
+    MISSED:                'bg-red-100 text-red-700 border-red-200',
   }[entry.status] ?? 'bg-stone-100 text-stone-600 border-stone-200'
 
   const icon = {
-    MATCH:        '',
-    SUBSTITUTION: '≠',
-    EXTRA:        '+',
-    MISSED:       '—',
+    MATCH:                 '',
+    LOW_CONFIDENCE_MATCH:  '?',
+    SUBSTITUTION:          '≠',
+    EXTRA:                 '+',
+    MISSED:                '—',
   }[entry.status] ?? ''
 
   const word = entry.status === 'MISSED' ? entry.reference_word : entry.asr_word
 
+  const title = entry.status === 'SUBSTITUTION'
+    ? `المرجع: ${entry.reference_word}`
+    : entry.status === 'LOW_CONFIDENCE_MATCH'
+    ? `ثقة منخفضة (${Math.round((entry.probability ?? 0) * 100)}%) — قد تكون الكلمة مختلفة`
+    : undefined
+
   return (
     <span className={`inline-flex items-center gap-0.5 px-2 py-1 rounded-lg border font-quran text-base ${cls}`}
-          title={entry.status === 'SUBSTITUTION' ? `المرجع: ${entry.reference_word}` : undefined}>
+          title={title}>
       {icon && <span className="font-ui text-xs font-bold">{icon}</span>}
       {word}
     </span>
@@ -64,9 +72,10 @@ export default function ReportScreen({ report, surah, ayahStart, ayahEnd, onUplo
   const madd  = maddBadge(report.madd_verdict)
 
   const alignments = report.word_alignment ?? []
-  const matchCount = alignments.filter(w => w.status === 'MATCH').length
-  const totalRef   = alignments.filter(w => w.status !== 'EXTRA').length
-  const accuracy   = totalRef > 0 ? Math.round((matchCount / totalRef) * 100) : null
+  const matchCount    = alignments.filter(w => w.status === 'MATCH').length
+  const lowConfCount  = alignments.filter(w => w.status === 'LOW_CONFIDENCE_MATCH').length
+  const totalRef      = alignments.filter(w => w.status !== 'EXTRA').length
+  const accuracy      = totalRef > 0 ? Math.round((matchCount / totalRef) * 100) : null
 
   const surahName = SURAH_NAMES[surah] ?? `سورة ${surah}`
   const range = ayahStart === ayahEnd ? `الآية ${ayahStart}` : `الآيات ${ayahStart}–${ayahEnd}`
@@ -134,7 +143,7 @@ export default function ReportScreen({ report, surah, ayahStart, ayahEnd, onUplo
             <p className="font-ui text-sm font-semibold text-stone-600 mb-3">
               كلمة بكلمة
               <span className="font-normal text-stone-400 mr-2 text-xs">
-                ({matchCount}/{totalRef} مطابق)
+                ({matchCount}/{totalRef} مطابق{lowConfCount > 0 ? ` · ${lowConfCount} ثقة منخفضة` : ''})
               </span>
             </p>
             <div className="flex flex-wrap gap-1.5">
@@ -147,6 +156,7 @@ export default function ReportScreen({ report, surah, ayahStart, ayahEnd, onUplo
             <div className="flex flex-wrap gap-3 mt-3 pt-3 border-t border-stone-100">
               {[
                 { cls: 'bg-emerald-100 text-emerald-800', label: 'مطابق' },
+                { cls: 'bg-yellow-100 text-yellow-800', label: 'ثقة منخفضة' },
                 { cls: 'bg-amber-100 text-amber-800', label: 'مختلف' },
                 { cls: 'bg-red-100 text-red-700', label: 'مفقود' },
                 { cls: 'bg-stone-100 text-stone-500 opacity-60', label: 'إضافي' },
@@ -160,20 +170,24 @@ export default function ReportScreen({ report, surah, ayahStart, ayahEnd, onUplo
           </div>
         )}
 
-        {/* Substitutions detail */}
-        {alignments.some(w => w.status === 'SUBSTITUTION') && (
+        {/* Substitutions + Low-confidence detail */}
+        {alignments.some(w => w.status === 'SUBSTITUTION' || w.status === 'LOW_CONFIDENCE_MATCH') && (
           <div className="bg-white rounded-2xl shadow-sm p-4">
-            <p className="font-ui text-sm font-semibold text-stone-600 mb-2">الاختلافات</p>
+            <p className="font-ui text-sm font-semibold text-stone-600 mb-2">كلمات تحتاج مراجعة</p>
             <div className="space-y-2">
               {alignments
-                .filter(w => w.status === 'SUBSTITUTION')
+                .filter(w => w.status === 'SUBSTITUTION' || w.status === 'LOW_CONFIDENCE_MATCH')
                 .map((entry) => (
                   <div key={entry.word_index} className="flex items-center gap-2 text-sm">
-                    <span className="font-quran text-red-700">{entry.asr_word}</span>
+                    <span className={`font-quran ${entry.status === 'SUBSTITUTION' ? 'text-red-700' : 'text-yellow-700'}`}>
+                      {entry.asr_word}
+                    </span>
                     <span className="font-ui text-stone-400 text-xs">←</span>
                     <span className="font-quran text-emerald-700">{entry.reference_word}</span>
                     <span className="font-ui text-xs text-stone-400 mr-auto">
-                      {entry.duration_ms}ms
+                      {entry.status === 'LOW_CONFIDENCE_MATCH'
+                        ? `ثقة ${Math.round((entry.probability ?? 0) * 100)}%`
+                        : `${entry.duration_ms}ms`}
                     </span>
                   </div>
                 ))
