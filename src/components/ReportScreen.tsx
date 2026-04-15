@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, type ReactNode } from 'react'
 import type { EvaluateFileResponse, WordAlignmentEntry, AyahBoundaryWaqfEntry, TajweedEventEntry } from '../types/hafiz'
 import { SURAH_NAMES } from '../types/hafiz'
 
@@ -55,8 +55,8 @@ const RULE_AR: Record<string, string> = {
 
 function normAr(s: string | null | undefined): string {
   return (s || '')
-    .replace(/[\u064B-\u0652\u0670\u0640]/g, '')
-    .replace(/[أإآ]/g, 'ا')
+    .replace(/[\u064B-\u0652\u0670\u0640]/g, '') // harakat + tatweel + superscript alef
+    .replace(/[أإآٱ]/g, 'ا')                     // أضف ٱ (U+0671 ألف الوصل) — يظهر في نصوص CPAE
     .replace(/ة/g, 'ه')
     .trim()
 }
@@ -64,6 +64,7 @@ function normAr(s: string | null | undefined): string {
 // ─── Parse tajweed reason ─────────────────────────────────────────────────────
 
 interface ReasonInfo { kind: 'ok' | 'low' | 'high' | 'error' | 'pending'; label: string }
+
 
 function parseReason(ev: TajweedEventEntry): ReasonInfo {
   const s = ev.tajweed_check_status
@@ -80,7 +81,8 @@ function parseReason(ev: TajweedEventEntry): ReasonInfo {
     if (long)  return { kind: 'high', label: `أعلى من المطلوب (${long[1]}ms)` }
     if (r.includes('قصير'))     return { kind: 'low',  label: 'مد قصير' }
     if (r.includes('excessive')) return { kind: 'high', label: 'مد مبالغ فيه' }
-    return { kind: s === 'ERROR' ? 'error' : 'low', label: r.slice(0, 50) }
+    // لا نُظهر نص backend الخام — نستخدم وصفاً عاماً
+    return { kind: s === 'ERROR' ? 'error' : 'low', label: s === 'ERROR' ? 'خطأ في التجويد' : 'تحذير تجويدي' }
   }
   if (s === 'PENDING_ACOUSTIC') return { kind: 'pending', label: 'تحتاج فحص صوتي' }
   return { kind: 'pending', label: s }
@@ -90,7 +92,7 @@ function parseReason(ev: TajweedEventEntry): ReasonInfo {
 
 function WordTooltip({ entry, events }: { entry: WordAlignmentEntry; events: TajweedEventEntry[] }) {
   const seen = new Set<string>()
-  const rows: React.ReactNode[] = []
+  const rows: ReactNode[] = []
 
   // Alignment status row (if not plain MATCH)
   if (entry.status === 'SUBSTITUTION') {
@@ -154,10 +156,17 @@ function WordTooltip({ entry, events }: { entry: WordAlignmentEntry; events: Taj
 
   return (
     <div
-      className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50
+      className="absolute bottom-full mb-2 z-50
                  bg-white border border-stone-200 rounded-xl shadow-xl
-                 px-3 py-2.5 min-w-[13rem] max-w-xs text-xs font-ui text-right
+                 px-3 py-2.5 w-56 text-xs font-ui text-right
                  pointer-events-none select-none"
+      style={{
+        // مركز أفقياً على الكلمة مع منع الخروج عن الشاشة
+        right: 'auto',
+        left: '50%',
+        transform: 'translateX(-50%)',
+        maxWidth: 'min(14rem, calc(100vw - 1.5rem))',
+      }}
       dir="rtl"
     >
       {/* Arrow */}
@@ -203,7 +212,8 @@ function WordChip({ entry, events }: { entry: WordAlignmentEntry; events: Tajwee
       className="relative inline-block"
       onMouseEnter={() => hasTooltip && setOpen(true)}
       onMouseLeave={() => setOpen(false)}
-      onClick={() => hasTooltip && setOpen(o => !o)}
+      // على mobile: النقر يفتح (لا يُغلق إذا كان مفتوحاً بالفعل بـ hover)
+      onClick={() => hasTooltip && setOpen(true)}
     >
       <span
         className={`inline-flex items-center gap-0.5 px-2 py-1 rounded-lg border font-quran text-base
@@ -239,6 +249,7 @@ function buildEventsMap(
 
   for (const ev of tajweedEvents) {
     const k = normAr(ev.word_text)
+    if (!k) continue  // تخطَ الأحداث بدون نص (بيانات ناقصة من الـ backend)
     if (k !== prevKey) {
       if (curGroup.length > 0 && prevKey) {
         if (!groups.has(prevKey)) groups.set(prevKey, [])
@@ -282,9 +293,10 @@ export default function ReportScreen({ report, surah, ayahStart, ayahEnd, onUplo
   const totalRef     = alignments.filter(w => w.status !== 'EXTRA').length
   const accuracy     = totalRef > 0 ? Math.round((matchCount / totalRef) * 100) : null
 
+  // الاعتماد على report.word_alignment مباشرةً (لا على alignments التي قد تُنشئ [] جديدة كل render)
   const eventsMap = useMemo(
-    () => buildEventsMap(alignments, report.tajweed_events ?? []),
-    [alignments, report.tajweed_events]
+    () => buildEventsMap(report.word_alignment ?? [], report.tajweed_events ?? []),
+    [report.word_alignment, report.tajweed_events]
   )
 
   const surahName = SURAH_NAMES[surah] ?? `سورة ${surah}`
