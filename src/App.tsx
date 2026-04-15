@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import type {
-  RecitationMode, AppPhase, AyahData, EvaluationResponse, SessionStats, HeardEntry
+  RecitationMode, AppPhase, AyahData, EvaluationResponse, SessionStats, HeardEntry,
+  EvaluateFileResponse,
 } from './types/hafiz'
 import { api } from './services/api'
 import { useLiveRecitation } from './hooks/useLiveRecitation'
@@ -12,6 +13,8 @@ import AyahDisplay from './components/AyahDisplay'
 import MicButton from './components/MicButton'
 import SessionSummary from './components/SessionSummary'
 import MushafPage from './components/MushafPage'
+import UploadScreen from './components/UploadScreen'
+import ReportScreen from './components/ReportScreen'
 
 const API_BASE = import.meta.env.VITE_API_URL ?? ''
 const API_KEY  = import.meta.env.VITE_API_KEY  ?? ''
@@ -32,6 +35,13 @@ export default function App() {
   const [evalError, setEvalError]   = useState<string | null>(null)
   const [currentWordIndex, setCurrentWordIndex] = useState(-1)
   const [mushafPage, setMushafPage] = useState(1)
+  // ─── evaluate-file state ──────────────────────────────────────────────────
+  const [fileReport, setFileReport]       = useState<EvaluateFileResponse | null>(null)
+  const [fileUploadError, setFileUploadError] = useState<string | null>(null)
+  const [fileLoading, setFileLoading]     = useState(false)
+  const [fileSurah, setFileSurah]         = useState(1)
+  const [fileAyahStart, setFileAyahStart] = useState(1)
+  const [fileAyahEnd, setFileAyahEnd]     = useState(1)
   const [wordErrors, setWordErrors] = useState<Array<{expected: string, heard: string, error_type: string | null}>>([])
   const [wordColorMap, setWordColorMap] = useState<Record<number, 'correct' | 'error' | 'unheard'>>({})
   const [waitingForEval, setWaitingForEval] = useState(false)
@@ -207,6 +217,32 @@ export default function App() {
     setWaitingForEval(false)
   }, [liveStop])
 
+  // ─── evaluate-file handlers ──────────────────────────────────────────────
+  const handleUploadFile = useCallback(() => {
+    setFileUploadError(null)
+    setFileReport(null)
+    setPhase('upload')
+  }, [])
+
+  const handleEvaluateFile = useCallback(async (
+    file: File, surah: number, start: number, end: number,
+  ) => {
+    setFileLoading(true)
+    setFileUploadError(null)
+    setFileSurah(surah)
+    setFileAyahStart(start)
+    setFileAyahEnd(end)
+    try {
+      const report = await api.evaluateFile(file, surah, start, end)
+      setFileReport(report)
+      setPhase('report')
+    } catch (e) {
+      setFileUploadError(e instanceof Error ? e.message : 'حدث خطأ أثناء التقييم')
+    } finally {
+      setFileLoading(false)
+    }
+  }, [])
+
   // ─── Mushaf browse handlers ───────────────────────────────────────────────
   const handleBrowseMushaf = useCallback(async () => {
     setMushafPage(1)
@@ -225,8 +261,37 @@ export default function App() {
       <StartScreen
         onStart={handleStart}
         onBrowseMushaf={handleBrowseMushaf}
+        onUploadFile={handleUploadFile}
         loading={startLoading}
         error={startError}
+      />
+    )
+  }
+
+  if (phase === 'upload') {
+    return (
+      <UploadScreen
+        onEvaluate={handleEvaluateFile}
+        onBack={() => setPhase('start')}
+        loading={fileLoading}
+        error={fileUploadError}
+      />
+    )
+  }
+
+  if (phase === 'report' && fileReport) {
+    return (
+      <ReportScreen
+        report={fileReport}
+        surah={fileSurah}
+        ayahStart={fileAyahStart}
+        ayahEnd={fileAyahEnd}
+        onUploadAnother={() => {
+          setFileReport(null)
+          setFileUploadError(null)
+          setPhase('upload')
+        }}
+        onHome={() => setPhase('start')}
       />
     )
   }

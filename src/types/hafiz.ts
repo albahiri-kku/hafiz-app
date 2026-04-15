@@ -74,7 +74,45 @@ export interface HeardEntry {
 }
 
 export type RecitationMode = 'tilawa' | 'hifz'
-export type AppPhase = 'start' | 'reciting' | 'summary' | 'mushaf_browse'
+export type AppPhase = 'start' | 'reciting' | 'summary' | 'mushaf_browse' | 'upload' | 'evaluating' | 'report'
+
+export interface WordAlignmentEntry {
+  word_index: number
+  asr_word: string
+  reference_word: string
+  start_sec: number
+  end_sec: number
+  duration_ms: number
+  probability: number
+  match_score: number
+  correct: boolean
+  status: 'MATCH' | 'SUBSTITUTION' | 'EXTRA' | 'MISSED'
+}
+
+export interface EvaluateFileResponse {
+  pipeline_status: string
+  matched_start_ayah_code: string | null
+  matched_end_ayah_code: string | null
+  final_label: string | null
+  action: string | null
+  confidence: number | null
+  tajweed_verdict: string | null
+  madd_verdict: string | null
+  waqf_verdict: string | null
+  verdict_confidence: number | null
+  tajweed_event_count: number | null
+  tajweed_error_count: number | null
+  tajweed_ok_count: number | null
+  asr_text: string | null
+  word_timestamps: WordTimestamp[] | null
+  word_errors: WordError[] | null
+  word_alignment: WordAlignmentEntry[] | null
+  total_runtime_sec: number
+  cpae_runtime_sec: number | null
+  cpae_quality: string | null
+  cpae_confidence: number | null
+  profiling: Record<string, number> | null
+}
 export type RecordingState = 'idle' | 'recording' | 'processing'
 
 export interface AyahResult {

@@ -1,4 +1,4 @@
-import type { AyahData, EvaluationResponse, SessionStartResponse } from '../types/hafiz'
+import type { AyahData, EvaluationResponse, SessionStartResponse, EvaluateFileResponse } from '../types/hafiz'
 import type { MushafPageData, TrackingState } from '../components/MushafPage/types'
 
 // In dev, Vite proxies /api → localhost:8000
@@ -48,6 +48,23 @@ export const api = {
     form.append('session_id', sessionId)
     form.append('audio', audioBlob, 'recitation.webm')
     return request<EvaluationResponse>('/api/v1/recitation/evaluate', {
+      method: 'POST',
+      body: form,
+    })
+  },
+
+  evaluateFile: async (
+    file: File,
+    surahNumber: number,
+    ayahStart: number,
+    ayahEnd: number,
+  ): Promise<EvaluateFileResponse> => {
+    const form = new FormData()
+    form.append('audio', file, file.name)
+    form.append('surah_number', String(surahNumber))
+    form.append('ayah_start', String(ayahStart))
+    form.append('ayah_end', String(ayahEnd))
+    return request<EvaluateFileResponse>('/api/v1/recitation/evaluate-file', {
       method: 'POST',
       body: form,
     })
