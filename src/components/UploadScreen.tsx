@@ -54,6 +54,7 @@ export default function UploadScreen({ onEvaluate, onBack, loading, error }: Pro
     const ext = f.name.split('.').pop()?.toLowerCase() ?? ''
     if (!['wav', 'mp3', 'm4a', 'ogg', 'webm'].includes(ext)) return
     if (f.size > 25 * 1024 * 1024) return
+    if (f.size < 50 * 1024) return   // أصغر من 50KB — على الأرجح ملف تالف أو صامت
     setFile(f)
   }, [])
 
@@ -69,8 +70,11 @@ export default function UploadScreen({ onEvaluate, onBack, loading, error }: Pro
     if (f) acceptFile(f)
   }
 
-  const wordCount = Array.from({ length: ayahEnd - ayahStart + 1 }, (_, i) => ayahStart + i).length
-  const canSubmit = file !== null && !loading
+  const ayahCount = ayahEnd - ayahStart + 1
+  // تقدير عدد الكلمات: متوسط 10 كلمات/آية — تقريبي (الحد الدقيق يُحكَم من الـ backend)
+  const estimatedWords = ayahCount * 10
+  const wordLimitWarning = estimatedWords > 150
+  const canSubmit = file !== null && !loading && !wordLimitWarning
 
   return (
     <div className="min-h-screen bg-parchment-50 flex flex-col items-center justify-center p-6" dir="rtl">
@@ -162,8 +166,11 @@ export default function UploadScreen({ onEvaluate, onBack, loading, error }: Pro
             </div>
           </div>
 
-          <p className="font-ui text-xs text-stone-400">
-            {wordCount} آية · الحد الأقصى 150 كلمة
+          <p className={`font-ui text-xs ${wordLimitWarning ? 'text-red-500 font-medium' : 'text-stone-400'}`}>
+            {ayahCount} {ayahCount === 1 ? 'آية' : 'آيات'} · ~{estimatedWords} كلمة
+            {wordLimitWarning
+              ? ' — يتجاوز الحد (150 كلمة)، قلّل النطاق'
+              : ' · الحد الأقصى 150 كلمة'}
           </p>
         </div>
 

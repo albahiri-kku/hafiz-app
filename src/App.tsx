@@ -232,12 +232,15 @@ export default function App() {
     setFileSurah(surah)
     setFileAyahStart(start)
     setFileAyahEnd(end)
+    setPhase('evaluating')      // ← phase انتقالية أثناء الانتظار
     try {
       const report = await api.evaluateFile(file, surah, start, end)
       setFileReport(report)
       setPhase('report')
     } catch (e) {
+      console.error('[hafiz] evaluateFile error:', e)
       setFileUploadError(e instanceof Error ? e.message : 'حدث خطأ أثناء التقييم')
+      setPhase('upload')        // ← ارجع للـ upload ليظهر الخطأ
     } finally {
       setFileLoading(false)
     }
@@ -279,7 +282,30 @@ export default function App() {
     )
   }
 
-  if (phase === 'report' && fileReport) {
+  if (phase === 'evaluating') {
+    return (
+      <div className="min-h-screen bg-parchment-50 flex flex-col items-center justify-center" dir="rtl">
+        <div className="text-center space-y-4">
+          <div className="w-12 h-12 rounded-full border-4 border-emerald-200 border-t-emerald-600 animate-spin mx-auto" />
+          <p className="font-ui text-stone-600 font-medium">جارٍ تقييم التلاوة…</p>
+          <p className="font-ui text-xs text-stone-400">قد يستغرق حتى 30 ثانية</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (phase === 'report') {
+    if (!fileReport) {
+      // حالة غير متوقعة — أعِد التوجيه للبداية
+      return (
+        <UploadScreen
+          onEvaluate={handleEvaluateFile}
+          onBack={() => setPhase('start')}
+          loading={false}
+          error="حدث خطأ في عرض التقرير — يرجى المحاولة مجدداً"
+        />
+      )
+    }
     return (
       <ReportScreen
         report={fileReport}

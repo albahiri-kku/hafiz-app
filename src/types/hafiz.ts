@@ -89,6 +89,36 @@ export interface WordAlignmentEntry {
   status: 'MATCH' | 'SUBSTITUTION' | 'EXTRA' | 'MISSED'
 }
 
+// حدث تجويدي واحد من tajweed_events
+export interface TajweedEventEntry {
+  event_type: string          // MADD_TABII / MADD_LAZIM / ...
+  family: string              // MADD / NOON_SAKINAH / ...
+  word_text: string
+  word_index: number
+  letter_index: number
+  trigger_text: string
+  tajweed_check_status: string  // OK / PENDING_ACOUSTIC / ERROR
+  tajweed_check_reason: string
+  expected_duration_ms: [number, number] | null
+  // حالة الوصل/الوقف (حقول جديدة)
+  waqf_variant: string | null     // MADD_AARID_LISUKOON عند الوقف
+  waqf_duration_ms: [number, number] | null
+  applied_rule: string | null     // الحكم المُطبَّق فعلياً
+  is_waqf: boolean | null
+  gap_after_ms: number | null
+  word_dur_ms: number | null
+}
+
+// كشف الوقف عند نهاية كل آية
+export interface AyahBoundaryWaqfEntry {
+  ayah_code: string
+  word_index: number
+  word_text: string
+  is_waqf: boolean
+  indicator_ms: number
+  dur_ms: number
+}
+
 export interface EvaluateFileResponse {
   pipeline_status: string
   matched_start_ayah_code: string | null
@@ -101,17 +131,21 @@ export interface EvaluateFileResponse {
   waqf_verdict: string | null
   verdict_confidence: number | null
   tajweed_event_count: number | null
+  tajweed_checked_count: number | null
   tajweed_error_count: number | null
   tajweed_ok_count: number | null
+  tajweed_warning_count: number | null
   asr_text: string | null
   word_timestamps: WordTimestamp[] | null
   word_errors: WordError[] | null
   word_alignment: WordAlignmentEntry[] | null
-  total_runtime_sec: number
+  total_runtime_sec: number | null   // null عند فشل CPAE
   cpae_runtime_sec: number | null
   cpae_quality: string | null
   cpae_confidence: number | null
   profiling: Record<string, number> | null
+  tajweed_events: TajweedEventEntry[] | null
+  ayah_boundary_waqf: AyahBoundaryWaqfEntry[] | null
 }
 export type RecordingState = 'idle' | 'recording' | 'processing'
 

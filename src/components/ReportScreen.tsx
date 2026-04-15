@@ -1,4 +1,4 @@
-import type { EvaluateFileResponse, WordAlignmentEntry } from '../types/hafiz'
+import type { EvaluateFileResponse, WordAlignmentEntry, AyahBoundaryWaqfEntry, TajweedEventEntry } from '../types/hafiz'
 import { SURAH_NAMES } from '../types/hafiz'
 
 interface Props {
@@ -113,11 +113,18 @@ export default function ReportScreen({ report, surah, ayahStart, ayahEnd, onUplo
               <Stat label="دقة الكلمات" value={`${accuracy}%`}
                 color={accuracy >= 80 ? 'text-emerald-600' : accuracy >= 60 ? 'text-amber-600' : 'text-red-500'} />
             )}
-            {report.cpae_confidence !== null && (
-              <Stat label="ثقة المحاذاة" value={`${Math.round(report.cpae_confidence * 100)}%`}
-                color={report.cpae_confidence >= 0.7 ? 'text-emerald-600' : 'text-amber-600'} />
+            {report.cpae_confidence != null && (
+              <Stat
+                label={`محاذاة${report.cpae_quality ? ` · ${report.cpae_quality}` : ''}`}
+                value={`${Math.round(report.cpae_confidence * 100)}%`}
+                color={report.cpae_confidence >= 0.7 ? 'text-emerald-600' : report.cpae_confidence >= 0.5 ? 'text-amber-600' : 'text-red-500'}
+              />
             )}
-            <Stat label="وقت التقييم" value={`${report.total_runtime_sec?.toFixed(1)}s`} color="text-stone-500" />
+            <Stat
+              label="وقت التقييم"
+              value={report.total_runtime_sec != null ? `${report.total_runtime_sec.toFixed(1)}s` : '—'}
+              color="text-stone-500"
+            />
           </div>
         </div>
 
@@ -173,6 +180,92 @@ export default function ReportScreen({ report, surah, ayahStart, ayahEnd, onUplo
               }
             </div>
           </div>
+        )}
+
+        {/* Waqf boundary — الوقوف عند نهايات الآيات */}
+        {(report.ayah_boundary_waqf ?? []).length > 0 && (
+          <div className="bg-white rounded-2xl shadow-sm p-4">
+            <p className="font-ui text-sm font-semibold text-stone-600 mb-3">الوقوف</p>
+            <div className="flex flex-wrap gap-2">
+              {(report.ayah_boundary_waqf as AyahBoundaryWaqfEntry[]).map((ev) => (
+                <span
+                  key={ev.ayah_code}
+                  className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full border font-ui text-xs font-medium ${
+                    ev.is_waqf
+                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                      : 'bg-stone-50 text-stone-500 border-stone-200'
+                  }`}
+                >
+                  <span className="font-quran text-sm">{ev.word_text || ev.ayah_code}</span>
+                  <span className="opacity-60">{ev.is_waqf ? '— وقف' : '— وصل'}</span>
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Tajweed events summary */}
+        {(report.tajweed_event_count ?? 0) > 0 && (
+          <div className="bg-white rounded-2xl shadow-sm p-4">
+            <p className="font-ui text-sm font-semibold text-stone-600 mb-3">
+              أحداث التجويد
+              <span className="font-normal text-stone-400 mr-2 text-xs">
+                ({report.tajweed_checked_count ?? 0} مفحوص من {report.tajweed_event_count})
+              </span>
+            </p>
+            <div className="flex gap-4">
+              {(report.tajweed_ok_count ?? 0) > 0 && (
+                <div className="text-center">
+                  <p className="font-ui font-bold text-base text-emerald-600">{report.tajweed_ok_count}</p>
+                  <p className="font-ui text-xs text-stone-400">سليم</p>
+                </div>
+              )}
+              {(report.tajweed_warning_count ?? 0) > 0 && (
+                <div className="text-center">
+                  <p className="font-ui font-bold text-base text-amber-600">{report.tajweed_warning_count}</p>
+                  <p className="font-ui text-xs text-stone-400">تحذير</p>
+                </div>
+              )}
+              {(report.tajweed_error_count ?? 0) > 0 && (
+                <div className="text-center">
+                  <p className="font-ui font-bold text-base text-red-600">{report.tajweed_error_count}</p>
+                  <p className="font-ui text-xs text-stone-400">خطأ</p>
+                </div>
+              )}
+            </div>
+            {/* Waqf/Wasl breakdown per event */}
+            {(report.tajweed_events ?? []).some((e: TajweedEventEntry) => e.waqf_variant) && (
+              <div className="mt-3 pt-3 border-t border-stone-100 space-y-1.5">
+                {(report.tajweed_events as TajweedEventEntry[])
+                  .filter(e => e.waqf_variant && e.tajweed_check_status === 'OK')
+                  .slice(0, 6)
+                  .map((ev, i) => (
+                    <div key={i} className="flex items-center gap-2 text-xs font-ui text-stone-500">
+                      <span className="font-quran text-sm text-stone-700">{ev.word_text}</span>
+                      <span>←</span>
+                      <span className={ev.is_waqf ? 'text-emerald-600' : 'text-stone-400'}>
+                        {ev.is_waqf ? (ev.waqf_variant === 'MADD_AARID_LISUKOON' ? 'مد عارض' : ev.waqf_variant) : 'مد طبيعي'}
+                      </span>
+                      {ev.word_dur_ms != null && (
+                        <span className="text-stone-300">{Math.round(ev.word_dur_ms)}ms</span>
+                      )}
+                    </div>
+                  ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ASR text — للتحقق */}
+        {report.asr_text && (
+          <details className="bg-white rounded-2xl shadow-sm p-4">
+            <summary className="font-ui text-sm font-semibold text-stone-600 cursor-pointer select-none">
+              النص المستخرج
+            </summary>
+            <p className="font-quran text-base text-stone-700 leading-loose mt-3 text-right" dir="rtl">
+              {report.asr_text}
+            </p>
+          </details>
         )}
 
         {/* Pipeline status note */}
