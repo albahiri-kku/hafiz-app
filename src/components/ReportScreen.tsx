@@ -118,6 +118,23 @@ function WordTooltip({ entry, events }: { entry: WordAlignmentEntry; events: Taj
         <span>كلمة مفقودة</span>
       </div>
     )
+  } else if (entry.status === 'TASHKEEL_MISMATCH') {
+    const tc = entry.tashkeel_check
+    const HARAKA_AR: Record<string, string> = { fatha: 'فتحة', damma: 'ضمة', kasra: 'كسرة', sukun: 'سكون' }
+    rows.push(
+      <div key="tashkeel" className="space-y-1 pb-1.5 mb-1.5 border-b border-stone-100">
+        <div className="flex items-center gap-1.5">
+          <span className="w-2 h-2 rounded-full bg-purple-500 flex-shrink-0" />
+          <span className="text-purple-700 font-medium">خطأ تشكيل</span>
+        </div>
+        {tc && (
+          <div className="text-xs text-stone-500 pr-3.5 space-y-0.5">
+            <p>نُطق: <span className="text-red-600 font-medium">{HARAKA_AR[tc.whisper_haraka] ?? tc.whisper_haraka}</span> ({tc.whisper_haraka_char})</p>
+            <p>المرجع: <span className="text-emerald-600 font-medium">{HARAKA_AR[tc.ref_haraka] ?? tc.ref_haraka}</span> ({tc.ref_haraka_char})</p>
+          </div>
+        )}
+      </div>
+    )
   } else if (entry.status === 'SUFFIX_MATCH') {
     rows.push(
       <div key="suffix" className="flex items-center gap-1.5 pb-1.5 mb-1.5 border-b border-stone-100">
@@ -203,23 +220,25 @@ function WordChip({ entry, events }: { entry: WordAlignmentEntry; events: Tajwee
   const [open, setOpen] = useState(false)
 
   const chipCls = {
-    MATCH:                'bg-emerald-100 text-emerald-800 border-emerald-200',
-    LOW_CONFIDENCE_MATCH: 'bg-yellow-100 text-yellow-800 border-yellow-300',
-    SUBSTITUTION:         'bg-amber-100 text-amber-800 border-amber-200',
-    SUFFIX_MATCH:         'bg-orange-100 text-orange-800 border-orange-300',
-    CPAE_FALLBACK:        'bg-red-50 text-red-400 border-red-200 opacity-70 line-through',
-    EXTRA:                'bg-stone-100 text-stone-500 border-stone-200 opacity-60',
-    MISSED:               'bg-red-100 text-red-700 border-red-200',
+    MATCH:                 'bg-emerald-100 text-emerald-800 border-emerald-200',
+    LOW_CONFIDENCE_MATCH:  'bg-yellow-100 text-yellow-800 border-yellow-300',
+    SUBSTITUTION:          'bg-amber-100 text-amber-800 border-amber-200',
+    SUFFIX_MATCH:          'bg-orange-100 text-orange-800 border-orange-300',
+    TASHKEEL_MISMATCH:     'bg-purple-100 text-purple-800 border-purple-300',
+    CPAE_FALLBACK:         'bg-red-50 text-red-400 border-red-200 opacity-70 line-through',
+    EXTRA:                 'bg-stone-100 text-stone-500 border-stone-200 opacity-60',
+    MISSED:                'bg-red-100 text-red-700 border-red-200',
   }[entry.status] ?? 'bg-stone-100 text-stone-600 border-stone-200'
 
   const icon = {
-    MATCH:                '',
-    LOW_CONFIDENCE_MATCH: '?',
-    SUBSTITUTION:         '≠',
-    SUFFIX_MATCH:         '+',
-    CPAE_FALLBACK:        '~',
-    EXTRA:                '+',
-    MISSED:               '—',
+    MATCH:                 '',
+    LOW_CONFIDENCE_MATCH:  '?',
+    SUBSTITUTION:          '≠',
+    SUFFIX_MATCH:          '+',
+    TASHKEEL_MISMATCH:     '~',
+    CPAE_FALLBACK:         '~',
+    EXTRA:                 '+',
+    MISSED:                '—',
   }[entry.status] ?? ''
 
   const word       = entry.status === 'MISSED' ? entry.reference_word : entry.asr_word
@@ -407,6 +426,7 @@ export default function ReportScreen({ report, surah, ayahStart, ayahEnd, onUplo
                 { cls: 'bg-yellow-100 text-yellow-800',    label: 'ثقة منخفضة' },
                 { cls: 'bg-amber-100 text-amber-800',      label: 'مختلف' },
                 { cls: 'bg-orange-100 text-orange-800',    label: 'حرف زائد' },
+                { cls: 'bg-purple-100 text-purple-800',   label: 'خطأ تشكيل' },
                 { cls: 'bg-red-50 text-red-400 opacity-70 line-through', label: 'وهمية (CPAE)' },
                 { cls: 'bg-red-100 text-red-700',          label: 'مفقود' },
                 { cls: 'bg-stone-100 text-stone-500 opacity-60', label: 'إضافي' },

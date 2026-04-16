@@ -86,7 +86,15 @@ export interface WordAlignmentEntry {
   probability: number
   match_score: number
   correct: boolean
-  status: 'MATCH' | 'LOW_CONFIDENCE_MATCH' | 'SUBSTITUTION' | 'SUFFIX_MATCH' | 'CPAE_FALLBACK' | 'EXTRA' | 'MISSED'
+  status: 'MATCH' | 'LOW_CONFIDENCE_MATCH' | 'SUBSTITUTION' | 'SUFFIX_MATCH' | 'TASHKEEL_MISMATCH' | 'CPAE_FALLBACK' | 'EXTRA' | 'MISSED'
+  tashkeel_check?: {
+    type: string
+    whisper_haraka: string   // 'fatha' | 'damma' | 'kasra' | 'sukun'
+    whisper_haraka_char: string
+    ref_haraka: string
+    ref_haraka_char: string
+    description: string
+  } | null
 }
 
 // حدث تجويدي واحد من tajweed_events
@@ -146,6 +154,15 @@ export interface EvaluateFileResponse {
   profiling: Record<string, number> | null
   tajweed_events: TajweedEventEntry[] | null
   ayah_boundary_waqf: AyahBoundaryWaqfEntry[] | null
+  behavior_events: BehaviorEvent[] | null
+}
+
+export interface BehaviorEvent {
+  type: 'REPETITION' | 'AYAH_RESTART'
+  word?: string            // للتكرار: الكلمة المكررة
+  start_ms?: number        // بداية الحدث
+  restart_at_ms?: number   // للإعادة: بداية إعادة القراءة
+  words_before?: number    // للإعادة: عدد الكلمات قبل نقطة الإعادة
 }
 export type RecordingState = 'idle' | 'recording' | 'processing'
 
