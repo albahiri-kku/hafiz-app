@@ -95,6 +95,7 @@ export interface WordAlignmentEntry {
     ref_haraka_char: string
     description: string
   } | null
+  tashkeel_word?: string | null  // ما قاله Whisper بدون توجيه (للتشخيص)
 }
 
 // حدث تجويدي واحد من tajweed_events
