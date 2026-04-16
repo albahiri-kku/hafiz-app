@@ -153,6 +153,17 @@ export interface MaddBarEntry {
   tempo_uncertain: boolean
 }
 
+export interface NarrativeReport {
+  opening: string
+  accuracy_section: string
+  tajweed_section: string
+  madd_section: string
+  waqf_section: string
+  recommendations: string[]
+  closing: string
+  overall_grade: string  // "ممتاز" | "جيد جداً" | "جيد" | "يحتاج تحسين"
+}
+
 export interface EvaluateFileResponse {
   pipeline_status: string
   matched_start_ayah_code: string | null
@@ -185,6 +196,7 @@ export interface EvaluateFileResponse {
     madd_summary?: MaddBarEntry[]
     [key: string]: unknown
   } | null
+  narrative_report: NarrativeReport | null
 }
 
 export interface BehaviorEvent {

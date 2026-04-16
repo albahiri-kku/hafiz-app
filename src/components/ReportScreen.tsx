@@ -1,5 +1,5 @@
 import { useState, useMemo, type ReactNode } from 'react'
-import type { EvaluateFileResponse, WordAlignmentEntry, AyahBoundaryWaqfEntry, TajweedEventEntry, MaddBarEntry } from '../types/hafiz'
+import type { EvaluateFileResponse, WordAlignmentEntry, AyahBoundaryWaqfEntry, TajweedEventEntry, MaddBarEntry, NarrativeReport } from '../types/hafiz'
 import { SURAH_NAMES } from '../types/hafiz'
 
 interface Props {
@@ -611,6 +611,69 @@ export default function ReportScreen({ report, surah, ayahStart, ayahEnd, onUplo
                   </div>
                 )
               })}
+            </div>
+          )
+        })()}
+
+        {/* Narrative teacher report */}
+        {report.narrative_report && (() => {
+          const nr = report.narrative_report
+          const gradeCls =
+            nr.overall_grade === 'ممتاز'         ? 'bg-emerald-100 text-emerald-800 border-emerald-300' :
+            nr.overall_grade === 'جيد جداً'      ? 'bg-teal-100 text-teal-800 border-teal-300' :
+            nr.overall_grade === 'جيد'           ? 'bg-amber-100 text-amber-800 border-amber-300' :
+                                                   'bg-red-100 text-red-800 border-red-300'
+          const sections = [
+            { key: 'accuracy', text: nr.accuracy_section, title: 'دقة الكلمات' },
+            { key: 'tajweed',  text: nr.tajweed_section,  title: 'أحكام التجويد' },
+            { key: 'madd',     text: nr.madd_section,     title: 'أحكام المد' },
+            { key: 'waqf',     text: nr.waqf_section,     title: 'الوقف' },
+          ].filter(s => s.text)
+
+          return (
+            <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+              {/* Header */}
+              <div className="bg-gradient-to-l from-emerald-800 to-emerald-700 px-4 py-3 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-xl">📖</span>
+                  <span className="font-ui text-sm font-bold text-white">تقرير المعلم</span>
+                </div>
+                <span className={`px-2.5 py-0.5 rounded-full border font-ui text-xs font-bold ${gradeCls}`}>
+                  {nr.overall_grade}
+                </span>
+              </div>
+
+              <div className="p-4 space-y-3">
+                {/* Opening */}
+                <p className="font-ui text-sm text-stone-800 font-semibold leading-relaxed">
+                  {nr.opening}
+                </p>
+
+                {/* Sections */}
+                {sections.map(s => (
+                  <div key={s.key}>
+                    <p className="font-ui text-xs font-bold text-emerald-800 mb-0.5">{s.title}</p>
+                    <p className="font-ui text-sm text-stone-600 leading-relaxed">{s.text}</p>
+                  </div>
+                ))}
+
+                {/* Recommendations */}
+                {nr.recommendations.length > 0 && (
+                  <div>
+                    <p className="font-ui text-xs font-bold text-emerald-800 mb-1">التوصيات</p>
+                    <ol className="list-decimal list-inside space-y-1 font-ui text-sm text-stone-600 leading-relaxed pr-1">
+                      {nr.recommendations.map((r, i) => (
+                        <li key={i}>{r}</li>
+                      ))}
+                    </ol>
+                  </div>
+                )}
+
+                {/* Closing */}
+                <p className="font-ui text-sm text-emerald-700 font-medium leading-relaxed pt-1 border-t border-stone-100">
+                  {nr.closing}
+                </p>
+              </div>
             </div>
           )
         })()}
