@@ -86,7 +86,7 @@ export interface WordAlignmentEntry {
   probability: number
   match_score: number
   correct: boolean
-  status: 'MATCH' | 'LOW_CONFIDENCE_MATCH' | 'SUBSTITUTION' | 'EXTRA' | 'MISSED'
+  status: 'MATCH' | 'LOW_CONFIDENCE_MATCH' | 'SUBSTITUTION' | 'SUFFIX_MATCH' | 'CPAE_FALLBACK' | 'EXTRA' | 'MISSED'
 }
 
 // حدث تجويدي واحد من tajweed_events

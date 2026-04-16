@@ -118,6 +118,26 @@ function WordTooltip({ entry, events }: { entry: WordAlignmentEntry; events: Taj
         <span>كلمة مفقودة</span>
       </div>
     )
+  } else if (entry.status === 'SUFFIX_MATCH') {
+    rows.push(
+      <div key="suffix" className="flex items-center gap-1.5 pb-1.5 mb-1.5 border-b border-stone-100">
+        <span className="w-2 h-2 rounded-full bg-orange-400 flex-shrink-0" />
+        <span className="text-stone-600 flex-1">حرف زائد في النهاية</span>
+        <span className="font-quran text-orange-700 text-sm">{entry.asr_word}</span>
+      </div>
+    )
+  } else if (entry.status === 'CPAE_FALLBACK') {
+    rows.push(
+      <div key="fallback" className="space-y-1 pb-1.5 mb-1.5 border-b border-stone-100">
+        <div className="flex items-center gap-1.5">
+          <span className="w-2 h-2 rounded-full bg-red-400 flex-shrink-0" />
+          <span className="text-red-600 font-medium">timestamps وهمية — لم تُقرأ فعلياً</span>
+        </div>
+        <p className="text-stone-400 text-xs pr-3.5">
+          CPAE لم يستطع محاذاة هذه الكلمة — المدة والثقة قيم افتراضية
+        </p>
+      </div>
+    )
   } else if (entry.status === 'EXTRA') {
     rows.push(
       <div key="extra" className="flex items-center gap-1.5 text-stone-500">
@@ -186,6 +206,8 @@ function WordChip({ entry, events }: { entry: WordAlignmentEntry; events: Tajwee
     MATCH:                'bg-emerald-100 text-emerald-800 border-emerald-200',
     LOW_CONFIDENCE_MATCH: 'bg-yellow-100 text-yellow-800 border-yellow-300',
     SUBSTITUTION:         'bg-amber-100 text-amber-800 border-amber-200',
+    SUFFIX_MATCH:         'bg-orange-100 text-orange-800 border-orange-300',
+    CPAE_FALLBACK:        'bg-red-50 text-red-400 border-red-200 opacity-70 line-through',
     EXTRA:                'bg-stone-100 text-stone-500 border-stone-200 opacity-60',
     MISSED:               'bg-red-100 text-red-700 border-red-200',
   }[entry.status] ?? 'bg-stone-100 text-stone-600 border-stone-200'
@@ -194,6 +216,8 @@ function WordChip({ entry, events }: { entry: WordAlignmentEntry; events: Tajwee
     MATCH:                '',
     LOW_CONFIDENCE_MATCH: '?',
     SUBSTITUTION:         '≠',
+    SUFFIX_MATCH:         '+',
+    CPAE_FALLBACK:        '~',
     EXTRA:                '+',
     MISSED:               '—',
   }[entry.status] ?? ''
@@ -288,10 +312,13 @@ export default function ReportScreen({ report, surah, ayahStart, ayahEnd, onUplo
   const madd  = maddBadge(report.madd_verdict)
 
   const alignments   = report.word_alignment ?? []
-  const matchCount   = alignments.filter(w => w.status === 'MATCH').length
-  const lowConfCount = alignments.filter(w => w.status === 'LOW_CONFIDENCE_MATCH').length
-  const totalRef     = alignments.filter(w => w.status !== 'EXTRA').length
-  const accuracy     = totalRef > 0 ? Math.round((matchCount / totalRef) * 100) : null
+  const matchCount    = alignments.filter(w => w.status === 'MATCH').length
+  const lowConfCount  = alignments.filter(w => w.status === 'LOW_CONFIDENCE_MATCH').length
+  const issueCount    = alignments.filter(w =>
+    ['SUBSTITUTION','SUFFIX_MATCH','CPAE_FALLBACK','MISSED'].includes(w.status)
+  ).length
+  const totalRef      = alignments.filter(w => w.status !== 'EXTRA').length
+  const accuracy      = totalRef > 0 ? Math.round((matchCount / totalRef) * 100) : null
 
   // الاعتماد على report.word_alignment مباشرةً (لا على alignments التي قد تُنشئ [] جديدة كل render)
   const eventsMap = useMemo(
@@ -356,7 +383,9 @@ export default function ReportScreen({ report, surah, ayahStart, ayahEnd, onUplo
             <p className="font-ui text-sm font-semibold text-stone-600 mb-1">
               كلمة بكلمة
               <span className="font-normal text-stone-400 mr-2 text-xs">
-                ({matchCount}/{totalRef} مطابق{lowConfCount > 0 ? ` · ${lowConfCount} ثقة منخفضة` : ''})
+                ({matchCount}/{totalRef} مطابق
+              {lowConfCount > 0 ? ` · ${lowConfCount} منخفضة` : ''}
+              {issueCount > 0 ? ` · ${issueCount} مشكلة` : ''})
               </span>
             </p>
             <p className="font-ui text-xs text-stone-400 mb-3">مرّر على الكلمة لرؤية أحكام التجويد</p>
@@ -374,10 +403,12 @@ export default function ReportScreen({ report, surah, ayahStart, ayahEnd, onUplo
             {/* Legend */}
             <div className="flex flex-wrap gap-3 mt-3 pt-3 border-t border-stone-100">
               {[
-                { cls: 'bg-emerald-100 text-emerald-800', label: 'مطابق' },
-                { cls: 'bg-yellow-100 text-yellow-800',   label: 'ثقة منخفضة' },
-                { cls: 'bg-amber-100 text-amber-800',     label: 'مختلف' },
-                { cls: 'bg-red-100 text-red-700',         label: 'مفقود' },
+                { cls: 'bg-emerald-100 text-emerald-800',  label: 'مطابق' },
+                { cls: 'bg-yellow-100 text-yellow-800',    label: 'ثقة منخفضة' },
+                { cls: 'bg-amber-100 text-amber-800',      label: 'مختلف' },
+                { cls: 'bg-orange-100 text-orange-800',    label: 'حرف زائد' },
+                { cls: 'bg-red-50 text-red-400 opacity-70 line-through', label: 'وهمية (CPAE)' },
+                { cls: 'bg-red-100 text-red-700',          label: 'مفقود' },
                 { cls: 'bg-stone-100 text-stone-500 opacity-60', label: 'إضافي' },
               ].map(item => (
                 <span key={item.label} className="flex items-center gap-1">
@@ -399,26 +430,38 @@ export default function ReportScreen({ report, surah, ayahStart, ayahEnd, onUplo
         )}
 
         {/* Words needing review */}
-        {alignments.some(w => w.status === 'SUBSTITUTION' || w.status === 'LOW_CONFIDENCE_MATCH') && (
+        {alignments.some(w =>
+          ['SUBSTITUTION','LOW_CONFIDENCE_MATCH','SUFFIX_MATCH','CPAE_FALLBACK'].includes(w.status)
+        ) && (
           <div className="bg-white rounded-2xl shadow-sm p-4">
             <p className="font-ui text-sm font-semibold text-stone-600 mb-2">كلمات تحتاج مراجعة</p>
             <div className="space-y-2">
               {alignments
-                .filter(w => w.status === 'SUBSTITUTION' || w.status === 'LOW_CONFIDENCE_MATCH')
-                .map(entry => (
-                  <div key={entry.word_index} className="flex items-center gap-2 text-sm">
-                    <span className={`font-quran ${entry.status === 'SUBSTITUTION' ? 'text-red-700' : 'text-yellow-700'}`}>
-                      {entry.asr_word}
-                    </span>
-                    <span className="font-ui text-stone-400 text-xs">←</span>
-                    <span className="font-quran text-emerald-700">{entry.reference_word}</span>
-                    <span className="font-ui text-xs text-stone-400 mr-auto">
-                      {entry.status === 'LOW_CONFIDENCE_MATCH'
-                        ? `ثقة ${Math.round((entry.probability ?? 0) * 100)}%`
-                        : `${entry.duration_ms}ms`}
-                    </span>
-                  </div>
-                ))}
+                .filter(w => ['SUBSTITUTION','LOW_CONFIDENCE_MATCH','SUFFIX_MATCH','CPAE_FALLBACK'].includes(w.status))
+                .map(entry => {
+                  const labelCls =
+                    entry.status === 'SUBSTITUTION'       ? 'text-red-700' :
+                    entry.status === 'SUFFIX_MATCH'        ? 'text-orange-700' :
+                    entry.status === 'CPAE_FALLBACK'       ? 'text-red-400 line-through' :
+                    /* LOW_CONFIDENCE_MATCH */                'text-yellow-700'
+                  const note =
+                    entry.status === 'LOW_CONFIDENCE_MATCH' ? `ثقة ${Math.round((entry.probability ?? 0) * 100)}%` :
+                    entry.status === 'SUFFIX_MATCH'          ? 'حرف زائد' :
+                    entry.status === 'CPAE_FALLBACK'         ? 'وهمية' :
+                    `${entry.duration_ms}ms`
+                  return (
+                    <div key={entry.word_index} className="flex items-center gap-2 text-sm">
+                      <span className={`font-quran ${labelCls}`}>{entry.asr_word ?? entry.reference_word}</span>
+                      {entry.status !== 'CPAE_FALLBACK' && (
+                        <>
+                          <span className="font-ui text-stone-400 text-xs">←</span>
+                          <span className="font-quran text-emerald-700">{entry.reference_word}</span>
+                        </>
+                      )}
+                      <span className="font-ui text-xs text-stone-400 mr-auto">{note}</span>
+                    </div>
+                  )
+                })}
             </div>
           </div>
         )}
