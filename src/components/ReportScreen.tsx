@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, type ReactNode } from 'react'
-import type { EvaluateFileResponse, WordAlignmentEntry, AyahBoundaryWaqfEntry, TajweedEventEntry, MaddBarEntry, HafizReport, ErrorDistribution } from '../types/hafiz'
+import type { EvaluateFileResponse, WordAlignmentEntry, TajweedEventEntry, MaddBarEntry, HafizReport, ErrorDistribution } from '../types/hafiz'
 import { SURAH_NAMES } from '../types/hafiz'
 
 interface Props {
@@ -9,18 +9,6 @@ interface Props {
   ayahEnd: number
   onUploadAnother: () => void
   onHome: () => void
-}
-
-// ─── Verdict helpers ─────────────────────────────────────────────────────────
-
-function tajweedBadge(verdict: string | null) {
-  if (!verdict) return { label: 'غير محدد', cls: 'bg-stone-100 text-stone-600 border-stone-200' }
-  if (verdict === 'TAJWEED_OK')       return { label: 'تجويد سليم',  cls: 'bg-emerald-100 text-emerald-800 border-emerald-200' }
-  if (verdict === 'TAJWEED_PARTIAL')  return { label: 'تجويد جزئي',  cls: 'bg-amber-100 text-amber-800 border-amber-200' }
-  if (verdict === 'TAJWEED_WARNING')  return { label: 'تحذير تجويدي', cls: 'bg-orange-100 text-orange-800 border-orange-200' }
-  if (verdict === 'TAJWEED_ERROR')    return { label: 'خطأ تجويدي',  cls: 'bg-red-100 text-red-800 border-red-200' }
-  if (verdict === 'TAJWEED_UNCHECKED') return { label: 'لم يُتحقق',  cls: 'bg-stone-100 text-stone-600 border-stone-200' }
-  return { label: verdict, cls: 'bg-stone-100 text-stone-600 border-stone-200' }
 }
 
 // ─── Arabic rule names ────────────────────────────────────────────────────────
