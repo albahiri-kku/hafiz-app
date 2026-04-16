@@ -366,6 +366,7 @@ export default function ReportScreen({ report, surah, ayahStart, ayahEnd, onUplo
                 { key: 'madd', text: hr.madd_section, title: 'أحكام المد' },
                 { key: 'waqf', text: hr.waqf_section, title: 'الوقف' },
                 { key: 'ra', text: (hr as any).ra_section, title: 'التفخيم والترقيق' },
+                { key: 'consistency', text: (hr as any).consistency_section, title: 'تماثل المدود (النظير)' },
                 { key: 'behavior', text: (hr as any).behavior_section, title: 'سلوك القارئ' },
               ].filter(s => s.text).map(s => (
                 <div key={s.key}><p className="font-ui text-xs font-bold text-emerald-800 mb-0.5">{s.title}</p><p className="font-ui text-sm text-stone-600 leading-relaxed">{s.text}</p></div>
