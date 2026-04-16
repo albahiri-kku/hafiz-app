@@ -161,7 +161,32 @@ export interface NarrativeReport {
   waqf_section: string
   recommendations: string[]
   closing: string
-  overall_grade: string  // "ممتاز" | "جيد جداً" | "جيد" | "يحتاج تحسين"
+  overall_grade: string
+}
+
+export interface ErrorDistribution {
+  rule_ar: string
+  rule_en: string
+  count: number
+  total: number
+  ok: number
+  warning: number
+  error: number
+}
+
+export interface HafizReport {
+  opening: string
+  accuracy_section: string
+  tajweed_section: string
+  madd_section: string
+  waqf_section: string
+  ra_section: string
+  behavior_section: string
+  recommendations: string[]
+  closing: string
+  overall_grade: string       // "ممتاز" | "جيد جداً" | "جيد" | "يحتاج تحسين"
+  reader_level: string        // "مبتدئ" | "متوسط" | "متقدم"
+  error_distribution: ErrorDistribution[]
 }
 
 export interface EvaluateFileResponse {
@@ -197,6 +222,7 @@ export interface EvaluateFileResponse {
     [key: string]: unknown
   } | null
   narrative_report: NarrativeReport | null
+  hafiz_report: HafizReport | null
 }
 
 export interface BehaviorEvent {
