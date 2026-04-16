@@ -1,5 +1,5 @@
 import { useState, useMemo, type ReactNode } from 'react'
-import type { EvaluateFileResponse, WordAlignmentEntry, AyahBoundaryWaqfEntry, TajweedEventEntry } from '../types/hafiz'
+import type { EvaluateFileResponse, WordAlignmentEntry, AyahBoundaryWaqfEntry, TajweedEventEntry, MaddBarEntry } from '../types/hafiz'
 import { SURAH_NAMES } from '../types/hafiz'
 
 interface Props {
@@ -539,6 +539,81 @@ export default function ReportScreen({ report, surah, ayahStart, ayahEnd, onUplo
             </div>
           </div>
         )}
+
+        {/* Madd duration bars */}
+        {(() => {
+          const maddItems: MaddBarEntry[] = report.word_gated_summary?.madd_summary ?? []
+          if (maddItems.length === 0) return null
+          const okCount = maddItems.filter(m => m.zone === 'OK').length
+          const pct = Math.round((okCount / maddItems.length) * 100)
+          return (
+            <div className="bg-white rounded-2xl shadow-sm p-4 space-y-3">
+              <p className="font-ui text-sm font-semibold text-stone-600">
+                تقييم أحكام المد
+                <span className="font-normal text-stone-400 mr-2 text-xs">
+                  ({okCount}/{maddItems.length} ضمن النطاق · {pct}%)
+                </span>
+              </p>
+
+              {maddItems.map((m, i) => {
+                const borderColor =
+                  m.verdict === 'ERROR'   ? 'border-red-400' :
+                  m.verdict === 'WARNING' ? 'border-amber-400' :
+                  m.verdict === 'PASS'    ? 'border-emerald-400' :
+                                            'border-stone-300'
+                const verdictLabel =
+                  m.verdict === 'ERROR'   ? 'خطأ' :
+                  m.verdict === 'WARNING' ? 'تنبيه' :
+                  m.verdict === 'PASS'    ? 'صحيح' : 'إعلام'
+                const verdictCls =
+                  m.verdict === 'ERROR'   ? 'text-red-600' :
+                  m.verdict === 'WARNING' ? 'text-amber-600' :
+                  m.verdict === 'PASS'    ? 'text-emerald-600' : 'text-stone-500'
+
+                return (
+                  <div key={i} className={`border-r-4 ${borderColor} rounded-lg bg-stone-50 px-3 py-2.5 space-y-1.5`}>
+                    {/* Header */}
+                    <div className="flex items-center justify-between">
+                      <span className="font-quran text-base font-bold text-emerald-900">{m.word_text || '—'}</span>
+                      <span className="font-ui text-xs text-stone-500">{m.madd_label_ar}</span>
+                    </div>
+                    {/* Meta */}
+                    <div className="flex gap-3 font-ui text-xs text-stone-500">
+                      <span>{m.obligation === 'WAJIB' ? 'واجب' : 'جائز'}</span>
+                      <span className={verdictCls}>{verdictLabel}</span>
+                    </div>
+                    {/* Bar */}
+                    <div className="relative h-4 rounded overflow-hidden flex">
+                      {m.bar_segments.map(seg => (
+                        <div
+                          key={seg.id}
+                          className="h-full"
+                          style={{ width: `${seg.width_pct}%`, backgroundColor: seg.color, opacity: 0.3 }}
+                        />
+                      ))}
+                      {/* Indicator */}
+                      <div
+                        className="absolute top-0 h-full w-0.5 bg-stone-800"
+                        style={{ right: `${100 - m.indicator_position_pct}%` }}
+                      />
+                    </div>
+                    <div className="flex justify-between font-ui text-[10px] text-stone-400">
+                      <span>قصير</span>
+                      <span>مقبول</span>
+                      <span>طويل</span>
+                    </div>
+                    {/* Stats */}
+                    <div className="flex gap-3 font-ui text-xs text-stone-500">
+                      <span>المقاس: <b className="text-stone-700">{(m.measured_ms / 1000).toFixed(2)}ث</b></span>
+                      <span>المرجعي: <b className="text-stone-700">{(m.ref_ms / 1000).toFixed(2)}ث</b></span>
+                      <span>النسبة: <b className="text-stone-700">{Math.round(m.ratio * 100)}%</b></span>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )
+        })()}
 
         {/* ASR text */}
         {report.asr_text && (

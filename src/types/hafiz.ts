@@ -128,6 +128,31 @@ export interface AyahBoundaryWaqfEntry {
   dur_ms: number
 }
 
+// بيانات شريط المد البصري (من word_gated_summary.madd_summary)
+export interface MaddBarSegment {
+  id: string
+  width_pct: number
+  color: string
+}
+
+export interface MaddBarEntry {
+  madd_type: string
+  madd_label_ar: string
+  obligation: string        // "WAJIB" | "JAIZ"
+  verdict: string           // "ERROR" | "WARNING" | "PASS" | "INFO"
+  zone: string
+  ratio: number
+  bar_segments: MaddBarSegment[]
+  indicator_position_pct: number
+  ref_min_pct: number
+  ref_max_pct: number
+  measured_ms: number
+  ref_ms: number
+  harakah_ms: number
+  word_text: string
+  tempo_uncertain: boolean
+}
+
 export interface EvaluateFileResponse {
   pipeline_status: string
   matched_start_ayah_code: string | null
@@ -156,6 +181,10 @@ export interface EvaluateFileResponse {
   tajweed_events: TajweedEventEntry[] | null
   ayah_boundary_waqf: AyahBoundaryWaqfEntry[] | null
   behavior_events: BehaviorEvent[] | null
+  word_gated_summary: {
+    madd_summary?: MaddBarEntry[]
+    [key: string]: unknown
+  } | null
 }
 
 export interface BehaviorEvent {
