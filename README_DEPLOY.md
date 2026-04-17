@@ -41,6 +41,32 @@ npm run preview      # local preview of dist/
    - `VITE_API_URL` = `https://your-backend.com`
 5. Deploy — `vercel.json` handles SPA rewriting automatically.
 
+### تنبيه: التحقق من الـ Remote الصحيح قبل كل push
+
+Vercel يراقب **`albahiri-kku/hafiz-app`** فقط — أي push إلى `quran-hafiz-guide` لن يُحرّك deploy.
+
+```bash
+# تحقق دائماً قبل push
+git remote -v
+# يجب أن يظهر:
+# origin   https://github.com/albahiri-kku/hafiz-app.git
+
+# تحقق من tracking branch
+git branch -vv
+# يجب أن يظهر: [origin/main] وليس [origin-old/main]
+
+# إذا كان tracking خاطئاً — أصلحه
+git branch -u origin/main main
+```
+
+### إجبار Vercel على إعادة البناء
+
+إذا ظهر آخر commit على GitHub لكن Vercel لم يبنِ:
+
+```bash
+git commit --allow-empty -m "chore: force vercel rebuild" && git push origin main
+```
+
 ---
 
 ## Deploy to Netlify
