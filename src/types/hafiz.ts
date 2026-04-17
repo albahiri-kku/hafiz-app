@@ -155,6 +155,8 @@ export interface MaddBarEntry {
   performance_mode?: string           // "WAQF" | "WASL"
   performance_transformed?: boolean   // true when lexical != performed (e.g., طبيعي → عارض للسكون)
   inconsistent_with_peers?: boolean   // ضمن النطاق لكن يختلف عن أقرانه من نفس النوع
+  basis?: string                      // مصدر القياس (stable_region_ms, word_duration_proxy, ...)
+  measurement_reliable?: boolean      // false عند استخدام word-duration proxy → لا يُعرض measured
 }
 
 export interface NarrativeReport {

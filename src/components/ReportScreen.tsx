@@ -278,14 +278,16 @@ export default function ReportScreen({ report, surah, ayahStart, ayahEnd, onUplo
                 {maddItems.map((m, i) => {
                   const measuredHarakaat = m.harakah_ms > 0 ? m.measured_ms / m.harakah_ms : 0
                   const refHarakaat = m.harakah_ms > 0 ? m.ref_ms / m.harakah_ms : 0
+                  const unreliable = m.measurement_reliable === false || m.verdict === 'PENDING'
                   // عرض الرقم كعدد صحيح عندما يكون قريباً من عدد حركات صحيح، وإلا بخانة واحدة
                   const fmtHarakaat = (h: number) => {
                     const r = Math.round(h)
                     return Math.abs(h - r) < 0.25 ? `${r}` : h.toFixed(1)
                   }
-                  // لون الرقم الأول: أخضر (صحيح) / أصفر (قصر أو طول طفيف) / أحمر (مبالغة)
+                  // لون الرقم الأول: أخضر (صحيح) / أصفر (قصر أو طول طفيف) / أحمر (مبالغة) / رمادي (غير مقاس)
                   const perfColor =
-                    m.zone === 'OK' ? 'text-emerald-600'
+                    unreliable ? 'text-stone-400'
+                    : m.zone === 'OK' ? 'text-emerald-600'
                     : (m.zone === 'SHORT' || m.zone === 'LONG') ? 'text-amber-500'
                     : 'text-red-500'   // CRITICAL_SHORT / CRITICAL_LONG / unknown
                   return (
@@ -303,7 +305,7 @@ export default function ReportScreen({ report, surah, ayahStart, ayahEnd, onUplo
                       {/* يسار: عدّاد الحركات (المنجز / المعياري) */}
                       <div className="flex flex-col items-end">
                         <div className="flex items-baseline gap-0.5 font-ui">
-                          <span className={`text-xl font-bold tabular-nums ${perfColor}`}>{fmtHarakaat(measuredHarakaat)}</span>
+                          <span className={`text-xl font-bold tabular-nums ${perfColor}`}>{unreliable ? '—' : fmtHarakaat(measuredHarakaat)}</span>
                           <span className="text-stone-300 text-lg">/</span>
                           <span className="text-base text-stone-500 tabular-nums">{fmtHarakaat(refHarakaat)}</span>
                           <span className="font-ui text-[9px] text-stone-400 mr-1">حركات</span>
