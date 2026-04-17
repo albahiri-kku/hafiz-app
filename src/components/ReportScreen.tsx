@@ -139,6 +139,7 @@ export default function ReportScreen({ report, surah, ayahStart, ayahEnd, onUplo
             </div>
           </div>
           <h1 className="font-ui text-base font-bold">تقرير حافظ</h1>
+          <p className="font-ui text-[9px] text-emerald-300/60 leading-tight mb-0.5">تقرير حافظ يُنتَج عن طريق الذكاء الاصطناعي وقد يكون به بعض الأخطاء التي تستلزم المراجعة والتدقيق</p>
           <p className="font-ui text-[10px] text-emerald-200">{surahName} \u00b7 {range}{hr ? ` \u00b7 ${(hr as any).reader_level ?? ''}` : ''}{report.total_runtime_sec != null ? ` \u00b7 ${report.total_runtime_sec.toFixed(0)}s` : ''}</p>
 
           {/* Metrics row inside header */}
