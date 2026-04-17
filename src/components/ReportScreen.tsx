@@ -134,7 +134,7 @@ export default function ReportScreen({ report, surah, ayahStart, ayahEnd, onUplo
             <button onClick={onHome} className="text-emerald-200 hover:text-white text-xs font-ui">\u2190 الرئيسية</button>
             <div className="flex items-center gap-2">
               {hr && <span className={`px-2 py-0.5 rounded-full border font-ui text-[10px] font-bold ${gradeCls}`}>{hr.overall_grade}</span>}
-              <button onClick={() => reportRef.current && exportToPDF(reportRef.current)} className="px-2 py-0.5 rounded bg-white/15 hover:bg-white/25 font-ui text-[10px]">PDF</button>
+              <button onClick={async () => { const prev = tab; setTab('summary'); await new Promise(r => setTimeout(r, 100)); if (reportRef.current) await exportToPDF(reportRef.current); setTab(prev) }} className="px-2 py-0.5 rounded bg-white/15 hover:bg-white/25 font-ui text-[10px]">PDF</button>
               <button onClick={onUploadAnother} className="px-2 py-0.5 rounded bg-white/20 hover:bg-white/30 font-ui text-[10px] font-medium">ملف آخر</button>
             </div>
           </div>
