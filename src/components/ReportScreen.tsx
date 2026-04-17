@@ -304,14 +304,28 @@ export default function ReportScreen({ report, surah, ayahStart, ayahEnd, onUplo
                       </div>
                       {/* يسار: عدّاد الحركات (المنجز / المعياري) */}
                       <div className="flex flex-col items-end">
-                        <div className="flex items-baseline gap-0.5 font-ui">
-                          <span className={`text-xl font-bold tabular-nums ${perfColor}`}>{unreliable ? '—' : fmtHarakaat(measuredHarakaat)}</span>
-                          <span className="text-stone-300 text-lg">/</span>
-                          <span className="text-base text-stone-500 tabular-nums">{fmtHarakaat(refHarakaat)}</span>
-                          <span className="font-ui text-[9px] text-stone-400 mr-1">حركات</span>
-                        </div>
-                        {m.inconsistent_with_peers && (
-                          <span className="font-ui text-[9px] text-amber-600 leading-tight">غير منضبط مع مثله</span>
+                        {unreliable ? (
+                          <>
+                            <span className="font-ui text-[10px] text-stone-500 leading-tight">
+                              المرجع: <span className="tabular-nums text-stone-700 font-semibold">{fmtHarakaat(refHarakaat)}</span> حركات (~{Math.round(m.ref_ms)}ms)
+                            </span>
+                            <span className="font-ui text-[10px] text-stone-400 leading-tight">
+                              مدة الكلمة: <span className="tabular-nums">{Math.round(m.measured_ms)}ms</span>
+                            </span>
+                            <span className="font-ui text-[9px] text-stone-400 italic leading-tight">غير مقاس صوتياً</span>
+                          </>
+                        ) : (
+                          <>
+                            <div className="flex items-baseline gap-0.5 font-ui">
+                              <span className={`text-xl font-bold tabular-nums ${perfColor}`}>{fmtHarakaat(measuredHarakaat)}</span>
+                              <span className="text-stone-300 text-lg">/</span>
+                              <span className="text-base text-stone-500 tabular-nums">{fmtHarakaat(refHarakaat)}</span>
+                              <span className="font-ui text-[9px] text-stone-400 mr-1">حركات</span>
+                            </div>
+                            {m.inconsistent_with_peers && (
+                              <span className="font-ui text-[9px] text-amber-600 leading-tight">غير منضبط مع مثله</span>
+                            )}
+                          </>
                         )}
                       </div>
                     </div>
