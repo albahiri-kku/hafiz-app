@@ -151,6 +151,10 @@ export interface MaddBarEntry {
   harakah_ms: number
   word_text: string
   tempo_uncertain: boolean
+  lexical_madd_type?: string
+  performance_mode?: string           // "WAQF" | "WASL"
+  performance_transformed?: boolean   // true when lexical != performed (e.g., طبيعي → عارض للسكون)
+  inconsistent_with_peers?: boolean   // ضمن النطاق لكن يختلف عن أقرانه من نفس النوع
 }
 
 export interface NarrativeReport {

@@ -276,35 +276,41 @@ export default function ReportScreen({ report, surah, ayahStart, ayahEnd, onUplo
               <>
                 <p className="font-ui text-xs text-stone-500 mb-1">{maddItems.filter(m => m.zone === 'OK').length}/{maddItems.length} ضمن النطاق</p>
                 {maddItems.map((m, i) => {
-                  const vc = m.verdict === 'ERROR' ? 'text-red-600' : m.verdict === 'WARNING' ? 'text-amber-600' : m.verdict === 'PASS' ? 'text-emerald-600' : 'text-stone-500'
+                  const measuredHarakaat = m.harakah_ms > 0 ? m.measured_ms / m.harakah_ms : 0
+                  const refHarakaat = m.harakah_ms > 0 ? m.ref_ms / m.harakah_ms : 0
+                  // عرض الرقم كعدد صحيح عندما يكون قريباً من عدد حركات صحيح، وإلا بخانة واحدة
+                  const fmtHarakaat = (h: number) => {
+                    const r = Math.round(h)
+                    return Math.abs(h - r) < 0.25 ? `${r}` : h.toFixed(1)
+                  }
+                  // لون الرقم الأول: أخضر (صحيح) / أصفر (قصر أو طول طفيف) / أحمر (مبالغة)
+                  const perfColor =
+                    m.zone === 'OK' ? 'text-emerald-600'
+                    : (m.zone === 'SHORT' || m.zone === 'LONG') ? 'text-amber-500'
+                    : 'text-red-500'   // CRITICAL_SHORT / CRITICAL_LONG / unknown
                   return (
-                    <div key={i} className={`rounded-xl bg-white px-3 py-2.5 shadow-sm`}>
-                      {/* Header: word + verdict icon */}
-                      <div className="flex items-center justify-between mb-1.5">
-                        <div className="flex items-center gap-2">
-                          <span className={`text-base ${m.verdict === 'PASS' ? '' : m.verdict === 'ERROR' ? 'text-red-500' : 'text-amber-500'}`}>
-                            {m.verdict === 'PASS' ? '\u2705' : m.verdict === 'ERROR' ? '\u274c' : '\u26a0\ufe0f'}
-                          </span>
-                          <span className="font-quran text-base font-bold text-stone-800">{m.word_text || '\u2014'}</span>
+                    <div key={i} className="flex items-center justify-between rounded-lg bg-white px-3 py-2 shadow-sm">
+                      {/* يمين: الكلمة ونوع المد */}
+                      <div className="flex flex-col">
+                        <span className="font-quran text-base font-bold text-stone-800 leading-tight">{m.word_text || '\u2014'}</span>
+                        <span className="font-ui text-[10px] text-stone-400 leading-tight">
+                          {m.madd_label_ar}
+                          {m.performance_transformed && (
+                            <span className="text-indigo-400 mr-1">· {m.performance_mode === 'WAQF' ? 'وقف' : 'وصل'}</span>
+                          )}
+                        </span>
+                      </div>
+                      {/* يسار: عدّاد الحركات (المنجز / المعياري) */}
+                      <div className="flex flex-col items-end">
+                        <div className="flex items-baseline gap-0.5 font-ui">
+                          <span className={`text-xl font-bold tabular-nums ${perfColor}`}>{fmtHarakaat(measuredHarakaat)}</span>
+                          <span className="text-stone-300 text-lg">/</span>
+                          <span className="text-base text-stone-500 tabular-nums">{fmtHarakaat(refHarakaat)}</span>
+                          <span className="font-ui text-[9px] text-stone-400 mr-1">حركات</span>
                         </div>
-                        <span className="font-ui text-[10px] text-stone-400">{m.madd_label_ar}</span>
-                      </div>
-                      {/* Gauge bar — modern circular-end design */}
-                      <div className="relative h-2 bg-stone-100 rounded-full overflow-hidden">
-                        {/* Fill from left to indicator position */}
-                        <div className="absolute inset-y-0 right-0 rounded-full transition-all"
-                          style={{
-                            width: `${Math.min(m.indicator_position_pct, 100)}%`,
-                            background: m.verdict === 'PASS' ? '#10B981' : m.verdict === 'ERROR' ? '#EF4444' : '#F59E0B',
-                            opacity: 0.7,
-                          }} />
-                        {/* Reference range marker */}
-                        <div className="absolute top-0 h-full border-r-2 border-stone-400/50" style={{ right: '40%' }} />
-                      </div>
-                      {/* Stats row */}
-                      <div className="flex items-center justify-between mt-1 font-ui text-[10px]">
-                        <span className="text-stone-400">{m.obligation === 'WAJIB' ? 'واجب' : 'جائز'}</span>
-                        <span className={`font-bold ${vc}`}>{Math.round(m.ratio * 100)}%</span>
+                        {m.inconsistent_with_peers && (
+                          <span className="font-ui text-[9px] text-amber-600 leading-tight">غير منضبط مع مثله</span>
+                        )}
                       </div>
                     </div>
                   )
