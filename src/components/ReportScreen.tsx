@@ -276,9 +276,7 @@ export default function ReportScreen({ report, surah, ayahStart, ayahEnd, onUplo
               <>
                 <p className="font-ui text-xs text-stone-500 mb-1">{maddItems.filter(m => m.zone === 'OK').length}/{maddItems.length} ضمن النطاق</p>
                 {maddItems.map((m, i) => {
-                  const bc = m.verdict === 'ERROR' ? 'border-red-400' : m.verdict === 'WARNING' ? 'border-amber-400' : m.verdict === 'PASS' ? 'border-emerald-400' : 'border-stone-300'
                   const vc = m.verdict === 'ERROR' ? 'text-red-600' : m.verdict === 'WARNING' ? 'text-amber-600' : m.verdict === 'PASS' ? 'text-emerald-600' : 'text-stone-500'
-                  const vl = m.verdict === 'ERROR' ? 'خطأ' : m.verdict === 'WARNING' ? 'تنبيه' : m.verdict === 'PASS' ? 'صحيح' : 'إعلام'
                   return (
                     <div key={i} className={`rounded-xl bg-white px-3 py-2.5 shadow-sm`}>
                       {/* Header: word + verdict icon */}
@@ -377,7 +375,7 @@ export default function ReportScreen({ report, surah, ayahStart, ayahEnd, onUplo
 function AudioReviewTab({ audioUrl, surah, ayahStart, ayahEnd }: {
   audioUrl?: string | null; surah: number; ayahStart: number; ayahEnd: number
 }) {
-  const [reciter, setReciter] = useState(RECITERS[0].id)
+  const [reciter, setReciter] = useState<string>(RECITERS[0].id)
   const [playingAyah, setPlayingAyah] = useState<number | null>(null)
   const refAudioRef = useRef<HTMLAudioElement>(null)
 
