@@ -128,6 +128,10 @@ export default function ReportScreen({ report, surah, ayahStart, ayahEnd, onUplo
   const totalRef = alignments.filter(w => w.status !== 'EXTRA').length
   const accuracy = totalRef > 0 ? Math.round((matchCount / totalRef) * 100) : null
 
+  // Low-quality audio detection: CPAE fell back for most words → madd measurements are meaningless
+  const cpaeFallbackCount = alignments.filter(w => w.status === 'CPAE_FALLBACK').length
+  const lowQualityAudio = totalRef > 0 && cpaeFallbackCount / totalRef >= 0.4
+
   const eventsMap = useMemo(() => buildEventsMap(report.word_alignment ?? [], report.tajweed_events ?? []), [report.word_alignment, report.tajweed_events])
 
   const surahName = SURAH_NAMES[surah] ?? `سورة ${surah}`
@@ -193,6 +197,17 @@ export default function ReportScreen({ report, surah, ayahStart, ayahEnd, onUplo
 
       {/* ═══ TAB CONTENT ═══ */}
       <div ref={reportRef} className="flex-1 overflow-y-auto px-4 py-4 max-w-lg mx-auto w-full">
+
+        {lowQualityAudio && (
+          <div className="rounded-lg bg-red-50 border border-red-200 p-3 mb-3">
+            <p className="font-ui text-sm font-bold text-red-800 mb-1">⚠ تعذّر تحليل معظم التسجيل</p>
+            <p className="font-ui text-xs text-red-700 leading-relaxed">
+              نظام المحاذاة الصوتية (CPAE) لم يتمكن من الربط بين الصوت والنص لـ <strong>{cpaeFallbackCount} من {totalRef} كلمة</strong>.
+              هذا يدل على تشويش أو انخفاض حجم الصوت.
+              التقييمات التالية قد لا تعكس التلاوة الفعلية — يُفضَّل إعادة التسجيل.
+            </p>
+          </div>
+        )}
 
         {/* ── TAB: SUMMARY (التقرير) ── */}
         {tab === 'summary' && (
@@ -270,6 +285,15 @@ export default function ReportScreen({ report, surah, ayahStart, ayahEnd, onUplo
         {/* ── TAB: MADD (المد) ── */}
         {tab === 'madd' && (
           <div className="space-y-2">
+            {lowQualityAudio && (
+              <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 mb-2">
+                <p className="font-ui text-sm font-semibold text-amber-800 mb-1">⚠ جودة الصوت منخفضة</p>
+                <p className="font-ui text-xs text-amber-700 leading-relaxed">
+                  لم يتمكن النظام من محاذاة الكلمات صوتياً ({cpaeFallbackCount} من {totalRef} كلمة).
+                  قياسات المدّ التالية غير موثوقة — يُرجى إعادة التسجيل في بيئة هادئة بميكروفون جيد.
+                </p>
+              </div>
+            )}
             {maddItems.length === 0 ? (
               <p className="font-ui text-sm text-stone-400 text-center py-8">لا توجد أحكام مد</p>
             ) : (
