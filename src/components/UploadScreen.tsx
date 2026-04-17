@@ -298,12 +298,23 @@ export default function UploadScreen({ onEvaluate, onBack, loading, error }: Pro
                 {previewUrl && (
                   <audio src={previewUrl} controls className="w-full mt-1" />
                 )}
-                <button
-                  onClick={discardRecording}
-                  className="font-ui text-xs text-red-400 hover:text-red-600 transition-colors"
-                >
-                  إعادة التسجيل
-                </button>
+                <div className="flex items-center gap-3">
+                  {previewUrl && file && (
+                    <a
+                      href={previewUrl}
+                      download={file.name}
+                      className="font-ui text-xs text-emerald-700 hover:text-emerald-900 transition-colors"
+                    >
+                      ⬇︎ حفظ الملف
+                    </a>
+                  )}
+                  <button
+                    onClick={discardRecording}
+                    className="font-ui text-xs text-red-400 hover:text-red-600 transition-colors"
+                  >
+                    إعادة التسجيل
+                  </button>
+                </div>
               </>
             )}
           </div>
