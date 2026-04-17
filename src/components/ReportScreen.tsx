@@ -9,6 +9,7 @@ interface Props {
   ayahEnd: number
   onUploadAnother: () => void
   onHome: () => void
+  audioUrl?: string | null
 }
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -22,7 +23,23 @@ const RULE_AR: Record<string, string> = {
   QALQALA: 'قلقلة', GHUNNA: 'غنة',
 }
 
-type TabId = 'summary' | 'words' | 'madd' | 'details'
+type TabId = 'summary' | 'words' | 'madd' | 'audio' | 'details'
+
+// ─── Reference reciters (EveryAyah.com) ──────────────────────────────────────
+
+const RECITERS = [
+  { id: 'Alafasy_128kbps', name: 'مشاري العفاسي', short: 'العفاسي' },
+  { id: 'Abdurrahmaan_As-Sudais_192kbps', name: 'عبدالرحمن السديس', short: 'السديس' },
+  { id: 'Saood_ash-Shuraym_128kbps', name: 'سعود الشريم', short: 'الشريم' },
+  { id: 'Husary_128kbps', name: 'محمود خليل الحصري', short: 'الحصري' },
+  { id: 'Minshawy_Murattal_128kbps', name: 'محمد صديق المنشاوي', short: 'المنشاوي' },
+] as const
+
+function ayahAudioUrl(reciterId: string, surah: number, ayah: number): string {
+  const s = String(surah).padStart(3, '0')
+  const a = String(ayah).padStart(3, '0')
+  return `https://everyayah.com/data/${reciterId}/${s}${a}.mp3`
+}
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -101,7 +118,7 @@ function WordChip({ entry, events }: { entry: WordAlignmentEntry; events: Tajwee
 
 // ─── Main component ──────────────────────────────────────────────────────────
 
-export default function ReportScreen({ report, surah, ayahStart, ayahEnd, onUploadAnother, onHome }: Props) {
+export default function ReportScreen({ report, surah, ayahStart, ayahEnd, onUploadAnother, onHome, audioUrl }: Props) {
   const [tab, setTab] = useState<TabId>('summary')
   const reportRef = useRef<HTMLDivElement>(null)
   const hr: HafizReport | null = (report.hafiz_report ?? report.narrative_report ?? null) as HafizReport | null
@@ -162,6 +179,7 @@ export default function ReportScreen({ report, surah, ayahStart, ayahEnd, onUplo
             ['summary', 'التقرير'],
             ['words', 'الكلمات'],
             ['madd', `المد${maddIssues.length > 0 ? ` (${maddIssues.length})` : ''}`],
+            ['audio', 'الصوت'],
             ['details', 'التفاصيل'],
           ] as [TabId, string][]).map(([id, label]) => (
             <button key={id} onClick={() => setTab(id)}
@@ -298,6 +316,11 @@ export default function ReportScreen({ report, surah, ayahStart, ayahEnd, onUplo
           </div>
         )}
 
+        {/* ── TAB: AUDIO (المراجعة الصوتية) ── */}
+        {tab === 'audio' && (
+          <AudioReviewTab audioUrl={audioUrl} surah={surah} ayahStart={ayahStart} ayahEnd={ayahEnd} />
+        )}
+
         {/* ── TAB: DETAILS (التفاصيل) ── */}
         {tab === 'details' && (
           <div className="space-y-3">
@@ -344,6 +367,80 @@ export default function ReportScreen({ report, surah, ayahStart, ayahEnd, onUplo
           </div>
         )}
 
+      </div>
+    </div>
+  )
+}
+
+// ─── Audio Review Tab ────────────────────────────────────────────────────────
+
+function AudioReviewTab({ audioUrl, surah, ayahStart, ayahEnd }: {
+  audioUrl?: string | null; surah: number; ayahStart: number; ayahEnd: number
+}) {
+  const [reciter, setReciter] = useState(RECITERS[0].id)
+  const [playingAyah, setPlayingAyah] = useState<number | null>(null)
+  const refAudioRef = useRef<HTMLAudioElement>(null)
+
+  const ayahs = Array.from({ length: ayahEnd - ayahStart + 1 }, (_, i) => ayahStart + i)
+
+  const playAyah = (ayah: number) => {
+    if (refAudioRef.current) {
+      refAudioRef.current.src = ayahAudioUrl(reciter, surah, ayah)
+      refAudioRef.current.play()
+      setPlayingAyah(ayah)
+      refAudioRef.current.onended = () => setPlayingAyah(null)
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* User recording */}
+      <div className="bg-white rounded-xl shadow-sm p-3 space-y-2">
+        <p className="font-ui text-xs font-bold text-emerald-800">تلاوتك</p>
+        {audioUrl ? (
+          <audio controls className="w-full h-10" src={audioUrl} preload="metadata" />
+        ) : (
+          <p className="font-ui text-xs text-stone-400 text-center py-3">الملف الصوتي غير متاح</p>
+        )}
+      </div>
+
+      {/* Reference reciters */}
+      <div className="bg-white rounded-xl shadow-sm p-3 space-y-3">
+        <p className="font-ui text-xs font-bold text-emerald-800">تلاوة مرجعية</p>
+
+        {/* Reciter selector */}
+        <div className="flex flex-wrap gap-1.5">
+          {RECITERS.map(r => (
+            <button key={r.id} onClick={() => { setReciter(r.id); setPlayingAyah(null) }}
+              className={`px-2.5 py-1 rounded-full font-ui text-[11px] transition-colors border
+                ${reciter === r.id
+                  ? 'bg-emerald-700 text-white border-emerald-700'
+                  : 'bg-white text-stone-600 border-stone-200 hover:border-emerald-300'}`}>
+              {r.short}
+            </button>
+          ))}
+        </div>
+
+        {/* Ayah buttons */}
+        <div className="space-y-1">
+          {ayahs.map(ayah => (
+            <button key={ayah} onClick={() => playAyah(ayah)}
+              className={`w-full flex items-center justify-between px-3 py-2 rounded-lg border transition-colors font-ui text-sm
+                ${playingAyah === ayah
+                  ? 'bg-emerald-50 border-emerald-300 text-emerald-800'
+                  : 'bg-stone-50 border-stone-200 text-stone-600 hover:border-emerald-200'}`}>
+              <span>الآية {ayah}</span>
+              <span className="text-base">{playingAyah === ayah ? '\u23f8' : '\u25b6'}</span>
+            </button>
+          ))}
+        </div>
+
+        {/* Hidden audio element */}
+        <audio ref={refAudioRef} preload="none" />
+
+        <p className="font-ui text-[9px] text-stone-400 text-center">
+          المصدر: EveryAyah.com — استمع للقارئ المرجعي ثم قارن بتلاوتك
+        </p>
       </div>
     </div>
   )

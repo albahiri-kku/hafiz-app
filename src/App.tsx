@@ -37,6 +37,7 @@ export default function App() {
   const [mushafPage, setMushafPage] = useState(1)
   // ─── evaluate-file state ──────────────────────────────────────────────────
   const [fileReport, setFileReport]       = useState<EvaluateFileResponse | null>(null)
+  const [uploadedAudioUrl, setUploadedAudioUrl] = useState<string | null>(null)
   const [fileUploadError, setFileUploadError] = useState<string | null>(null)
   const [fileLoading, setFileLoading]     = useState(false)
   const [fileSurah, setFileSurah]         = useState(1)
@@ -233,6 +234,9 @@ export default function App() {
     setFileAyahStart(start)
     setFileAyahEnd(end)
     setPhase('evaluating')      // ← phase انتقالية أثناء الانتظار
+    // حفظ URL الملف الصوتي للتشغيل لاحقاً في تبويب المراجعة
+    if (uploadedAudioUrl) URL.revokeObjectURL(uploadedAudioUrl)
+    setUploadedAudioUrl(URL.createObjectURL(file))
     try {
       const report = await api.evaluateFile(file, surah, start, end)
       setFileReport(report)
@@ -312,6 +316,7 @@ export default function App() {
         surah={fileSurah}
         ayahStart={fileAyahStart}
         ayahEnd={fileAyahEnd}
+        audioUrl={uploadedAudioUrl}
         onUploadAnother={() => {
           setFileReport(null)
           setFileUploadError(null)
