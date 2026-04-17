@@ -61,7 +61,7 @@ export default function UploadScreen({ onEvaluate, onBack, loading, error }: Pro
 
   const acceptFile = useCallback((f: File) => {
     const ext = f.name.split('.').pop()?.toLowerCase() ?? ''
-    if (!['wav', 'mp3', 'm4a', 'ogg', 'webm'].includes(ext)) return
+    if (!['wav', 'mp3', 'm4a', 'mp4', 'ogg', 'opus', 'webm', 'aac'].includes(ext)) return
     if (f.size > 25 * 1024 * 1024) return
     if (f.size < 50 * 1024) return
     setFile(f)
@@ -229,7 +229,7 @@ export default function UploadScreen({ onEvaluate, onBack, loading, error }: Pro
             <input
               ref={inputRef}
               type="file"
-              accept=".wav,.mp3,.m4a,.ogg,.webm,audio/*"
+              accept=".wav,.mp3,.m4a,.mp4,.ogg,.opus,.webm,.aac,audio/*"
               className="hidden"
               onChange={onInputChange}
             />
