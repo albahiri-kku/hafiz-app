@@ -53,14 +53,19 @@ function buildEventsMap(alignments: WordAlignmentEntry[], tajweedEvents: Tajweed
 }
 
 async function exportToPDF(element: HTMLElement) {
-  const { default: html2canvas } = await import('html2canvas')
-  const { jsPDF } = await import('jspdf')
-  const canvas = await html2canvas(element, { scale: 2, useCORS: true, backgroundColor: '#fafaf9' })
-  const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
-  const w = 210, h = (canvas.height * w) / canvas.width, ph = 297
-  let pos = 0
-  while (pos < h) { if (pos > 0) pdf.addPage(); pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, -pos, w, h); pos += ph }
-  pdf.save(`hafiz-report-${Date.now()}.pdf`)
+  try {
+    const { default: html2canvas } = await import('html2canvas')
+    const { jsPDF } = await import('jspdf')
+    const canvas = await html2canvas(element, { scale: 2, useCORS: true, backgroundColor: '#fafaf9' })
+    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
+    const w = 210, h = (canvas.height * w) / canvas.width, ph = 297
+    let pos = 0
+    while (pos < h) { if (pos > 0) pdf.addPage(); pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, -pos, w, h); pos += ph }
+    pdf.save(`hafiz-report-${Date.now()}.pdf`)
+  } catch (e) {
+    console.error('PDF export failed:', e)
+    alert('تعذّر تصدير التقرير. تأكد من اتصال الإنترنت وأعد المحاولة.')
+  }
 }
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
@@ -99,7 +104,7 @@ function WordChip({ entry, events }: { entry: WordAlignmentEntry; events: Tajwee
 export default function ReportScreen({ report, surah, ayahStart, ayahEnd, onUploadAnother, onHome }: Props) {
   const [tab, setTab] = useState<TabId>('summary')
   const reportRef = useRef<HTMLDivElement>(null)
-  const hr = report.hafiz_report ?? report.narrative_report as HafizReport | null
+  const hr: HafizReport | null = (report.hafiz_report ?? report.narrative_report ?? null) as HafizReport | null
 
   const alignments = report.word_alignment ?? []
   const matchCount = alignments.filter(w => w.status === 'MATCH').length
@@ -121,7 +126,7 @@ export default function ReportScreen({ report, surah, ayahStart, ayahEnd, onUplo
     hr.overall_grade === 'جيد' ? 'bg-amber-100 text-amber-800 border-amber-300' :
     'bg-red-100 text-red-800 border-red-300'
 
-  const errorDist: ErrorDistribution[] = (hr as any)?.error_distribution ?? []
+  const errorDist: ErrorDistribution[] = hr?.error_distribution ?? []
   const maddIssues = maddItems.filter(m => m.zone !== 'OK')
 
   return (
@@ -140,7 +145,7 @@ export default function ReportScreen({ report, surah, ayahStart, ayahEnd, onUplo
           </div>
           <h1 className="font-ui text-base font-bold">تقرير حافظ</h1>
           <p className="font-ui text-[9px] text-emerald-300/60 leading-tight mb-0.5">تقرير حافظ يُنتَج عن طريق الذكاء الاصطناعي وقد يكون به بعض الأخطاء التي تستلزم المراجعة والتدقيق</p>
-          <p className="font-ui text-[10px] text-emerald-200">{surahName} \u00b7 {range}{hr ? ` \u00b7 ${(hr as any).reader_level ?? ''}` : ''}{report.total_runtime_sec != null ? ` \u00b7 ${report.total_runtime_sec.toFixed(0)}s` : ''}</p>
+          <p className="font-ui text-[10px] text-emerald-200">{surahName} \u00b7 {range}{hr ? ` \u00b7 ${hr.reader_level ?? ''}` : ''}{report.total_runtime_sec != null ? ` \u00b7 ${report.total_runtime_sec.toFixed(0)}s` : ''}</p>
 
           {/* Metrics row inside header */}
           <div className="grid grid-cols-4 gap-1.5 mt-2">
@@ -183,9 +188,9 @@ export default function ReportScreen({ report, surah, ayahStart, ayahEnd, onUplo
                   { key: 'tajweed', text: hr.tajweed_section, title: 'أحكام التجويد' },
                   { key: 'madd', text: hr.madd_section, title: 'أحكام المد' },
                   { key: 'waqf', text: hr.waqf_section, title: 'الوقف' },
-                  { key: 'ra', text: (hr as any).ra_section, title: 'التفخيم والترقيق' },
-                  { key: 'consistency', text: (hr as any).consistency_section, title: 'تماثل المدود' },
-                  { key: 'behavior', text: (hr as any).behavior_section, title: 'سلوك القارئ' },
+                  { key: 'ra', text: hr.ra_section, title: 'التفخيم والترقيق' },
+                  { key: 'consistency', text: hr.consistency_section, title: 'تماثل المدود' },
+                  { key: 'behavior', text: hr.behavior_section, title: 'سلوك القارئ' },
                 ].filter(s => s.text).map(s => (
                   <div key={s.key} className="bg-stone-50 rounded-xl px-3 py-2">
                     <p className="font-ui text-xs font-bold text-emerald-800 mb-0.5">{s.title}</p>

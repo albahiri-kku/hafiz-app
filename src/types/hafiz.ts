@@ -182,11 +182,17 @@ export interface HafizReport {
   waqf_section: string
   ra_section: string
   behavior_section: string
+  consistency_section: string
   recommendations: string[]
   closing: string
   overall_grade: string       // "ممتاز" | "جيد جداً" | "جيد" | "يحتاج تحسين"
   reader_level: string        // "مبتدئ" | "متوسط" | "متقدم"
   error_distribution: ErrorDistribution[]
+  madd_consistency: {
+    consistent: boolean
+    violations: unknown[]
+    message_ar: string
+  } | null
 }
 
 export interface EvaluateFileResponse {
