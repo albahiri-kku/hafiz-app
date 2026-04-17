@@ -72,7 +72,7 @@ export default function LandingPage() {
           <li><a href="#features">المزايا</a></li>
           <li><a href="#how">كيف يعمل</a></li>
           <li><Link to="/about">عن المشروع</Link></li>
-          <li><Link to="/app" className="lp-nav-cta">ابدأ الآن</Link></li>
+          <li><Link to="/app?upload=1" className="lp-nav-cta">ابدأ الآن</Link></li>
         </ul>
       </nav>
 
@@ -88,7 +88,7 @@ export default function LandingPage() {
         </p>
 
         <div className="lp-hero-actions">
-          <Link to="/app" className="lp-btn-primary">
+          <Link to="/app?upload=1" className="lp-btn-primary">
             🎙 ابدأ المراجعة
           </Link>
           <a href="#how" className="lp-btn-secondary">
@@ -167,7 +167,7 @@ export default function LandingPage() {
           <p className="lp-cta-desc">
             لا يلزمك تسجيل حساب — افتح التطبيق مباشرةً وابدأ تلاوتك.
           </p>
-          <Link to="/app" className="lp-btn-primary">
+          <Link to="/app?upload=1" className="lp-btn-primary">
             🎙 ادخل إلى التطبيق
           </Link>
         </div>

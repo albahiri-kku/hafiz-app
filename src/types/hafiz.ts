@@ -235,6 +235,10 @@ export interface EvaluateFileResponse {
   } | null
   narrative_report: NarrativeReport | null
   hafiz_report: HafizReport | null
+  auto_detect_used?: boolean | null
+  auto_detect_confidence?: number | null
+  auto_detect_word_match_ratio?: number | null
+  auto_detect_candidates?: Array<{ ayah_code: string; end_ayah_code?: string; score: number; word_match_ratio?: number }> | null
 }
 
 export interface BehaviorEvent {

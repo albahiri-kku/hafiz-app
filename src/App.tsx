@@ -24,7 +24,12 @@ const EMPTY_STATS: SessionStats = {
 }
 
 export default function App() {
-  const [phase, setPhase]           = useState<AppPhase>('start')
+  const _initialPhase: AppPhase = (() => {
+    if (typeof window === 'undefined') return 'start'
+    const params = new URLSearchParams(window.location.search)
+    return params.get('upload') === '1' ? 'upload' : 'start'
+  })()
+  const [phase, setPhase]           = useState<AppPhase>(_initialPhase)
   const [mode, setMode]             = useState<RecitationMode>('tilawa')
   const [sessionId, setSessionId]   = useState('')
   const [ayahData, setAyahData]     = useState<AyahData | null>(null)
@@ -226,7 +231,7 @@ export default function App() {
   }, [])
 
   const handleEvaluateFile = useCallback(async (
-    file: File, surah: number, start: number, end: number,
+    file: File, surah: number, start: number, end: number, autoDetect: boolean = false,
   ) => {
     setFileLoading(true)
     setFileUploadError(null)
@@ -238,7 +243,19 @@ export default function App() {
     if (uploadedAudioUrl) URL.revokeObjectURL(uploadedAudioUrl)
     setUploadedAudioUrl(URL.createObjectURL(file))
     try {
-      const report = await api.evaluateFile(file, surah, start, end)
+      const report = await api.evaluateFile(
+        file,
+        autoDetect ? null : surah,
+        autoDetect ? null : start,
+        autoDetect ? null : end,
+        autoDetect,
+      )
+      // عند الكشف التلقائي: استخدم القيم المُكتشفة لعرض التقرير
+      if (autoDetect && report.surah_number) {
+        setFileSurah(report.surah_number)
+        setFileAyahStart(report.ayah_start)
+        setFileAyahEnd(report.ayah_end)
+      }
       setFileReport(report)
       setPhase('report')
     } catch (e) {

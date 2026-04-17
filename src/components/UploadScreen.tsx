@@ -17,7 +17,7 @@ const SURAH_LENGTHS: Record<number, number> = {
 }
 
 interface Props {
-  onEvaluate: (file: File, surah: number, start: number, end: number) => void
+  onEvaluate: (file: File, surah: number, start: number, end: number, autoDetect: boolean) => void
   onBack: () => void
   loading: boolean
   error: string | null
@@ -32,6 +32,7 @@ export default function UploadScreen({ onEvaluate, onBack, loading, error }: Pro
   const [surah, setSurah]     = useState(1)
   const [ayahStart, setAyahStart] = useState(1)
   const [ayahEnd, setAyahEnd] = useState(1)
+  const [autoDetect, setAutoDetect] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
   // Recording state
@@ -179,7 +180,7 @@ export default function UploadScreen({ onEvaluate, onBack, loading, error }: Pro
 
   const ayahCount = ayahEnd - ayahStart + 1
   const estimatedWords = ayahCount * 10
-  const wordLimitWarning = estimatedWords > 150
+  const wordLimitWarning = !autoDetect && estimatedWords > 150
   const canSubmit = file !== null && !loading && !wordLimitWarning && !recording
 
   return (
@@ -323,41 +324,64 @@ export default function UploadScreen({ onEvaluate, onBack, loading, error }: Pro
         {/* Surah + Ayah selector */}
         <div className="bg-white rounded-2xl shadow-sm p-4 space-y-3">
           <label className="font-ui text-sm font-semibold text-stone-600 block">نطاق التلاوة</label>
-          <div>
-            <label className="font-ui text-xs text-stone-400 block mb-1">السورة</label>
-            <select
-              value={surah}
-              onChange={(e) => handleSurahChange(Number(e.target.value))}
-              className="w-full border border-stone-200 rounded-xl px-3 py-2 font-ui text-sm focus:outline-none focus:border-emerald-400"
-              dir="rtl"
-            >
-              {Array.from({ length: 114 }, (_, i) => i + 1).map((s) => (
-                <option key={s} value={s}>{s}. {SURAH_NAMES[s]}</option>
-              ))}
-            </select>
-          </div>
-          <div className="flex gap-3">
-            <div className="flex-1">
-              <label className="font-ui text-xs text-stone-400 block mb-1">من الآية</label>
-              <input
-                type="number" min={1} max={maxAyah} value={ayahStart}
-                onChange={(e) => handleStartChange(Number(e.target.value))}
-                className="w-full border border-stone-200 rounded-xl px-3 py-2 font-ui text-sm text-center focus:outline-none focus:border-emerald-400"
-              />
+
+          <label className="flex items-center gap-2 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={autoDetect}
+              onChange={(e) => setAutoDetect(e.target.checked)}
+              className="w-4 h-4 accent-emerald-700"
+            />
+            <span className="font-ui text-sm text-stone-700">
+              🔍 اكتشاف الموضع تلقائياً من الصوت
+            </span>
+          </label>
+          {autoDetect && (
+            <p className="font-ui text-xs text-emerald-700 bg-emerald-50 rounded-lg px-2 py-1.5">
+              سيحدّد النظام السورة والآيات من الصوت مباشرة — قد يفشل إن كان التسجيل قصيراً أو غير واضح.
+            </p>
+          )}
+
+          <div className={autoDetect ? 'opacity-40 pointer-events-none space-y-3' : 'space-y-3'}>
+            <div>
+              <label className="font-ui text-xs text-stone-400 block mb-1">السورة</label>
+              <select
+                value={surah}
+                onChange={(e) => handleSurahChange(Number(e.target.value))}
+                className="w-full border border-stone-200 rounded-xl px-3 py-2 font-ui text-sm focus:outline-none focus:border-emerald-400"
+                dir="rtl"
+                disabled={autoDetect}
+              >
+                {Array.from({ length: 114 }, (_, i) => i + 1).map((s) => (
+                  <option key={s} value={s}>{s}. {SURAH_NAMES[s]}</option>
+                ))}
+              </select>
             </div>
-            <div className="flex-1">
-              <label className="font-ui text-xs text-stone-400 block mb-1">إلى الآية</label>
-              <input
-                type="number" min={ayahStart} max={maxAyah} value={ayahEnd}
-                onChange={(e) => handleEndChange(Number(e.target.value))}
-                className="w-full border border-stone-200 rounded-xl px-3 py-2 font-ui text-sm text-center focus:outline-none focus:border-emerald-400"
-              />
+            <div className="flex gap-3">
+              <div className="flex-1">
+                <label className="font-ui text-xs text-stone-400 block mb-1">من الآية</label>
+                <input
+                  type="number" min={1} max={maxAyah} value={ayahStart}
+                  onChange={(e) => handleStartChange(Number(e.target.value))}
+                  className="w-full border border-stone-200 rounded-xl px-3 py-2 font-ui text-sm text-center focus:outline-none focus:border-emerald-400"
+                  disabled={autoDetect}
+                />
+              </div>
+              <div className="flex-1">
+                <label className="font-ui text-xs text-stone-400 block mb-1">إلى الآية</label>
+                <input
+                  type="number" min={ayahStart} max={maxAyah} value={ayahEnd}
+                  onChange={(e) => handleEndChange(Number(e.target.value))}
+                  className="w-full border border-stone-200 rounded-xl px-3 py-2 font-ui text-sm text-center focus:outline-none focus:border-emerald-400"
+                  disabled={autoDetect}
+                />
+              </div>
             </div>
+            <p className={`font-ui text-xs ${wordLimitWarning ? 'text-red-500 font-medium' : 'text-stone-400'}`}>
+              {ayahCount} {ayahCount === 1 ? 'آية' : 'آيات'} · ~{estimatedWords} كلمة
+              {wordLimitWarning ? ' — يتجاوز الحد (150 كلمة)، قلّل النطاق' : ' · الحد الأقصى 150 كلمة'}
+            </p>
           </div>
-          <p className={`font-ui text-xs ${wordLimitWarning ? 'text-red-500 font-medium' : 'text-stone-400'}`}>
-            {ayahCount} {ayahCount === 1 ? 'آية' : 'آيات'} · ~{estimatedWords} كلمة
-            {wordLimitWarning ? ' — يتجاوز الحد (150 كلمة)، قلّل النطاق' : ' · الحد الأقصى 150 كلمة'}
-          </p>
         </div>
 
         {error && (
@@ -367,7 +391,7 @@ export default function UploadScreen({ onEvaluate, onBack, loading, error }: Pro
         )}
 
         <button
-          onClick={() => file && onEvaluate(file, surah, ayahStart, ayahEnd)}
+          onClick={() => file && onEvaluate(file, surah, ayahStart, ayahEnd, autoDetect)}
           disabled={!canSubmit}
           className="w-full py-3.5 rounded-2xl bg-emerald-700 hover:bg-emerald-600 active:scale-95 text-white font-ui font-semibold text-base transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-md"
         >

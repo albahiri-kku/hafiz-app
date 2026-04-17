@@ -10,7 +10,7 @@ export default function AboutPage() {
         <Link to="/" className="lp-nav-logo">حافِظ</Link>
         <ul className="lp-nav-links">
           <li><Link to="/">الرئيسية</Link></li>
-          <li><Link to="/app" className="lp-nav-cta">التطبيق</Link></li>
+          <li><Link to="/app?upload=1" className="lp-nav-cta">التطبيق</Link></li>
         </ul>
       </nav>
 
@@ -74,7 +74,7 @@ export default function AboutPage() {
           </p>
 
           <div style={{ marginTop: 48, textAlign: 'center' }}>
-            <Link to="/app" className="lp-btn-primary">
+            <Link to="/app?upload=1" className="lp-btn-primary">
               🎙 جرِّب التطبيق الآن
             </Link>
           </div>

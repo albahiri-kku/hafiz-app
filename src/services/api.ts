@@ -55,15 +55,20 @@ export const api = {
 
   evaluateFile: async (
     file: File,
-    surahNumber: number,
-    ayahStart: number,
-    ayahEnd: number,
+    surahNumber: number | null,
+    ayahStart: number | null,
+    ayahEnd: number | null,
+    autoDetect: boolean = false,
   ): Promise<EvaluateFileResponse> => {
     const form = new FormData()
     form.append('audio', file, file.name)
-    form.append('surah_number', String(surahNumber))
-    form.append('ayah_start', String(ayahStart))
-    form.append('ayah_end', String(ayahEnd))
+    if (autoDetect) {
+      form.append('auto_detect', 'true')
+    } else {
+      form.append('surah_number', String(surahNumber))
+      form.append('ayah_start', String(ayahStart))
+      form.append('ayah_end', String(ayahEnd))
+    }
     return request<EvaluateFileResponse>('/api/v1/recitation/evaluate-file', {
       method: 'POST',
       body: form,
