@@ -251,7 +251,7 @@ export default function App() {
         autoDetect,
       )
       // عند الكشف التلقائي: استخدم القيم المُكتشفة لعرض التقرير
-      if (autoDetect && report.surah_number) {
+      if (autoDetect && report.surah_number && report.ayah_start && report.ayah_end) {
         setFileSurah(report.surah_number)
         setFileAyahStart(report.ayah_start)
         setFileAyahEnd(report.ayah_end)

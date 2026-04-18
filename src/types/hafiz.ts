@@ -260,6 +260,10 @@ export interface EvaluateFileResponse {
   auto_detect_confidence?: number | null
   auto_detect_word_match_ratio?: number | null
   auto_detect_candidates?: Array<{ ayah_code: string; end_ayah_code?: string; score: number; word_match_ratio?: number }> | null
+  // Auto-detect resolved ayah range (echoed from the backend)
+  surah_number?: number
+  ayah_start?: number
+  ayah_end?: number
 }
 
 export interface BehaviorEvent {
