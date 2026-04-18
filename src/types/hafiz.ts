@@ -128,6 +128,25 @@ export interface AyahBoundaryWaqfEntry {
   dur_ms: number
 }
 
+// حكم تفخيم/ترقيق (لام الجلالة أو حرف استعلاء)
+export interface TafkhimEntry {
+  kind: 'lam_jalalah' | 'istila'
+  word_index: number
+  word_text: string
+  expected?: 'TAFKHIM' | 'TARQIQ'   // for lam_jalalah
+  letter?: string                    // for istila
+  letter_name?: string               // for istila
+  tier?: number                      // for istila (1-5)
+  detected: string | null            // TAFKHIM | TARQIQ | TAFKHIM_OK | WEAK_TAFKHIM | AMBIGUOUS | null
+  verdict: string                    // OK | TAFKHIM | TARQIQ | WEAK_TAFKHIM | ISSUE
+  acoustic: 'MEASURED' | 'TEXT_ONLY'
+  confidence: number
+  f2_min_hz: number | null
+  f2_ratio: number | null
+  baseline_hz: number | null
+  lam_form?: string                  // for lam_jalalah
+}
+
 // بيانات شريط المد البصري (من word_gated_summary.madd_summary)
 export interface MaddBarSegment {
   id: string
@@ -231,6 +250,8 @@ export interface EvaluateFileResponse {
   behavior_events: BehaviorEvent[] | null
   word_gated_summary: {
     madd_summary?: MaddBarEntry[]
+    tafkhim_summary?: TafkhimEntry[]
+    reciter_baseline_hz?: number | null
     [key: string]: unknown
   } | null
   narrative_report: NarrativeReport | null

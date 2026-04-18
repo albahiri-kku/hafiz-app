@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, type ReactNode } from 'react'
-import type { EvaluateFileResponse, WordAlignmentEntry, TajweedEventEntry, MaddBarEntry, HafizReport, ErrorDistribution } from '../types/hafiz'
+import type { EvaluateFileResponse, WordAlignmentEntry, TajweedEventEntry, MaddBarEntry, TafkhimEntry, HafizReport, ErrorDistribution } from '../types/hafiz'
 import { SURAH_NAMES } from '../types/hafiz'
 
 interface Props {
@@ -149,6 +149,14 @@ export default function ReportScreen({ report, surah, ayahStart, ayahEnd, onUplo
 
   const errorDist: ErrorDistribution[] = hr?.error_distribution ?? []
   const maddIssues = maddItems.filter(m => m.zone !== 'OK')
+
+  const tafkhimItems: TafkhimEntry[] = (report.word_gated_summary?.tafkhim_summary ?? []) as TafkhimEntry[]
+  const baselineHz = (report.word_gated_summary?.reciter_baseline_hz ?? null) as number | null
+  const tafkhimMeasured = tafkhimItems.filter(t => t.acoustic === 'MEASURED')
+  const tafkhimIssues = tafkhimMeasured.filter(t =>
+    t.verdict === 'ISSUE' || t.verdict === 'WEAK_TAFKHIM' ||
+    (t.expected && t.detected && t.expected !== t.detected && t.detected !== 'AMBIGUOUS')
+  )
 
   return (
     <div className="min-h-screen bg-parchment-50 flex flex-col" dir="rtl">
@@ -356,6 +364,73 @@ export default function ReportScreen({ report, surah, ayahStart, ayahEnd, onUplo
                   )
                 })}
               </>
+            )}
+
+            {/* ── تفخيم/ترقيق (لام الجلالة + الحروف المستعلية) ── */}
+            {tafkhimItems.length > 0 && (
+              <div className="mt-6">
+                <h3 className="font-ui text-sm font-bold text-stone-700 mb-2">
+                  التفخيم والترقيق
+                  <span className="font-ui text-xs text-stone-400 mr-2">
+                    ({tafkhimMeasured.length} مقاس صوتياً من {tafkhimItems.length})
+                  </span>
+                </h3>
+                {baselineHz && (
+                  <p className="font-ui text-[10px] text-stone-400 mb-2">
+                    بصمة القارئ الصوتية: F2 الأساسي = <span className="tabular-nums">{Math.round(baselineHz)}</span> Hz
+                  </p>
+                )}
+                {tafkhimIssues.length > 0 && (
+                  <p className="font-ui text-xs text-amber-600 mb-1">
+                    {tafkhimIssues.length} ملاحظة تستدعي المراجعة
+                  </p>
+                )}
+                <div className="space-y-1">
+                  {tafkhimItems.map((t, i) => {
+                    const isLam = t.kind === 'lam_jalalah'
+                    const label = isLam
+                      ? (t.expected === 'TARQIQ' ? 'ترقيق لام الجلالة' : 'تفخيم لام الجلالة')
+                      : `تفخيم ${t.letter_name === 'khaa' ? 'الخاء' : t.letter_name === 'saad' ? 'الصاد' : t.letter_name === 'daad' ? 'الضاد' : t.letter_name === 'taa' ? 'الطاء' : t.letter_name === 'zhaa' ? 'الظاء' : t.letter_name === 'ghayn' ? 'الغين' : t.letter_name === 'qaaf' ? 'القاف' : t.letter_name}`
+                    const isIssue = t.verdict === 'ISSUE' || t.verdict === 'WEAK_TAFKHIM' ||
+                      (isLam && t.expected && t.detected && t.expected !== t.detected && t.detected !== 'AMBIGUOUS')
+                    const isMeasured = t.acoustic === 'MEASURED'
+                    const colorCls = !isMeasured ? 'text-stone-400'
+                      : isIssue ? 'text-red-500'
+                      : 'text-emerald-600'
+                    return (
+                      <div key={i} className="flex items-center justify-between rounded-lg bg-white px-3 py-1.5 shadow-sm">
+                        <div className="flex flex-col">
+                          <span className="font-quran text-sm font-bold text-stone-800 leading-tight">{t.word_text}</span>
+                          <span className="font-ui text-[10px] text-stone-400 leading-tight">{label}</span>
+                        </div>
+                        <div className="flex flex-col items-end">
+                          {isMeasured && t.f2_min_hz ? (
+                            <>
+                              <span className={`font-ui text-xs font-bold ${colorCls} tabular-nums`}>
+                                {Math.round(t.f2_min_hz)} Hz
+                                {t.f2_ratio != null && (
+                                  <span className="font-normal text-stone-400 mr-1">
+                                    (نسبة {t.f2_ratio.toFixed(2)})
+                                  </span>
+                                )}
+                              </span>
+                              <span className={`font-ui text-[10px] leading-tight ${colorCls}`}>
+                                {t.detected === 'TAFKHIM_OK' ? 'تفخيم صحيح' :
+                                 t.detected === 'WEAK_TAFKHIM' ? 'تفخيم ضعيف' :
+                                 t.detected === 'TAFKHIM' ? 'تفخيم' :
+                                 t.detected === 'TARQIQ' ? 'ترقيق' :
+                                 t.detected === 'AMBIGUOUS' ? 'ضمن النطاق' : '—'}
+                              </span>
+                            </>
+                          ) : (
+                            <span className="font-ui text-[10px] text-stone-400 italic">بدون قياس صوتي</span>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
             )}
           </div>
         )}
