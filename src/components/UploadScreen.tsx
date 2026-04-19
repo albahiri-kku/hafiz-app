@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
 import { SURAH_NAMES } from '../types/hafiz'
+import '../pages/LandingPage.css'
 
 const SURAH_LENGTHS: Record<number, number> = {
   1:7,2:286,3:200,4:176,5:120,6:165,7:206,8:75,9:129,10:109,
@@ -27,15 +28,14 @@ type Mode = 'upload' | 'record'
 
 export default function UploadScreen({ onEvaluate, onBack, loading, error }: Props) {
   const [mode, setMode] = useState<Mode>('upload')
-  const [file, setFile]       = useState<File | null>(null)
+  const [file, setFile] = useState<File | null>(null)
   const [dragging, setDragging] = useState(false)
-  const [surah, setSurah]     = useState(1)
+  const [surah, setSurah] = useState(1)
   const [ayahStart, setAyahStart] = useState(1)
   const [ayahEnd, setAyahEnd] = useState(1)
   const [autoDetect, setAutoDetect] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  // Recording state
   const [recording, setRecording] = useState(false)
   const [elapsedSec, setElapsedSec] = useState(0)
   const [recordError, setRecordError] = useState<string | null>(null)
@@ -79,7 +79,6 @@ export default function UploadScreen({ onEvaluate, onBack, loading, error }: Pro
     if (f) acceptFile(f)
   }
 
-  // --- Recording ---
   const pickMimeType = (): string => {
     const candidates = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg']
     for (const c of candidates) {
@@ -161,7 +160,13 @@ export default function UploadScreen({ onEvaluate, onBack, loading, error }: Pro
   useEffect(() => () => {
     stopStream()
     if (previewUrl) URL.revokeObjectURL(previewUrl)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  useEffect(() => {
+    const prev = document.body.style.background
+    document.body.style.background = '#0B1410'
+    return () => { document.body.style.background = prev }
   }, [])
 
   const switchMode = (m: Mode) => {
@@ -184,228 +189,281 @@ export default function UploadScreen({ onEvaluate, onBack, loading, error }: Pro
   const canSubmit = file !== null && !loading && !wordLimitWarning && !recording
 
   return (
-    <div className="min-h-screen bg-parchment-50 flex flex-col items-center justify-center p-6" dir="rtl">
-      <div className="mb-6 text-center">
-        <h1 className="font-quran text-4xl text-emerald-800 mb-1">حافِظ</h1>
-        <p className="font-ui text-stone-500 text-sm">تقييم تلاوة — رفع ملف أو تسجيل مباشر</p>
-      </div>
-
-      <div className="w-full max-w-sm space-y-4">
-
-        {/* Mode tabs */}
-        <div className="flex bg-white rounded-2xl shadow-sm p-1">
-          <button
-            onClick={() => switchMode('upload')}
-            disabled={recording}
-            className={`flex-1 py-2 rounded-xl font-ui text-sm font-semibold transition-colors ${
-              mode === 'upload' ? 'bg-emerald-700 text-white' : 'text-stone-600 hover:bg-stone-50'
-            } disabled:opacity-40`}
-          >
-            📁 رفع ملف
-          </button>
-          <button
-            onClick={() => switchMode('record')}
-            disabled={recording}
-            className={`flex-1 py-2 rounded-xl font-ui text-sm font-semibold transition-colors ${
-              mode === 'record' ? 'bg-emerald-700 text-white' : 'text-stone-600 hover:bg-stone-50'
-            } disabled:opacity-40`}
-          >
-            🎙 تسجيل مباشر
-          </button>
-        </div>
-
-        {/* Upload mode */}
-        {mode === 'upload' && (
-          <div
-            onClick={() => !file && inputRef.current?.click()}
-            onDragOver={(e) => { e.preventDefault(); setDragging(true) }}
-            onDragLeave={() => setDragging(false)}
-            onDrop={onDrop}
-            className={`
-              relative border-2 border-dashed rounded-2xl p-6 text-center transition-all cursor-pointer
-              ${dragging ? 'border-emerald-500 bg-emerald-50' : 'border-stone-300 bg-white hover:border-emerald-400 hover:bg-parchment-50'}
-              ${file ? 'border-emerald-500 bg-emerald-50 cursor-default' : ''}
-            `}
-          >
-            <input
-              ref={inputRef}
-              type="file"
-              accept=".wav,.mp3,.m4a,.mp4,.ogg,.opus,.webm,.aac,audio/*"
-              className="hidden"
-              onChange={onInputChange}
-            />
-            {file ? (
-              <div className="space-y-1">
-                <div className="text-2xl">🎵</div>
-                <p className="font-ui text-sm font-semibold text-emerald-700 truncate">{file.name}</p>
-                <p className="font-ui text-xs text-stone-400">{(file.size / 1024 / 1024).toFixed(1)} MB</p>
-                <button
-                  onClick={(e) => { e.stopPropagation(); setFile(null); if (inputRef.current) inputRef.current.value = '' }}
-                  className="font-ui text-xs text-red-400 hover:text-red-600 transition-colors mt-1"
-                >
-                  إزالة الملف
-                </button>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                <div className="text-3xl text-stone-300">🎙</div>
-                <p className="font-ui text-sm font-semibold text-stone-600">اسحب الملف أو اضغط للاختيار</p>
-                <p className="font-ui text-xs text-stone-400">WAV · MP3 · M4A — الحد الأقصى 25 MB</p>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Record mode */}
-        {mode === 'record' && (
-          <div className="bg-white rounded-2xl shadow-sm p-6 text-center space-y-3">
-            {!file ? (
-              <>
-                <div className={`text-5xl ${recording ? 'animate-pulse' : ''}`}>
-                  {recording ? '🔴' : '🎙'}
-                </div>
-                <p className="font-ui text-2xl font-semibold text-stone-700 tabular-nums">
-                  {fmt(elapsedSec)}
-                </p>
-                <p className="font-ui text-xs text-stone-400">
-                  {recording ? 'جارٍ التسجيل… تكلّم الآن' : `حد أقصى ${MAX_RECORD_SEC / 60} دقائق`}
-                </p>
-                {!recording ? (
-                  <button
-                    onClick={startRecording}
-                    className="w-full py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-600 text-white font-ui font-semibold text-sm transition-colors"
-                  >
-                    ابدأ التسجيل
-                  </button>
-                ) : (
-                  <button
-                    onClick={stopRecording}
-                    className="w-full py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white font-ui font-semibold text-sm transition-colors"
-                  >
-                    إيقاف التسجيل
-                  </button>
-                )}
-                {recordError && (
-                  <p className="font-ui text-xs text-red-500">{recordError}</p>
-                )}
-              </>
-            ) : (
-              <>
-                <div className="text-3xl">✅</div>
-                <p className="font-ui text-sm font-semibold text-emerald-700">تم التسجيل</p>
-                <p className="font-ui text-xs text-stone-400">
-                  {fmt(elapsedSec)} · {(file.size / 1024 / 1024).toFixed(1)} MB
-                </p>
-                {previewUrl && (
-                  <audio src={previewUrl} controls className="w-full mt-1" />
-                )}
-                <div className="flex items-center gap-3">
-                  {previewUrl && file && (
-                    <a
-                      href={previewUrl}
-                      download={file.name}
-                      className="font-ui text-xs text-emerald-700 hover:text-emerald-900 transition-colors"
-                    >
-                      ⬇︎ حفظ الملف
-                    </a>
-                  )}
-                  <button
-                    onClick={discardRecording}
-                    className="font-ui text-xs text-red-400 hover:text-red-600 transition-colors"
-                  >
-                    إعادة التسجيل
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
-        )}
-
-        {/* Surah + Ayah selector */}
-        <div className="bg-white rounded-2xl shadow-sm p-4 space-y-3">
-          <label className="font-ui text-sm font-semibold text-stone-600 block">نطاق التلاوة</label>
-
-          <label className="flex items-center gap-2 cursor-pointer select-none">
-            <input
-              type="checkbox"
-              checked={autoDetect}
-              onChange={(e) => setAutoDetect(e.target.checked)}
-              className="w-4 h-4 accent-emerald-700"
-            />
-            <span className="font-ui text-sm text-stone-700">
-              🔍 اكتشاف الموضع تلقائياً من الصوت
-            </span>
-          </label>
-          {autoDetect && (
-            <p className="font-ui text-xs text-emerald-700 bg-emerald-50 rounded-lg px-2 py-1.5">
-              سيحدّد النظام السورة والآيات من الصوت مباشرة — قد يفشل إن كان التسجيل قصيراً أو غير واضح.
+    <div className="hafiz-landing">
+      <section className="recite-upload">
+        <div className="ru-container">
+          <div className="ru-head">
+            <div className="t-eyebrow">جَلْسَة تَقْيِيم</div>
+            <h1 className="ru-title t-display">قَيِّم تِلاوَتَك</h1>
+            <p className="ru-sub">
+              ارفع ملفاً صوتياً لتلاوتك أو سجِّل مباشرةً، وسيُحلّلها حافِظ ويُقدّم تقييماً تفصيلياً للتجويد والمخارج.
             </p>
-          )}
+          </div>
 
-          <div className={autoDetect ? 'opacity-40 pointer-events-none space-y-3' : 'space-y-3'}>
-            <div>
-              <label className="font-ui text-xs text-stone-400 block mb-1">السورة</label>
-              <select
-                value={surah}
-                onChange={(e) => handleSurahChange(Number(e.target.value))}
-                className="w-full border border-stone-200 rounded-xl px-3 py-2 font-ui text-sm focus:outline-none focus:border-emerald-400"
-                dir="rtl"
-                disabled={autoDetect}
+          <div className="ru-card">
+            {/* Mode tabs */}
+            <div className="ru-tabs">
+              <button
+                className={`ru-tab ${mode === 'upload' ? 'active' : ''}`}
+                onClick={() => switchMode('upload')}
+                disabled={recording}
               >
-                {Array.from({ length: 114 }, (_, i) => i + 1).map((s) => (
-                  <option key={s} value={s}>{s}. {SURAH_NAMES[s]}</option>
-                ))}
-              </select>
+                <UploadGlyph /> رَفْع مِلَفّ
+              </button>
+              <button
+                className={`ru-tab ${mode === 'record' ? 'active' : ''}`}
+                onClick={() => switchMode('record')}
+                disabled={recording}
+              >
+                <MicGlyph /> تَسْجِيل مُباشِر
+              </button>
+              <span
+                className="ru-tab-indicator"
+                style={{ transform: mode === 'upload' ? 'translateX(0)' : 'translateX(-100%)' }}
+              />
             </div>
-            <div className="flex gap-3">
-              <div className="flex-1">
-                <label className="font-ui text-xs text-stone-400 block mb-1">من الآية</label>
+
+            {/* Upload mode */}
+            {mode === 'upload' && (
+              <div
+                className={`dropzone ${dragging ? 'over' : ''} ${file ? 'has-file' : ''}`}
+                onClick={() => !file && inputRef.current?.click()}
+                onDragOver={(e) => { e.preventDefault(); setDragging(true) }}
+                onDragLeave={() => setDragging(false)}
+                onDrop={onDrop}
+              >
                 <input
-                  type="number" min={1} max={maxAyah} value={ayahStart}
-                  onChange={(e) => handleStartChange(Number(e.target.value))}
-                  className="w-full border border-stone-200 rounded-xl px-3 py-2 font-ui text-sm text-center focus:outline-none focus:border-emerald-400"
-                  disabled={autoDetect}
+                  ref={inputRef}
+                  type="file"
+                  accept=".wav,.mp3,.m4a,.mp4,.ogg,.opus,.webm,.aac,audio/*"
+                  style={{ display: 'none' }}
+                  onChange={onInputChange}
                 />
+                {file ? (
+                  <div className="file-pill">
+                    <span className="fp-icon"><AudioFile /></span>
+                    <div className="fp-info">
+                      <div className="fp-name">{file.name}</div>
+                      <div className="fp-meta">
+                        {(file.size / 1024 / 1024).toFixed(2)} MB · جاهز للتقييم
+                      </div>
+                    </div>
+                    <button
+                      className="fp-remove"
+                      onClick={(e) => {
+                        e.stopPropagation(); setFile(null)
+                        if (inputRef.current) inputRef.current.value = ''
+                      }}
+                      aria-label="إزالة الملف"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <div className="dz-icon"><CloudUpload /></div>
+                    <div className="dz-title">اِسحَب الملف هُنا أو اِضغط للاختيار</div>
+                    <div className="dz-meta">WAV · MP3 · M4A · OGG — الحد الأقصى ٢٥MB</div>
+                  </>
+                )}
               </div>
-              <div className="flex-1">
-                <label className="font-ui text-xs text-stone-400 block mb-1">إلى الآية</label>
-                <input
-                  type="number" min={ayahStart} max={maxAyah} value={ayahEnd}
-                  onChange={(e) => handleEndChange(Number(e.target.value))}
-                  className="w-full border border-stone-200 rounded-xl px-3 py-2 font-ui text-sm text-center focus:outline-none focus:border-emerald-400"
-                  disabled={autoDetect}
-                />
+            )}
+
+            {/* Record mode */}
+            {mode === 'record' && (
+              <div className="recorder">
+                {!file ? (
+                  <>
+                    <div className={`rec-orb ${recording ? 'live' : ''}`}>
+                      <span className="orb-ring" />
+                      <span className="orb-ring" />
+                      <span className="orb-ring" />
+                      <button
+                        className="orb-core-btn"
+                        onClick={recording ? stopRecording : startRecording}
+                        aria-label={recording ? 'إيقاف' : 'بدء التسجيل'}
+                      >
+                        {recording ? <StopIcon /> : <MicGlyph />}
+                      </button>
+                    </div>
+                    <div className="rec-time-big">{fmt(elapsedSec)}</div>
+                    <div className="rec-hint">
+                      {recording ? 'جارٍ التسجيل… تكلّم الآن' : `اضغط لبدء التسجيل · حد أقصى ${MAX_RECORD_SEC / 60} دقائق`}
+                    </div>
+                    {recordError && <div className="rec-err">{recordError}</div>}
+                  </>
+                ) : (
+                  <div className="rec-preview">
+                    <div className="file-pill">
+                      <span className="fp-icon"><AudioFile /></span>
+                      <div className="fp-info">
+                        <div className="fp-name">تم التسجيل</div>
+                        <div className="fp-meta">
+                          {fmt(elapsedSec)} · {(file.size / 1024 / 1024).toFixed(2)} MB
+                        </div>
+                      </div>
+                      <button
+                        className="fp-remove"
+                        onClick={discardRecording}
+                        aria-label="إعادة التسجيل"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                    {previewUrl && <audio src={previewUrl} controls />}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Scope picker */}
+            <div className="ru-scope">
+              <div className="scope-head">
+                <div className="t-eyebrow">نِطاق التِّلاوة</div>
+                <label className="scope-toggle">
+                  <input
+                    type="checkbox"
+                    checked={autoDetect}
+                    onChange={(e) => setAutoDetect(e.target.checked)}
+                  />
+                  <span className="toggle-slot"><span className="toggle-knob" /></span>
+                  اكتشاف الموضع تلقائياً
+                </label>
+              </div>
+
+              <div className={`scope-fields ${autoDetect ? 'dim' : ''}`}>
+                <div className="field">
+                  <label htmlFor="ru-surah">السُّورة</label>
+                  <div className="select-wrap">
+                    <select
+                      id="ru-surah"
+                      value={surah}
+                      onChange={(e) => handleSurahChange(Number(e.target.value))}
+                      disabled={autoDetect}
+                      dir="rtl"
+                    >
+                      {Array.from({ length: 114 }, (_, i) => i + 1).map((s) => (
+                        <option key={s} value={s}>{s}. {SURAH_NAMES[s]}</option>
+                      ))}
+                    </select>
+                    <ChevronDown />
+                  </div>
+                </div>
+                <div className="field field-pair">
+                  <div>
+                    <label htmlFor="ru-ayah-start">مِن آية</label>
+                    <input
+                      id="ru-ayah-start"
+                      type="number" min={1} max={maxAyah} value={ayahStart}
+                      onChange={(e) => handleStartChange(Number(e.target.value))}
+                      disabled={autoDetect}
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="ru-ayah-end">إلى آية</label>
+                    <input
+                      id="ru-ayah-end"
+                      type="number" min={ayahStart} max={maxAyah} value={ayahEnd}
+                      onChange={(e) => handleEndChange(Number(e.target.value))}
+                      disabled={autoDetect}
+                    />
+                  </div>
+                </div>
+              </div>
+              <div className={`scope-foot ${wordLimitWarning ? 'warn' : ''}`}>
+                {ayahCount} {ayahCount === 1 ? 'آية' : 'آيات'} · ~{estimatedWords} كلمة
+                {wordLimitWarning ? ' — يتجاوز الحد (١٥٠ كلمة)، قلّل النطاق' : ' · الحد الأقصى ١٥٠ كلمة'}
               </div>
             </div>
-            <p className={`font-ui text-xs ${wordLimitWarning ? 'text-red-500 font-medium' : 'text-stone-400'}`}>
-              {ayahCount} {ayahCount === 1 ? 'آية' : 'آيات'} · ~{estimatedWords} كلمة
-              {wordLimitWarning ? ' — يتجاوز الحد (150 كلمة)، قلّل النطاق' : ' · الحد الأقصى 150 كلمة'}
-            </p>
+
+            {error && <div className="ru-err-banner">{error}</div>}
+
+            <button
+              className={`btn btn-primary btn-lg ru-cta ${!canSubmit ? 'disabled' : ''}`}
+              disabled={!canSubmit}
+              onClick={() => file && onEvaluate(file, surah, ayahStart, ayahEnd, autoDetect)}
+            >
+              {loading ? (
+                <>
+                  <Spinner /> جارٍ التَّقييم…
+                </>
+              ) : (
+                <>تَقْييم التِّلاوة <ArrowLeft /></>
+              )}
+            </button>
+
+            <a
+              className="ru-back"
+              onClick={() => !loading && !recording && onBack()}
+              style={(loading || recording) ? { opacity: 0.4, pointerEvents: 'none' } : undefined}
+            >
+              ← العودة
+            </a>
           </div>
         </div>
-
-        {error && (
-          <div className="bg-red-50 border border-red-200 rounded-xl px-3 py-2">
-            <p className="font-ui text-xs text-red-600">{error}</p>
-          </div>
-        )}
-
-        <button
-          onClick={() => file && onEvaluate(file, surah, ayahStart, ayahEnd, autoDetect)}
-          disabled={!canSubmit}
-          className="w-full py-3.5 rounded-2xl bg-emerald-700 hover:bg-emerald-600 active:scale-95 text-white font-ui font-semibold text-base transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-md"
-        >
-          {loading ? 'جارٍ التقييم…' : 'تقييم التلاوة ←'}
-        </button>
-
-        <button
-          onClick={onBack}
-          disabled={loading || recording}
-          className="w-full py-2.5 font-ui text-sm text-stone-500 hover:text-stone-700 transition-colors"
-        >
-          ← رجوع
-        </button>
-      </div>
+      </section>
     </div>
+  )
+}
+
+/* ═══════════ Icons ═══════════ */
+function UploadGlyph() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
+      <path d="M8 11V2M4 6l4-4 4 4M2 12v2h12v-2" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+function MicGlyph() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
+      <rect x="6" y="2" width="4" height="8" rx="2" stroke="currentColor" strokeWidth="1.4" />
+      <path d="M3 7v1a5 5 0 0010 0V7M8 13v2" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+    </svg>
+  )
+}
+function CloudUpload() {
+  return (
+    <svg width="40" height="40" viewBox="0 0 40 40" fill="none" aria-hidden>
+      <path d="M28 24a6 6 0 000-12 8 8 0 00-15.5 2A6 6 0 0014 26h14z" stroke="currentColor" strokeWidth="1.4" />
+      <path d="M20 18v10M16 22l4-4 4 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+function AudioFile() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden>
+      <path d="M4 2h8l4 4v12H4V2z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
+      <path d="M12 2v4h4M8 12v3M10 10v5M12 11v4M14 13v1" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+    </svg>
+  )
+}
+function ChevronDown() {
+  return (
+    <svg className="chev" width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden>
+      <path d="M3 5l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+function StopIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 22 22" fill="currentColor" aria-hidden>
+      <rect x="6" y="6" width="10" height="10" rx="2" />
+    </svg>
+  )
+}
+function Spinner() {
+  return (
+    <svg className="spinner" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
+      <circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="1.5" opacity="0.3" />
+      <path d="M14 8a6 6 0 00-6-6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  )
+}
+function ArrowLeft() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden>
+      <path d="M9 3L4 7l5 4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
   )
 }
