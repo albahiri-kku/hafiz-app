@@ -214,11 +214,11 @@ function RecitationCard() {
           <span className="word">وَنُنَزِّلُ</span>{' '}
           <span className="word">مِنَ</span>{' '}
           <span className="word">الْقُرْآنِ</span>{' '}
-          <span className="word err" data-tip="مدّ منفصل: ٤ حركات">مَا</span>{' '}
+          <span className="word" data-tip="مدّ طبيعي: حركتان">مَا</span>{' '}
           <span className="word">هُوَ</span>{' '}
-          <span className="word warn" data-tip="إخفاء: غُنّة بمقدار حركتين">شِفَاءٌ</span>{' '}
-          <span className="word">وَرَحْمَةٌ</span>{' '}
-          <span className="word">لِّلْمُؤْمِنِينَ</span>
+          <span className="word good" data-tip="مدّ واجب متصل: ٤–٥ حركات">شِفَاءٌ</span>{' '}
+          <span className="word warn" data-tip="إدغام بغير غنّة: تنوين الضمّ مع اللام">وَرَحْمَةٌ</span>{' '}
+          <span className="word err" data-tip="مدّ عارض للسكون عند الوقف: ٢ / ٤ / ٦ حركات">لِّلْمُؤْمِنِينَ</span>
           <span className="ayah-mark">۸۲</span>
         </p>
       </div>
@@ -235,9 +235,9 @@ function RecitationCard() {
         ))}
       </div>
       <div className="rec-chips">
-        <Chip kind="good" icon="✓" label="مخارج الحروف" value="ممتاز" />
-        <Chip kind="warn" icon="◐" label="الإخفاء" value="حرّك ٢" />
-        <Chip kind="err" icon="!" label="المدّ المنفصل" value="٢ → ٤" />
+        <Chip kind="good" icon="✓" label="مدّ واجب متصل" value="شِفَاءٌ" />
+        <Chip kind="warn" icon="◐" label="إدغام بغير غنّة" value="رَحْمَةٌ لِّـ" />
+        <Chip kind="err" icon="!" label="مدّ عارض للسكون" value="للمؤمنين" />
       </div>
       <div className="rec-controls">
         <button className="rec-btn rec-btn-mic" aria-label="تشغيل"><MicIcon /></button>

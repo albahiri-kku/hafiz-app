@@ -270,6 +270,10 @@
   color: var(--gold-bright); text-decoration: underline dotted var(--gold);
   text-underline-offset: 8px; cursor: pointer;
 }
+.hafiz-landing .word.good {
+  color: var(--emerald-bright, #7FD4A8); text-decoration: underline solid var(--emerald, #3FA675);
+  text-underline-offset: 8px; text-decoration-thickness: 1px; cursor: pointer;
+}
 .hafiz-landing .word[data-tip]:hover::after {
   content: attr(data-tip); position: absolute; bottom: calc(100% + 12px);
   left: 50%; transform: translateX(-50%);

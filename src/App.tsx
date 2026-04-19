@@ -24,15 +24,54 @@ const EMPTY_STATS: SessionStats = {
   totalAyahs: 0, correct: 0, errors: 0, reviews: 0, holds: 0, history: [],
 }
 
+// ─── URL ↔ phase mapping ────────────────────────────────────────────────────
+const PHASE_TO_PATH: Record<AppPhase, string> = {
+  landing: '/',
+  upload: '/recite',
+  evaluating: '/recite',
+  report: '/report',
+  start: '/app',
+  reciting: '/app',
+  summary: '/app',
+  mushaf_browse: '/mushaf',
+}
+function pathToPhase(pathname: string, search: string): AppPhase {
+  // Back-compat with legacy ?upload=1 / ?app=1 query params
+  const params = new URLSearchParams(search)
+  if (params.get('upload') === '1') return 'upload'
+  if (params.get('app') === '1') return 'start'
+  const p = pathname.replace(/\/+$/, '') || '/'
+  if (p === '/recite') return 'upload'
+  if (p === '/report') return 'report'
+  if (p === '/app') return 'start'
+  if (p === '/mushaf') return 'mushaf_browse'
+  return 'landing'
+}
+
 export default function App() {
   const _initialPhase: AppPhase = (() => {
     if (typeof window === 'undefined') return 'landing'
-    const params = new URLSearchParams(window.location.search)
-    if (params.get('upload') === '1') return 'upload'
-    if (params.get('app') === '1') return 'start'
-    return 'landing'
+    return pathToPhase(window.location.pathname, window.location.search)
   })()
   const [phase, setPhase]           = useState<AppPhase>(_initialPhase)
+
+  // Sync URL ↔ phase (pushState on phase change, popstate on back/forward)
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const target = PHASE_TO_PATH[phase] ?? '/'
+    if (window.location.pathname !== target) {
+      window.history.pushState({ phase }, '', target)
+    }
+  }, [phase])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const onPop = () => {
+      setPhase(pathToPhase(window.location.pathname, window.location.search))
+    }
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
+  }, [])
   const [mode, setMode]             = useState<RecitationMode>('tilawa')
   const [sessionId, setSessionId]   = useState('')
   const [ayahData, setAyahData]     = useState<AyahData | null>(null)
@@ -303,7 +342,7 @@ export default function App() {
     return (
       <UploadScreen
         onEvaluate={handleEvaluateFile}
-        onBack={() => setPhase('start')}
+        onBack={() => setPhase('landing')}
         loading={fileLoading}
         error={fileUploadError}
       />
@@ -346,7 +385,7 @@ export default function App() {
           setFileUploadError(null)
           setPhase('upload')
         }}
-        onHome={() => setPhase('start')}
+        onHome={() => setPhase('landing')}
       />
     )
   }

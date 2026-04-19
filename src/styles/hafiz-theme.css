@@ -1,0 +1,465 @@
+/* ==============================================================
+   Hafiz Theme — shared brand identity scoped under .hafiz-report
+   Mirrors tokens from LandingPage.css for full visual consistency.
+   ============================================================== */
+
+.hafiz-report {
+  --bg-deep: #0B1410;
+  --bg-night: #0F1A14;
+  --bg-elev: #14241C;
+
+  --cream: #F4E9D1;
+  --cream-soft: #E8D9B8;
+  --cream-dim: #C9BFA4;
+  --gold: #C9A961;
+  --gold-bright: #E0BE74;
+  --gold-deep: #8B6F2F;
+  --emerald: #1F5C42;
+  --emerald-bright: #2A7A57;
+  --emerald-deep: #0F3D2A;
+  --line: rgba(201, 169, 97, 0.18);
+  --line-strong: rgba(201, 169, 97, 0.42);
+  --red: #FF8B6B;
+  --red-deep: #D94B2D;
+
+  --f-display: "Amiri", "Reem Kufi", "Scheherazade New", serif;
+  --f-quran: "Amiri Quran", "Amiri", "Scheherazade New", serif;
+  --f-sans: "Readex Pro", "IBM Plex Sans Arabic", system-ui, sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  min-height: 100vh;
+  background:
+    radial-gradient(ellipse at 20% 0%, rgba(31, 92, 66, 0.18), transparent 50%),
+    radial-gradient(ellipse at 80% 100%, rgba(201, 169, 97, 0.08), transparent 50%),
+    var(--bg-deep);
+  color: var(--cream);
+  font-family: var(--f-sans);
+  padding: 40px 20px 80px;
+}
+
+.hafiz-report *,
+.hafiz-report *::before,
+.hafiz-report *::after { box-sizing: border-box; }
+
+.hafiz-report a { color: inherit; text-decoration: none; cursor: pointer; }
+.hafiz-report button {
+  font: inherit; color: inherit; background: none; border: none;
+  cursor: pointer; padding: 0;
+}
+.hafiz-report h1, .hafiz-report h2, .hafiz-report h3, .hafiz-report h4 {
+  margin: 0; font-weight: 500;
+}
+.hafiz-report p, .hafiz-report ul, .hafiz-report ol { margin: 0; padding: 0; }
+.hafiz-report ul, .hafiz-report ol { list-style: none; }
+
+/* Typography */
+.hafiz-report .t-quran { font-family: var(--f-quran); font-weight: 400; line-height: 2; }
+.hafiz-report .t-display { font-family: var(--f-display); font-weight: 700; letter-spacing: -0.01em; }
+.hafiz-report .t-eyebrow {
+  font-size: 12px; letter-spacing: 0.25em; text-transform: uppercase;
+  color: var(--gold); display: inline-flex; align-items: center; gap: 12px;
+}
+.hafiz-report .t-eyebrow.solo::before,
+.hafiz-report .t-eyebrow.solo::after {
+  content: ""; height: 1px; width: 24px; background: var(--gold-deep);
+}
+
+/* Buttons */
+.hafiz-report .btn {
+  display: inline-flex; align-items: center; gap: 10px;
+  padding: 13px 26px; border-radius: 999px;
+  font-family: var(--f-sans); font-size: 14px; font-weight: 500;
+  transition: all 0.2s ease; cursor: pointer; border: 1px solid transparent;
+}
+.hafiz-report .btn-primary {
+  background: linear-gradient(180deg, var(--gold-bright), var(--gold));
+  color: var(--bg-deep);
+  box-shadow: 0 8px 30px -10px rgba(201, 169, 97, 0.6);
+}
+.hafiz-report .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 12px 40px -10px rgba(201, 169, 97, 0.8); }
+.hafiz-report .btn-ghost {
+  border: 1px solid var(--line-strong); color: var(--cream); background: transparent;
+}
+.hafiz-report .btn-ghost:hover { background: rgba(201, 169, 97, 0.08); border-color: var(--gold); }
+.hafiz-report .btn-lg { padding: 16px 32px; font-size: 15px; }
+
+/* Container */
+.hafiz-report .ru-container {
+  width: 100%; max-width: 960px; margin: 0 auto;
+  display: flex; flex-direction: column; gap: 28px;
+}
+
+/* Top bar */
+.hafiz-report .rp-topbar {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 0 4px;
+}
+.hafiz-report .rp-topbar a { color: var(--cream-dim); font-size: 13px; }
+.hafiz-report .rp-topbar a:hover { color: var(--gold); }
+.hafiz-report .rp-topbar .rp-actions { display: flex; gap: 10px; }
+.hafiz-report .rp-notice {
+  font-size: 11px; color: var(--cream-dim); text-align: center;
+  max-width: 560px; margin: 0 auto; line-height: 1.6; opacity: 0.7;
+}
+
+/* Results card */
+.hafiz-report .ru-card {
+  padding: 36px; border: 1px solid var(--line-strong); border-radius: 24px;
+  background: linear-gradient(165deg, rgba(20,36,28,0.4), rgba(15,26,20,0.4));
+  display: flex; flex-direction: column; gap: 28px; backdrop-filter: blur(8px);
+  box-shadow: 0 30px 80px -30px rgba(0,0,0,0.6);
+}
+.hafiz-report .ru-card.results { gap: 28px; }
+
+/* Results header */
+.hafiz-report .results-head {
+  display: grid; grid-template-columns: 1fr auto;
+  gap: 24px; align-items: center;
+  padding-bottom: 24px; border-bottom: 1px solid var(--line);
+}
+.hafiz-report .results-title { font-size: 24px; color: var(--cream); margin: 8px 0; }
+.hafiz-report .results-meta {
+  display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+  font-size: 12px; color: var(--cream-dim);
+}
+.hafiz-report .results-meta .dot { opacity: 0.5; }
+.hafiz-report .results-meta svg { vertical-align: middle; }
+
+.hafiz-report .score-pod {
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+}
+.hafiz-report .score-ring-lg { position: relative; width: 110px; height: 110px; }
+.hafiz-report .score-ring-lg svg { width: 100%; height: 100%; }
+.hafiz-report .score-num-lg {
+  position: absolute; inset: 0; display: flex; align-items: center;
+  justify-content: center; font-size: 30px; color: var(--gold);
+}
+.hafiz-report .score-num-lg span { font-size: 14px; opacity: 0.7; margin-right: 2px; }
+.hafiz-report .score-label-lg {
+  font-size: 13px; color: var(--gold); font-family: var(--f-display); letter-spacing: 0.05em;
+}
+
+/* Metrics row */
+.hafiz-report .metrics-row {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px;
+}
+.hafiz-report .metric {
+  display: flex; flex-direction: column; gap: 6px;
+  padding: 14px; background: rgba(11,20,16,0.4);
+  border: 1px solid var(--line); border-radius: 10px;
+}
+.hafiz-report .metric-head { display: flex; justify-content: space-between; font-size: 13px; }
+.hafiz-report .metric-head span { color: var(--cream-dim); }
+.hafiz-report .metric-head b { color: var(--cream); font-weight: 500; }
+.hafiz-report .metric-bar {
+  height: 4px; background: rgba(201,169,97,0.1);
+  border-radius: 2px; overflow: hidden;
+}
+.hafiz-report .metric-bar div { height: 100%; border-radius: 2px; }
+.hafiz-report .metric-ok .metric-bar div    { background: linear-gradient(90deg, #2A7A57, #6FBF93); }
+.hafiz-report .metric-warn .metric-bar div  { background: linear-gradient(90deg, var(--gold-deep), var(--gold-bright)); }
+.hafiz-report .metric-err .metric-bar div   { background: linear-gradient(90deg, #D94B2D, #FF8B6B); }
+.hafiz-report .metric-none .metric-bar div  { background: var(--line); }
+
+/* Ayah review */
+.hafiz-report .ayah-review {
+  padding: 28px; background: rgba(11,20,16,0.4);
+  border: 1px solid var(--line); border-radius: 14px;
+}
+.hafiz-report .ar-title {
+  font-size: 12px; color: var(--gold); letter-spacing: 0.2em;
+  text-transform: uppercase; margin-bottom: 20px; font-weight: 500; font-family: var(--f-sans);
+}
+.hafiz-report .ayat-line {
+  font-size: 26px; line-height: 2.4; color: var(--cream); text-align: center;
+  font-family: var(--f-quran);
+}
+.hafiz-report .ayat-line .word {
+  display: inline-block; padding: 0 4px; border-radius: 6px; cursor: default;
+  transition: all 0.15s ease;
+}
+.hafiz-report .ayat-line .word.good { color: var(--cream); border-bottom: 2px solid rgba(42, 122, 87, 0.65); }
+.hafiz-report .ayat-line .word.warn { color: var(--gold-bright); border-bottom: 2px dotted var(--gold); }
+.hafiz-report .ayat-line .word.err  {
+  color: var(--red);
+  text-decoration: underline wavy var(--red-deep);
+  text-underline-offset: 4px;
+}
+.hafiz-report .ayat-line .word.missed { color: var(--red); opacity: 0.55; text-decoration: line-through; }
+.hafiz-report .ayat-line .word.extra  { color: var(--cream-dim); font-style: italic; opacity: 0.65; }
+.hafiz-report .ayat-line .word:hover { background: rgba(201, 169, 97, 0.08); }
+.hafiz-report .ayat-line .ayah-mark {
+  display: inline-block; min-width: 26px; height: 26px; line-height: 26px;
+  padding: 0 6px; margin: 0 6px; font-size: 12px; color: var(--gold);
+  border: 1px solid var(--gold-deep); border-radius: 50%;
+  font-family: var(--f-sans); vertical-align: middle;
+}
+
+/* Findings */
+.hafiz-report .findings-row { display: flex; flex-direction: column; gap: 10px; }
+.hafiz-report .finding {
+  padding: 14px 16px; border-radius: 12px;
+  background: rgba(15,26,20,0.5); border: 1px solid var(--line);
+}
+.hafiz-report .finding-head {
+  display: flex; align-items: center; gap: 10px; margin-bottom: 6px;
+}
+.hafiz-report .finding-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.hafiz-report .dot-err  { background: #FF8B6B; }
+.hafiz-report .dot-warn { background: var(--gold-bright); }
+.hafiz-report .dot-ok   { background: #6FBF93; }
+.hafiz-report .finding-word { font-size: 18px; color: var(--cream); font-family: var(--f-quran); }
+.hafiz-report .finding-rule {
+  margin-right: auto; font-size: 11px; color: var(--cream-dim);
+  padding: 3px 8px; background: rgba(201,169,97,0.08); border-radius: 999px;
+}
+.hafiz-report .finding-desc { font-size: 12px; color: var(--cream-dim); line-height: 1.7; }
+
+/* Actions */
+.hafiz-report .results-actions {
+  display: flex; gap: 10px; flex-wrap: wrap;
+  padding-top: 20px; border-top: 1px solid var(--line);
+}
+.hafiz-report .results-actions .btn {
+  flex: 1; justify-content: center; min-width: 180px;
+}
+
+/* Tabs (deep data) */
+.hafiz-report .rp-tabs {
+  position: relative; display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  padding: 5px;
+  background: rgba(11, 20, 16, 0.5);
+  border: 1px solid var(--line); border-radius: 12px;
+}
+.hafiz-report .rp-tab {
+  padding: 10px 8px; font-size: 13px; color: var(--cream-dim);
+  border-radius: 8px; transition: color 0.2s; text-align: center;
+  position: relative; z-index: 1;
+}
+.hafiz-report .rp-tab:hover { color: var(--cream); }
+.hafiz-report .rp-tab.active { color: var(--bg-deep); font-weight: 600; }
+.hafiz-report .rp-tab-indicator {
+  position: absolute; top: 5px; bottom: 5px; right: 5px;
+  width: calc(20% - 5px);
+  background: linear-gradient(180deg, var(--gold-bright), var(--gold));
+  border-radius: 8px; transition: transform 0.3s ease;
+  box-shadow: 0 4px 12px -4px rgba(201,169,97,0.5); z-index: 0;
+}
+
+/* Panels */
+.hafiz-report .rp-panel {
+  padding: 24px; background: rgba(11,20,16,0.35);
+  border: 1px solid var(--line); border-radius: 16px;
+  display: flex; flex-direction: column; gap: 16px;
+}
+.hafiz-report .rp-panel h3 {
+  font-size: 13px; color: var(--gold); letter-spacing: 0.2em;
+  text-transform: uppercase; margin-bottom: 4px;
+}
+
+/* Narrative sections */
+.hafiz-report .narrative p { color: var(--cream); font-size: 15px; line-height: 1.9; }
+.hafiz-report .narr-block {
+  padding: 14px 16px; background: rgba(15,26,20,0.5);
+  border: 1px solid var(--line); border-radius: 12px; margin-bottom: 10px;
+}
+.hafiz-report .narr-block .narr-title {
+  font-size: 11px; color: var(--gold); letter-spacing: 0.15em;
+  text-transform: uppercase; margin-bottom: 6px; font-weight: 500;
+}
+.hafiz-report .narr-block .narr-text {
+  font-size: 14px; color: var(--cream-dim); line-height: 1.8;
+}
+.hafiz-report .recs {
+  padding: 16px 20px; background: rgba(31, 92, 66, 0.18);
+  border: 1px solid rgba(111, 191, 147, 0.25); border-radius: 12px;
+}
+.hafiz-report .recs h4 {
+  font-size: 12px; color: #8FD9B0; letter-spacing: 0.15em;
+  text-transform: uppercase; margin-bottom: 10px;
+}
+.hafiz-report .recs ol { margin-inline-start: 18px; list-style: decimal; }
+.hafiz-report .recs li { color: var(--cream); font-size: 14px; line-height: 1.9; }
+.hafiz-report .narr-closing {
+  color: #8FD9B0; font-size: 15px; font-style: italic; text-align: center;
+  padding-top: 8px;
+}
+
+/* Word chip grid */
+.hafiz-report .word-grid {
+  display: flex; flex-wrap: wrap; gap: 6px;
+  padding: 16px; background: rgba(11,20,16,0.4);
+  border: 1px solid var(--line); border-radius: 14px;
+  direction: rtl;
+}
+.hafiz-report .wchip {
+  position: relative; display: inline-flex; align-items: center; gap: 4px;
+  padding: 5px 10px; border-radius: 8px; border: 1px solid var(--line);
+  font-family: var(--f-quran); font-size: 17px;
+  background: rgba(15,26,20,0.4); color: var(--cream);
+  cursor: default; transition: all 0.15s;
+}
+.hafiz-report .wchip:hover { border-color: var(--gold-deep); }
+.hafiz-report .wchip.s-MATCH                { background: rgba(42, 122, 87, 0.18); border-color: rgba(42, 122, 87, 0.4); color: #C7EBD5; }
+.hafiz-report .wchip.s-LOW_CONFIDENCE_MATCH { background: rgba(201, 169, 97, 0.14); border-color: rgba(201, 169, 97, 0.4); color: var(--gold-bright); }
+.hafiz-report .wchip.s-SUBSTITUTION         { background: rgba(224, 190, 116, 0.12); border-color: rgba(224, 190, 116, 0.4); color: var(--gold-bright); }
+.hafiz-report .wchip.s-SUFFIX_MATCH         { background: rgba(224, 150, 60, 0.14); border-color: rgba(224, 150, 60, 0.4); color: #F0B070; }
+.hafiz-report .wchip.s-TASHKEEL_MISMATCH    { background: rgba(168, 120, 200, 0.14); border-color: rgba(168, 120, 200, 0.4); color: #C59EDD; }
+.hafiz-report .wchip.s-CPAE_FALLBACK        { background: rgba(217, 75, 45, 0.12); border-color: rgba(217, 75, 45, 0.3); color: #FF8B6B; text-decoration: line-through; opacity: 0.75; }
+.hafiz-report .wchip.s-EXTRA                { background: rgba(201,191,164,0.08); border-style: dashed; color: var(--cream-dim); font-style: italic; }
+.hafiz-report .wchip.s-MISSED               { background: rgba(217, 75, 45, 0.2); border-color: rgba(217, 75, 45, 0.45); color: #FF8B6B; }
+.hafiz-report .wchip-marker {
+  font-family: var(--f-sans); font-size: 10px; font-weight: 700;
+  opacity: 0.75;
+}
+
+/* Distribution bars */
+.hafiz-report .dist-row { margin-bottom: 10px; }
+.hafiz-report .dist-row .dist-head {
+  display: flex; justify-content: space-between;
+  font-size: 11px; margin-bottom: 4px; color: var(--cream-dim);
+}
+.hafiz-report .dist-bar {
+  height: 6px; background: rgba(11,20,16,0.6);
+  border-radius: 3px; overflow: hidden; display: flex;
+}
+.hafiz-report .dist-bar .seg-ok   { background: #2A7A57; }
+.hafiz-report .dist-bar .seg-warn { background: var(--gold); }
+.hafiz-report .dist-bar .seg-err  { background: var(--red-deep); }
+
+/* Legend */
+.hafiz-report .legend {
+  display: flex; flex-wrap: wrap; gap: 16px;
+  padding-top: 12px; border-top: 1px solid var(--line);
+  font-size: 11px; color: var(--cream-dim);
+}
+.hafiz-report .legend-item { display: inline-flex; align-items: center; gap: 6px; }
+.hafiz-report .legend-swatch { width: 10px; height: 10px; border-radius: 3px; }
+
+/* Madd card */
+.hafiz-report .madd-card {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 12px 14px; background: rgba(11,20,16,0.4);
+  border: 1px solid var(--line); border-radius: 10px; margin-bottom: 8px;
+}
+.hafiz-report .madd-left .mw { font-family: var(--f-quran); font-size: 17px; color: var(--cream); }
+.hafiz-report .madd-left .ml { font-size: 11px; color: var(--cream-dim); margin-top: 2px; }
+.hafiz-report .madd-left .ml .tag-mode { color: #8FD9B0; margin-inline-start: 6px; }
+.hafiz-report .madd-right { text-align: left; font-variant-numeric: tabular-nums; }
+.hafiz-report .madd-right .mv { font-size: 20px; font-weight: 700; }
+.hafiz-report .madd-right .mv .sep { color: var(--cream-dim); font-weight: 400; margin: 0 3px; }
+.hafiz-report .madd-right .mv .ref { color: var(--cream-dim); font-size: 15px; font-weight: 400; }
+.hafiz-report .madd-right .unit { font-size: 10px; color: var(--cream-dim); margin-inline-start: 4px; }
+.hafiz-report .madd-right .note { font-size: 10px; color: var(--gold-bright); }
+.hafiz-report .madd-ok    { color: #8FD9B0; }
+.hafiz-report .madd-warn  { color: var(--gold-bright); }
+.hafiz-report .madd-err   { color: var(--red); }
+.hafiz-report .madd-none  { color: var(--cream-dim); }
+
+/* Waqf chips */
+.hafiz-report .waqf-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.hafiz-report .waqf-chip {
+  padding: 4px 10px; border-radius: 999px;
+  font-size: 12px; border: 1px solid var(--line);
+  background: rgba(11,20,16,0.4); color: var(--cream-dim);
+}
+.hafiz-report .waqf-chip.on {
+  border-color: rgba(42, 122, 87, 0.45);
+  background: rgba(42, 122, 87, 0.14); color: #C7EBD5;
+}
+.hafiz-report .waqf-chip .qw { font-family: var(--f-quran); margin-inline-end: 4px; }
+
+/* Behavior & status */
+.hafiz-report .pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 10px; border-radius: 999px;
+  font-size: 11px; border: 1px solid var(--line);
+  color: var(--cream-dim); background: rgba(11,20,16,0.5);
+}
+.hafiz-report .pill.blue { color: #9FC5E8; border-color: rgba(159, 197, 232, 0.3); background: rgba(40, 70, 110, 0.2); }
+.hafiz-report .pill.warn { color: var(--gold-bright); border-color: rgba(224, 190, 116, 0.4); background: rgba(201, 169, 97, 0.1); }
+.hafiz-report .pill.err  { color: var(--red); border-color: rgba(217, 75, 45, 0.4); background: rgba(217, 75, 45, 0.12); }
+
+/* Grade badge */
+.hafiz-report .grade-badge {
+  display: inline-flex; align-items: center; padding: 4px 12px;
+  border-radius: 999px; font-size: 12px; font-weight: 600;
+  border: 1px solid var(--line-strong); background: rgba(201, 169, 97, 0.14);
+  color: var(--gold-bright);
+}
+
+/* Warning banner */
+.hafiz-report .warn-banner {
+  padding: 14px 16px; border-radius: 12px;
+  border: 1px solid rgba(217, 75, 45, 0.35);
+  background: rgba(217, 75, 45, 0.1); color: #FFB8A0;
+  font-size: 13px; line-height: 1.7;
+}
+.hafiz-report .warn-banner strong { color: var(--red); font-weight: 600; }
+
+/* Audio panel */
+.hafiz-report audio { width: 100%; filter: invert(0.92) hue-rotate(180deg); border-radius: 8px; }
+.hafiz-report .reciter-pills { display: flex; flex-wrap: wrap; gap: 8px; }
+.hafiz-report .reciter-pill {
+  padding: 6px 14px; border-radius: 999px; font-size: 12px;
+  border: 1px solid var(--line); color: var(--cream-dim);
+  background: rgba(11,20,16,0.4); transition: all 0.2s;
+}
+.hafiz-report .reciter-pill:hover { border-color: var(--gold-deep); color: var(--cream); }
+.hafiz-report .reciter-pill.active {
+  background: linear-gradient(180deg, var(--gold-bright), var(--gold));
+  border-color: var(--gold); color: var(--bg-deep); font-weight: 600;
+}
+.hafiz-report .ayah-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 10px 14px; border-radius: 10px;
+  background: rgba(11,20,16,0.4); border: 1px solid var(--line);
+  font-size: 14px; color: var(--cream-dim); cursor: pointer;
+  transition: all 0.15s;
+}
+.hafiz-report .ayah-row:hover { border-color: var(--gold-deep); color: var(--cream); }
+.hafiz-report .ayah-row.on {
+  background: rgba(42, 122, 87, 0.15);
+  border-color: rgba(42, 122, 87, 0.4); color: #C7EBD5;
+}
+
+/* Details / asr text */
+.hafiz-report details {
+  padding: 14px 16px; background: rgba(11,20,16,0.4);
+  border: 1px solid var(--line); border-radius: 12px;
+}
+.hafiz-report details > summary {
+  font-size: 12px; color: var(--gold); letter-spacing: 0.15em;
+  text-transform: uppercase; cursor: pointer; list-style: none;
+}
+.hafiz-report details > summary::marker { display: none; }
+.hafiz-report details[open] > summary { margin-bottom: 10px; }
+.hafiz-report details p.asr { font-family: var(--f-quran); font-size: 16px; color: var(--cream); line-height: 2; direction: rtl; }
+
+/* Spinner */
+.hafiz-report .spinner { animation: hr-spin 1s linear infinite; }
+@keyframes hr-spin { to { transform: rotate(360deg); } }
+
+/* Responsive */
+@media (max-width: 860px) {
+  .hafiz-report { padding: 24px 14px 60px; }
+  .hafiz-report .ru-card { padding: 24px 20px; border-radius: 18px; }
+  .hafiz-report .results-head { grid-template-columns: 1fr; text-align: center; gap: 16px; }
+  .hafiz-report .score-pod { align-self: center; }
+  .hafiz-report .metrics-row { grid-template-columns: 1fr 1fr; }
+  .hafiz-report .ayat-line { font-size: 22px; line-height: 2.2; }
+  .hafiz-report .results-actions .btn { min-width: 0; width: 100%; }
+  .hafiz-report .rp-tabs { grid-template-columns: repeat(5, 1fr); }
+  .hafiz-report .rp-tab { padding: 9px 4px; font-size: 11px; }
+}
+@media (max-width: 560px) {
+  .hafiz-report .ru-card { padding: 18px 16px; border-radius: 16px; }
+  .hafiz-report .results-title { font-size: 20px; }
+  .hafiz-report .metrics-row { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .hafiz-report .ayat-line { font-size: 19px; line-height: 2.1; }
+  .hafiz-report .score-ring-lg { width: 94px; height: 94px; }
+  .hafiz-report .score-num-lg { font-size: 26px; }
+  .hafiz-report .results-actions { flex-direction: column; }
+  .hafiz-report .rp-tab { font-size: 10px; padding: 8px 2px; }
+}

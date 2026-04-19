@@ -1,6 +1,10 @@
-import { useState, useMemo, useRef, type ReactNode } from 'react'
-import type { EvaluateFileResponse, WordAlignmentEntry, TajweedEventEntry, MaddBarEntry, TafkhimEntry, HafizReport, ErrorDistribution } from '../types/hafiz'
+import { useState, useMemo, useRef, useEffect, type ReactNode } from 'react'
+import type {
+  EvaluateFileResponse, WordAlignmentEntry, TajweedEventEntry,
+  MaddBarEntry, TafkhimEntry, SaktaEntry, HafizReport, ErrorDistribution,
+} from '../types/hafiz'
 import { SURAH_NAMES } from '../types/hafiz'
+import '../styles/hafiz-theme.css'
 
 interface Props {
   report: EvaluateFileResponse
@@ -12,8 +16,6 @@ interface Props {
   audioUrl?: string | null
 }
 
-// ─── Constants ───────────────────────────────────────────────────────────────
-
 const RULE_AR: Record<string, string> = {
   MADD_TABII: 'مد طبيعي', MADD_LAZIM: 'مد لازم كلمي', MADD_WAJIB_MUTTASIL: 'مد واجب متصل',
   MADD_MUNFASIL: 'مد منفصل', MADD_AARID_LISUKOON: 'مد عارض للسكون', MADD_LIN: 'مد لين',
@@ -23,49 +25,59 @@ const RULE_AR: Record<string, string> = {
   QALQALA: 'قلقلة', GHUNNA: 'غنة',
 }
 
-type TabId = 'summary' | 'words' | 'madd' | 'audio' | 'details'
+const LETTER_AR: Record<string, string> = {
+  khaa: 'الخاء', saad: 'الصاد', daad: 'الضاد', taa: 'الطاء',
+  zhaa: 'الظاء', ghayn: 'الغين', qaaf: 'القاف',
+}
 
-// ─── Reference reciters (EveryAyah.com) ──────────────────────────────────────
+type TabId = 'summary' | 'words' | 'madd' | 'audio' | 'details'
+const TAB_ORDER: TabId[] = ['summary', 'words', 'madd', 'audio', 'details']
 
 const RECITERS = [
-  { id: 'Alafasy_128kbps', name: 'مشاري العفاسي', short: 'العفاسي' },
-  { id: 'Abdurrahmaan_As-Sudais_192kbps', name: 'عبدالرحمن السديس', short: 'السديس' },
-  { id: 'Saood_ash-Shuraym_128kbps', name: 'سعود الشريم', short: 'الشريم' },
-  { id: 'Husary_128kbps', name: 'محمود خليل الحصري', short: 'الحصري' },
-  { id: 'Minshawy_Murattal_128kbps', name: 'محمد صديق المنشاوي', short: 'المنشاوي' },
+  { id: 'Alafasy_128kbps', short: 'العفاسي' },
+  { id: 'Abdurrahmaan_As-Sudais_192kbps', short: 'السديس' },
+  { id: 'Saood_ash-Shuraym_128kbps', short: 'الشريم' },
+  { id: 'Husary_128kbps', short: 'الحصري' },
+  { id: 'Minshawy_Murattal_128kbps', short: 'المنشاوي' },
 ] as const
 
 function ayahAudioUrl(reciterId: string, surah: number, ayah: number): string {
-  const s = String(surah).padStart(3, '0')
-  const a = String(ayah).padStart(3, '0')
+  const s = String(surah).padStart(3, '0'); const a = String(ayah).padStart(3, '0')
   return `https://everyayah.com/data/${reciterId}/${s}${a}.mp3`
 }
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-
 function normAr(s: string | null | undefined): string {
-  return (s || '').replace(/[\u064B-\u0652\u0670\u0640]/g, '').replace(/[أإآٱ]/g, 'ا').replace(/ة/g, 'ه').trim()
-}
-
-interface ReasonInfo { kind: 'ok' | 'low' | 'high' | 'error' | 'pending'; label: string }
-function parseReason(ev: TajweedEventEntry): ReasonInfo {
-  const s = ev.tajweed_check_status, r = ev.tajweed_check_reason || ''
-  if (s === 'OK') return r.includes('TEXTUAL_ONLY') ? { kind: 'ok', label: 'مرجع نصي' } : { kind: 'ok', label: 'صحيح' }
-  if (s === 'WARNING' || s === 'ERROR') {
-    const sh = r.match(/word_dur=(\d+)ms\s*<\s*(\d+)ms/); if (sh) return { kind: 'low', label: `أقل (${sh[1]}/${sh[2]}ms)` }
-    const lg = r.match(/word_dur=(\d+)ms\s*>>\s*(\d+)ms/); if (lg) return { kind: 'high', label: `أعلى (${lg[1]}ms)` }
-    return { kind: s === 'ERROR' ? 'error' : 'low', label: s === 'ERROR' ? 'خطأ تجويدي' : 'تحذير' }
-  }
-  return { kind: 'pending', label: s }
+  return (s || '')
+    .replace(/[\u064B-\u0652\u0670\u0640]/g, '')
+    .replace(/[أإآٱ]/g, 'ا').replace(/ة/g, 'ه').trim()
 }
 
 function buildEventsMap(alignments: WordAlignmentEntry[], tajweedEvents: TajweedEventEntry[]): Map<number, TajweedEventEntry[]> {
   const groups = new Map<string, TajweedEventEntry[][]>()
   let prevKey = '', curGroup: TajweedEventEntry[] = []
-  for (const ev of tajweedEvents) { const k = normAr(ev.word_text); if (!k) continue; if (k !== prevKey) { if (curGroup.length && prevKey) { if (!groups.has(prevKey)) groups.set(prevKey, []); groups.get(prevKey)!.push(curGroup) } prevKey = k; curGroup = [ev] } else curGroup.push(ev) }
-  if (curGroup.length && prevKey) { if (!groups.has(prevKey)) groups.set(prevKey, []); groups.get(prevKey)!.push(curGroup) }
-  const ptrs = new Map<string, number>(), result = new Map<number, TajweedEventEntry[]>()
-  for (const e of alignments) { const k = normAr(e.reference_word || e.asr_word || ''); const wg = groups.get(k) || []; const p = ptrs.get(k) || 0; result.set(e.word_index, p < wg.length ? wg[p] : []); ptrs.set(k, p + 1) }
+  for (const ev of tajweedEvents) {
+    const k = normAr(ev.word_text); if (!k) continue
+    if (k !== prevKey) {
+      if (curGroup.length && prevKey) {
+        if (!groups.has(prevKey)) groups.set(prevKey, [])
+        groups.get(prevKey)!.push(curGroup)
+      }
+      prevKey = k; curGroup = [ev]
+    } else curGroup.push(ev)
+  }
+  if (curGroup.length && prevKey) {
+    if (!groups.has(prevKey)) groups.set(prevKey, [])
+    groups.get(prevKey)!.push(curGroup)
+  }
+  const ptrs = new Map<string, number>()
+  const result = new Map<number, TajweedEventEntry[]>()
+  for (const e of alignments) {
+    const k = normAr(e.reference_word || e.asr_word || '')
+    const wg = groups.get(k) || []
+    const p = ptrs.get(k) || 0
+    result.set(e.word_index, p < wg.length ? wg[p] : [])
+    ptrs.set(k, p + 1)
+  }
   return result
 }
 
@@ -73,11 +85,15 @@ async function exportToPDF(element: HTMLElement) {
   try {
     const { default: html2canvas } = await import('html2canvas')
     const { jsPDF } = await import('jspdf')
-    const canvas = await html2canvas(element, { scale: 2, useCORS: true, backgroundColor: '#fafaf9' })
+    const canvas = await html2canvas(element, { scale: 2, useCORS: true, backgroundColor: '#0B1410' })
     const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
     const w = 210, h = (canvas.height * w) / canvas.width, ph = 297
     let pos = 0
-    while (pos < h) { if (pos > 0) pdf.addPage(); pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, -pos, w, h); pos += ph }
+    while (pos < h) {
+      if (pos > 0) pdf.addPage()
+      pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, -pos, w, h)
+      pos += ph
+    }
     pdf.save(`hafiz-report-${Date.now()}.pdf`)
   } catch (e) {
     console.error('PDF export failed:', e)
@@ -85,493 +101,830 @@ async function exportToPDF(element: HTMLElement) {
   }
 }
 
-// ─── Sub-components ──────────────────────────────────────────────────────────
+// ─── Helpers ───────────────────────────────────────────────────────────────
 
-function WordTooltip({ entry, events }: { entry: WordAlignmentEntry; events: TajweedEventEntry[] }) {
-  const seen = new Set<string>(), rows: ReactNode[] = []
-  if (entry.status === 'SUBSTITUTION') rows.push(<div key="sub" className="flex items-center gap-1.5 pb-1 mb-1 border-b border-stone-100"><span className="w-2 h-2 rounded-full bg-red-500" /><span className="text-stone-600">المرجع:</span><span className="font-quran text-emerald-700 text-sm">{entry.reference_word}</span></div>)
-  else if (entry.status === 'LOW_CONFIDENCE_MATCH') rows.push(<div key="lc" className="flex items-center gap-1.5 pb-1 mb-1 border-b border-stone-100"><span className="w-2 h-2 rounded-full bg-yellow-400" /><span className="text-stone-600">ثقة {Math.round((entry.probability ?? 0) * 100)}%</span></div>)
-  else if (entry.status === 'MISSED') rows.push(<div key="m" className="text-red-600 font-medium">كلمة مفقودة</div>)
-  for (const ev of events) { const rk = ev.applied_rule ?? ev.event_type; const dk = `${rk}-${ev.tajweed_check_status}`; if (seen.has(dk)) continue; seen.add(dk); const rn = RULE_AR[rk] || rk; const ri = parseReason(ev); const dc = { ok: 'bg-emerald-500', low: 'bg-red-500', high: 'bg-amber-500', error: 'bg-red-700', pending: 'bg-stone-300' }[ri.kind]; const tc = { ok: 'text-emerald-700', low: 'text-red-600', high: 'text-amber-600', error: 'text-red-700', pending: 'text-stone-400' }[ri.kind]; rows.push(<div key={dk} className="flex items-center gap-2 py-0.5"><span className={`w-2 h-2 rounded-full ${dc}`} /><span className="text-stone-700 flex-1 truncate">{rn}</span><span className={`text-xs ${tc}`}>{ri.label}</span></div>) }
-  if (!rows.length) rows.push(<p key="e" className="text-stone-400 text-xs">لا أحكام</p>)
-  return (<div className="absolute bottom-full mb-2 z-50 bg-white border border-stone-200 rounded-xl shadow-xl px-3 py-2 w-52 text-xs font-ui text-right pointer-events-none" style={{ left: '50%', transform: 'translateX(-50%)' }} dir="rtl"><div className="absolute -bottom-[6px] left-1/2 -translate-x-1/2 w-3 h-3 bg-white border-b border-r border-stone-200 rotate-45" /><div className="space-y-0.5">{rows}</div></div>)
+function arDigit(n: number | string): string {
+  const map: Record<string, string> = { '0':'٠','1':'١','2':'٢','3':'٣','4':'٤','5':'٥','6':'٦','7':'٧','8':'٨','9':'٩' }
+  return String(n).replace(/[0-9]/g, d => map[d] ?? d)
 }
 
-function WordChip({ entry, events }: { entry: WordAlignmentEntry; events: TajweedEventEntry[] }) {
-  const [open, setOpen] = useState(false)
-  const cls = { MATCH: 'bg-emerald-100 text-emerald-800 border-emerald-200', LOW_CONFIDENCE_MATCH: 'bg-yellow-100 text-yellow-800 border-yellow-300', SUBSTITUTION: 'bg-amber-100 text-amber-800 border-amber-200', SUFFIX_MATCH: 'bg-orange-100 text-orange-800 border-orange-300', TASHKEEL_MISMATCH: 'bg-purple-100 text-purple-800 border-purple-300', CPAE_FALLBACK: 'bg-red-50 text-red-400 border-red-200 opacity-70 line-through', EXTRA: 'bg-stone-100 text-stone-500 border-stone-200 opacity-60', MISSED: 'bg-red-100 text-red-700 border-red-200' }[entry.status] ?? 'bg-stone-100 text-stone-600 border-stone-200'
-  const icon = { MATCH: '', LOW_CONFIDENCE_MATCH: '?', SUBSTITUTION: '\u2260', SUFFIX_MATCH: '+', TASHKEEL_MISMATCH: '~', CPAE_FALLBACK: '~', EXTRA: '+', MISSED: '\u2014' }[entry.status] ?? ''
-  const word = entry.status === 'MISSED' ? entry.reference_word : entry.asr_word
-  const tip = events.length > 0 || entry.status !== 'MATCH'
-  const issue = events.some(e => e.tajweed_check_status === 'WARNING' || e.tajweed_check_status === 'ERROR')
-  const ok = events.some(e => e.tajweed_check_status === 'OK')
-  return (
-    <span className="relative inline-block" onMouseEnter={() => tip && setOpen(true)} onMouseLeave={() => setOpen(false)} onClick={() => tip && setOpen(true)}>
-      <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md border font-quran text-sm ${cls} ${tip ? 'cursor-pointer hover:shadow-sm' : ''}`}>
-        {icon && <span className="font-ui text-[10px] font-bold mr-0.5">{icon}</span>}{word}
-        {(issue || ok) && <span className={`w-1.5 h-1.5 rounded-full ml-0.5 self-start mt-0.5 ${issue ? 'bg-amber-500' : 'bg-emerald-400'}`} />}
-      </span>
-      {open && tip && <WordTooltip entry={entry} events={events} />}
-    </span>
-  )
+function statusToWordClass(s: WordAlignmentEntry['status']): string {
+  switch (s) {
+    case 'MATCH': return 'good'
+    case 'LOW_CONFIDENCE_MATCH':
+    case 'SUBSTITUTION':
+    case 'SUFFIX_MATCH':
+    case 'TASHKEEL_MISMATCH': return 'warn'
+    case 'CPAE_FALLBACK':
+    case 'MISSED': return 'err'
+    case 'EXTRA': return 'extra'
+    default: return ''
+  }
 }
 
-// ─── Main component ──────────────────────────────────────────────────────────
+interface MetricData { label: string; v: number | null; kind: 'ok' | 'warn' | 'err' | 'none' }
+
+function kindFor(pct: number | null, goodAt = 80, warnAt = 60): MetricData['kind'] {
+  if (pct == null) return 'none'
+  if (pct >= goodAt) return 'ok'
+  if (pct >= warnAt) return 'warn'
+  return 'err'
+}
+
+// ─── Main ──────────────────────────────────────────────────────────────────
 
 export default function ReportScreen({ report, surah, ayahStart, ayahEnd, onUploadAnother, onHome, audioUrl }: Props) {
   const [tab, setTab] = useState<TabId>('summary')
   const reportRef = useRef<HTMLDivElement>(null)
-  const hr: HafizReport | null = (report.hafiz_report ?? report.narrative_report ?? null) as HafizReport | null
+
+  useEffect(() => {
+    const prev = document.body.style.background
+    document.body.style.background = '#0B1410'
+    return () => { document.body.style.background = prev }
+  }, [])
+
+  const hr: HafizReport | null = (report.hafiz_report ?? (report.narrative_report as unknown as HafizReport) ?? null)
 
   const alignments = report.word_alignment ?? []
   const matchCount = alignments.filter(w => w.status === 'MATCH').length
   const totalRef = alignments.filter(w => w.status !== 'EXTRA').length
   const accuracy = totalRef > 0 ? Math.round((matchCount / totalRef) * 100) : null
 
-  // Low-quality audio detection: CPAE fell back for most words → madd measurements are meaningless
   const cpaeFallbackCount = alignments.filter(w => w.status === 'CPAE_FALLBACK').length
   const lowQualityAudio = totalRef > 0 && cpaeFallbackCount / totalRef >= 0.4
 
-  const eventsMap = useMemo(() => buildEventsMap(report.word_alignment ?? [], report.tajweed_events ?? []), [report.word_alignment, report.tajweed_events])
+  const eventsMap = useMemo(
+    () => buildEventsMap(report.word_alignment ?? [], report.tajweed_events ?? []),
+    [report.word_alignment, report.tajweed_events],
+  )
 
   const surahName = SURAH_NAMES[surah] ?? `سورة ${surah}`
-  const range = ayahStart === ayahEnd ? `الآية ${ayahStart}` : `الآيات ${ayahStart}\u2013${ayahEnd}`
-  const maddItems: MaddBarEntry[] = report.word_gated_summary?.madd_summary ?? []
-  const maddOk = maddItems.length > 0 ? Math.round(maddItems.filter(m => m.zone === 'OK').length / maddItems.length * 100) : null
-  const waqfItems = report.ayah_boundary_waqf ?? []
-  const waqfOk = waqfItems.length > 0 ? Math.round(waqfItems.filter(w => w.is_waqf).length / waqfItems.length * 100) : null
+  const range = ayahStart === ayahEnd
+    ? `الآية ${arDigit(ayahStart)}`
+    : `الآيات ${arDigit(ayahStart)}\u2013${arDigit(ayahEnd)}`
 
-  const gradeCls = !hr ? '' :
-    hr.overall_grade === 'ممتاز' ? 'bg-emerald-100 text-emerald-800 border-emerald-300' :
-    hr.overall_grade === 'جيد جداً' ? 'bg-teal-100 text-teal-800 border-teal-300' :
-    hr.overall_grade === 'جيد' ? 'bg-amber-100 text-amber-800 border-amber-300' :
-    'bg-red-100 text-red-800 border-red-300'
+  const maddItems: MaddBarEntry[] = report.word_gated_summary?.madd_summary ?? []
+  const maddOk = maddItems.length > 0
+    ? Math.round(maddItems.filter(m => m.zone === 'OK').length / maddItems.length * 100)
+    : null
+
+  const waqfItems = report.ayah_boundary_waqf ?? []
+  const waqfOk = waqfItems.length > 0
+    ? Math.round(waqfItems.filter(w => w.is_waqf).length / waqfItems.length * 100)
+    : null
+
+  const tajweedTotal = report.tajweed_event_count ?? 0
+  const tajweedOk = report.tajweed_ok_count ?? 0
+  const tajweedPct = tajweedTotal > 0 ? Math.round((tajweedOk / tajweedTotal) * 100) : null
+
+  // Compute score for ring (weight: accuracy.35 + tajweed.25 + madd.25 + waqf.15)
+  const score = useMemo(() => {
+    const parts: Array<[number, number]> = []
+    if (accuracy != null) parts.push([accuracy, 0.35])
+    if (tajweedPct != null) parts.push([tajweedPct, 0.25])
+    if (maddOk != null) parts.push([maddOk, 0.25])
+    if (waqfOk != null) parts.push([waqfOk, 0.15])
+    if (!parts.length) return null
+    const wSum = parts.reduce((s, [, w]) => s + w, 0)
+    return Math.round(parts.reduce((s, [v, w]) => s + v * w, 0) / wSum)
+  }, [accuracy, tajweedPct, maddOk, waqfOk])
+
+  const grade = hr?.overall_grade ?? (
+    score == null ? '' :
+    score >= 90 ? 'ممتاز' : score >= 75 ? 'جيد جداً' : score >= 60 ? 'جيد' : 'يحتاج تحسين'
+  )
+
+  const metrics: MetricData[] = [
+    { label: 'مَخارج الحُروف', v: accuracy,   kind: kindFor(accuracy, 85, 70) },
+    { label: 'أحكام التَّجويد', v: tajweedPct, kind: kindFor(tajweedPct, 80, 60) },
+    { label: 'المُدود',         v: maddOk,     kind: kindFor(maddOk, 75, 55) },
+    { label: 'الإيقاع والتَّرتيل', v: waqfOk,  kind: kindFor(waqfOk, 80, 60) },
+  ]
 
   const errorDist: ErrorDistribution[] = hr?.error_distribution ?? []
-  const maddIssues = maddItems.filter(m => m.zone !== 'OK')
 
   const tafkhimItems: TafkhimEntry[] = (report.word_gated_summary?.tafkhim_summary ?? []) as TafkhimEntry[]
+  const saktaItems: SaktaEntry[] = (report.word_gated_summary?.sakta_summary ?? []) as SaktaEntry[]
   const baselineHz = (report.word_gated_summary?.reciter_baseline_hz ?? null) as number | null
   const tafkhimMeasured = tafkhimItems.filter(t => t.acoustic === 'MEASURED')
   const tafkhimIssues = tafkhimMeasured.filter(t =>
     t.verdict === 'ISSUE' || t.verdict === 'WEAK_TAFKHIM' ||
-    (t.expected && t.detected && t.expected !== t.detected && t.detected !== 'AMBIGUOUS')
+    (t.expected && t.detected && t.expected !== t.detected && t.detected !== 'AMBIGUOUS'),
   )
 
+  // Compute findings: top 5 issue words
+  const findings = useMemo(() => {
+    const out: Array<{ kind: 'err' | 'warn' | 'ok'; word: string; rule: string; desc: string }> = []
+    // 1. missed / substitution / CPAE_FALLBACK
+    for (const w of alignments) {
+      if (out.length >= 5) break
+      if (w.status === 'MISSED') out.push({ kind: 'err', word: w.reference_word, rule: 'كلمة مفقودة', desc: 'لم تُقرأ هذه الكلمة.' })
+      else if (w.status === 'SUBSTITUTION') out.push({ kind: 'warn', word: w.asr_word || w.reference_word, rule: 'استبدال كلمة', desc: `المرجع: ${w.reference_word}` })
+      else if (w.status === 'CPAE_FALLBACK') out.push({ kind: 'err', word: w.reference_word || w.asr_word, rule: 'غير مسموعة', desc: 'لم يتمكن النظام من محاذاة الصوت بهذه الكلمة.' })
+    }
+    // 2. madd errors
+    for (const m of maddItems) {
+      if (out.length >= 5) break
+      if (m.zone === 'CRITICAL_SHORT' || m.verdict === 'ERROR') {
+        const hmRef = m.harakah_ms > 0 ? Math.round(m.ref_ms / m.harakah_ms) : 0
+        out.push({ kind: 'err', word: m.word_text || '—', rule: m.madd_label_ar, desc: `المطلوب حوالي ${arDigit(hmRef)} حركات.` })
+      } else if (m.zone === 'SHORT' || m.zone === 'LONG' || m.verdict === 'WARNING') {
+        out.push({ kind: 'warn', word: m.word_text || '—', rule: m.madd_label_ar, desc: m.zone === 'SHORT' ? 'المدّ أقل من المطلوب.' : 'المدّ أطول من المطلوب.' })
+      }
+    }
+    // 3. tafkhim issues
+    for (const t of tafkhimIssues) {
+      if (out.length >= 5) break
+      const letterAr = t.letter_name ? (LETTER_AR[t.letter_name] ?? t.letter_name) : ''
+      out.push({
+        kind: 'warn',
+        word: t.word_text,
+        rule: t.kind === 'lam_jalalah' ? 'لام الجلالة' : `تفخيم ${letterAr}`,
+        desc: t.verdict === 'WEAK_TAFKHIM' ? 'التفخيم ضعيف عن المتوقّع.' : 'لم يتحقق الحكم المتوقّع.',
+      })
+    }
+    return out.slice(0, 5)
+  }, [alignments, maddItems, tafkhimIssues])
+
+  // ─── Tab indicator position ──
+  const tabIdx = TAB_ORDER.indexOf(tab)
+  const tabIndicatorStyle = {
+    transform: `translateX(${tabIdx * -100}%)`,
+  } as React.CSSProperties
+
   return (
-    <div className="min-h-screen bg-parchment-50 flex flex-col" dir="rtl">
-      {/* ═══ STICKY HEADER ═══ */}
-      <div className="sticky top-0 z-20">
-        {/* Nav */}
-        <div className="bg-gradient-to-l from-[#085041] to-[#0F6E56] px-4 pt-3 pb-2 text-white">
-          <div className="flex items-center justify-between mb-2">
-            <button onClick={onHome} className="text-emerald-200 hover:text-white text-xs font-ui">\u2190 الرئيسية</button>
-            <div className="flex items-center gap-2">
-              {hr && <span className={`px-2 py-0.5 rounded-full border font-ui text-[10px] font-bold ${gradeCls}`}>{hr.overall_grade}</span>}
-              <button onClick={async () => { const prev = tab; setTab('summary'); await new Promise(r => setTimeout(r, 100)); if (reportRef.current) await exportToPDF(reportRef.current); setTab(prev) }} className="px-2 py-0.5 rounded bg-white/15 hover:bg-white/25 font-ui text-[10px]">PDF</button>
-              <button onClick={onUploadAnother} className="px-2 py-0.5 rounded bg-white/20 hover:bg-white/30 font-ui text-[10px] font-medium">ملف آخر</button>
-            </div>
-          </div>
-          <h1 className="font-ui text-base font-bold">تقرير حافظ</h1>
-          <p className="font-ui text-[9px] text-emerald-300/60 leading-tight mb-0.5">تقرير حافظ يُنتَج عن طريق الذكاء الاصطناعي وقد يكون به بعض الأخطاء التي تستلزم المراجعة والتدقيق</p>
-          <p className="font-ui text-[10px] text-emerald-200">{surahName} \u00b7 {range}{hr ? ` \u00b7 ${hr.reader_level ?? ''}` : ''}{report.total_runtime_sec != null ? ` \u00b7 ${report.total_runtime_sec.toFixed(0)}s` : ''}</p>
-
-          {/* Metrics row inside header */}
-          <div className="grid grid-cols-4 gap-1.5 mt-2">
-            <MiniStat label="الكلمات" value={accuracy != null ? `${accuracy}%` : '\u2014'} good={accuracy != null && accuracy >= 80} />
-            <MiniStat label="التجويد" value={`${report.tajweed_ok_count ?? 0}/${report.tajweed_event_count ?? 0}`} good={(report.tajweed_ok_count ?? 0) >= (report.tajweed_event_count ?? 1) * 0.8} />
-            <MiniStat label="المد" value={maddOk != null ? `${maddOk}%` : '\u2014'} good={maddOk != null && maddOk >= 70} />
-            <MiniStat label="الوقف" value={waqfOk != null ? `${waqfOk}%` : '\u2014'} good={waqfOk != null && waqfOk >= 80} />
+    <div className="hafiz-report" dir="rtl">
+      <div className="ru-container">
+        {/* Top bar */}
+        <div className="rp-topbar">
+          <a onClick={onHome}>← الرئيسية</a>
+          <div className="rp-actions">
+            {grade && <span className="grade-badge">{grade}</span>}
+            <button
+              className="btn btn-ghost"
+              style={{ padding: '8px 16px', fontSize: 12 }}
+              onClick={async () => {
+                const prev = tab; setTab('summary')
+                await new Promise(r => setTimeout(r, 80))
+                if (reportRef.current) await exportToPDF(reportRef.current)
+                setTab(prev)
+              }}
+            >حفظ PDF</button>
           </div>
         </div>
 
-        {/* Tabs */}
-        <div className="bg-white border-b border-stone-200 flex">
-          {([
-            ['summary', 'التقرير'],
-            ['words', 'الكلمات'],
-            ['madd', `المد${maddIssues.length > 0 ? ` (${maddIssues.length})` : ''}`],
-            ['audio', 'الصوت'],
-            ['details', 'التفاصيل'],
-          ] as [TabId, string][]).map(([id, label]) => (
-            <button key={id} onClick={() => setTab(id)}
-              className={`flex-1 py-2 font-ui text-xs font-medium transition-colors
-                ${tab === id ? 'text-emerald-700 border-b-2 border-emerald-600' : 'text-stone-400 hover:text-stone-600'}`}>
-              {label}
-            </button>
-          ))}
-        </div>
-      </div>
+        <p className="rp-notice">
+          تقرير حافظ يُنتَج بواسطة الذكاء الاصطناعي وقد يحتوي على بعض الأخطاء التي تستلزم المراجعة والتدقيق من معلّم قرآن.
+        </p>
 
-      {/* ═══ TAB CONTENT ═══ */}
-      <div ref={reportRef} className="flex-1 overflow-y-auto px-4 py-4 max-w-lg mx-auto w-full">
-
-        {lowQualityAudio && (
-          <div className="rounded-lg bg-red-50 border border-red-200 p-3 mb-3">
-            <p className="font-ui text-sm font-bold text-red-800 mb-1">⚠ تعذّر تحليل معظم التسجيل</p>
-            <p className="font-ui text-xs text-red-700 leading-relaxed">
-              نظام المحاذاة الصوتية (CPAE) لم يتمكن من الربط بين الصوت والنص لـ <strong>{cpaeFallbackCount} من {totalRef} كلمة</strong>.
-              هذا يدل على تشويش أو انخفاض حجم الصوت.
-              التقييمات التالية قد لا تعكس التلاوة الفعلية — يُفضَّل إعادة التسجيل.
-            </p>
-          </div>
-        )}
-
-        {/* ── TAB: SUMMARY (التقرير) ── */}
-        {tab === 'summary' && (
-          <div className="space-y-4">
-            {/* Narrative report */}
-            {hr && (
-              <div className="space-y-3">
-                <p className="font-ui text-sm text-stone-800 leading-relaxed">{hr.opening}</p>
-                {[
-                  { key: 'accuracy', text: hr.accuracy_section, title: 'دقة الكلمات' },
-                  { key: 'tajweed', text: hr.tajweed_section, title: 'أحكام التجويد' },
-                  { key: 'madd', text: hr.madd_section, title: 'أحكام المد' },
-                  { key: 'waqf', text: hr.waqf_section, title: 'الوقف' },
-                  { key: 'ra', text: hr.ra_section, title: 'التفخيم والترقيق' },
-                  { key: 'consistency', text: hr.consistency_section, title: 'تماثل المدود' },
-                  { key: 'behavior', text: hr.behavior_section, title: 'سلوك القارئ' },
-                ].filter(s => s.text).map(s => (
-                  <div key={s.key} className="bg-stone-50 rounded-xl px-3 py-2">
-                    <p className="font-ui text-xs font-bold text-emerald-800 mb-0.5">{s.title}</p>
-                    <p className="font-ui text-sm text-stone-600 leading-relaxed">{s.text}</p>
-                  </div>
-                ))}
-                {hr.recommendations.length > 0 && (
-                  <div className="bg-emerald-50 rounded-xl px-3 py-2.5 border border-emerald-100">
-                    <p className="font-ui text-xs font-bold text-emerald-800 mb-1">التوصيات</p>
-                    <ol className="list-decimal list-inside space-y-1 font-ui text-sm text-stone-700 leading-relaxed">
-                      {hr.recommendations.map((r, i) => <li key={i}>{r}</li>)}
-                    </ol>
-                  </div>
+        {/* Results card */}
+        <div className="ru-card results" ref={reportRef}>
+          <div className="results-head">
+            <div>
+              <div className="t-eyebrow solo">نَتيجَة التَّقييم</div>
+              <h2 className="results-title t-display">سُورة {surahName} · {range}</h2>
+              <div className="results-meta">
+                <AudioFile />
+                <span>{alignments.length > 0 ? `${arDigit(alignments.length)} كلمة` : 'التلاوة'}</span>
+                {report.total_runtime_sec != null && (
+                  <><span className="dot">·</span><span>{arDigit(report.total_runtime_sec.toFixed(0))} ثانية تحليل</span></>
                 )}
-                <p className="font-ui text-sm text-emerald-700 font-medium leading-relaxed text-center pt-2">{hr.closing}</p>
+                {findings.length > 0 && (
+                  <><span className="dot">·</span><span>اكتُشِفت {arDigit(findings.length)} ملاحظة</span></>
+                )}
               </div>
-            )}
-            {/* Actions */}
-            <div className="space-y-2 pt-2">
-              <button onClick={onUploadAnother} className="w-full py-3 rounded-2xl bg-emerald-700 hover:bg-emerald-600 active:scale-95 text-white font-ui font-semibold text-sm transition-all shadow-md">رفع ملف آخر</button>
+            </div>
+            <div className="score-pod">
+              <ScoreRing pct={score ?? 0} />
+              <div className="score-label-lg">{grade || ''}</div>
             </div>
           </div>
-        )}
 
-        {/* ── TAB: WORDS (الكلمات) ── */}
-        {tab === 'words' && (
-          <div className="space-y-3">
-            <div className="flex flex-wrap gap-1 relative">
-              {alignments.map(entry => <WordChip key={entry.word_index} entry={entry} events={eventsMap.get(entry.word_index) ?? []} />)}
-            </div>
-            <div className="flex flex-wrap gap-2 pt-2 border-t border-stone-100">
-              {[
-                { cls: 'bg-emerald-100', label: 'مطابق' }, { cls: 'bg-yellow-100', label: 'ثقة منخفضة' },
-                { cls: 'bg-amber-100', label: 'مختلف' }, { cls: 'bg-red-100', label: 'مفقود' },
-              ].map(item => <span key={item.label} className="flex items-center gap-1"><span className={`w-2.5 h-2.5 rounded ${item.cls}`} /><span className="font-ui text-[10px] text-stone-500">{item.label}</span></span>)}
-            </div>
-            {/* Error distribution bars */}
-            {errorDist.length > 0 && (
-              <div className="pt-2">
-                <p className="font-ui text-xs font-semibold text-stone-600 mb-2">توزيع الأحكام</p>
-                {errorDist.map(ed => (
-                  <div key={ed.rule_ar} className="mb-1.5">
-                    <div className="flex justify-between font-ui text-[10px] mb-0.5">
-                      <span className="text-stone-600">{ed.rule_ar}</span>
-                      <span className="text-stone-400">{ed.ok}/{ed.total}</span>
-                    </div>
-                    <div className="h-2 bg-stone-100 rounded-full overflow-hidden flex">
-                      {ed.ok > 0 && <div className="h-full bg-emerald-400" style={{ width: `${Math.round(ed.ok / ed.total * 100)}%` }} />}
-                      {ed.warning > 0 && <div className="h-full bg-amber-400" style={{ width: `${Math.round(ed.warning / ed.total * 100)}%` }} />}
-                      {ed.error > 0 && <div className="h-full bg-red-400" style={{ width: `${Math.round(ed.error / ed.total * 100)}%` }} />}
-                    </div>
-                  </div>
-                ))}
+          {/* Metrics */}
+          <div className="metrics-row">
+            {metrics.map(m => (
+              <div key={m.label} className={`metric metric-${m.kind}`}>
+                <div className="metric-head">
+                  <span>{m.label}</span>
+                  <b>{m.v != null ? `${arDigit(m.v)}٪` : '—'}</b>
+                </div>
+                <div className="metric-bar">
+                  <div style={{ width: `${m.v ?? 0}%` }} />
+                </div>
               </div>
-            )}
+            ))}
           </div>
-        )}
 
-        {/* ── TAB: MADD (المد) ── */}
-        {tab === 'madd' && (
-          <div className="space-y-2">
-            {lowQualityAudio && (
-              <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 mb-2">
-                <p className="font-ui text-sm font-semibold text-amber-800 mb-1">⚠ جودة الصوت منخفضة</p>
-                <p className="font-ui text-xs text-amber-700 leading-relaxed">
-                  لم يتمكن النظام من محاذاة الكلمات صوتياً ({cpaeFallbackCount} من {totalRef} كلمة).
-                  قياسات المدّ التالية غير موثوقة — يُرجى إعادة التسجيل في بيئة هادئة بميكروفون جيد.
-                </p>
-              </div>
-            )}
-            {maddItems.length === 0 ? (
-              <p className="font-ui text-sm text-stone-400 text-center py-8">لا توجد أحكام مد</p>
-            ) : (
-              <>
-                <p className="font-ui text-xs text-stone-500 mb-1">{maddItems.filter(m => m.zone === 'OK').length}/{maddItems.length} ضمن النطاق</p>
-                {maddItems.map((m, i) => {
-                  const measuredHarakaat = m.harakah_ms > 0 ? m.measured_ms / m.harakah_ms : 0
-                  const refHarakaat = m.harakah_ms > 0 ? m.ref_ms / m.harakah_ms : 0
-                  const unreliable = m.measurement_reliable === false || m.verdict === 'PENDING'
-                  // عرض الرقم كعدد صحيح عندما يكون قريباً من عدد حركات صحيح، وإلا بخانة واحدة
-                  const fmtHarakaat = (h: number) => {
-                    const r = Math.round(h)
-                    return Math.abs(h - r) < 0.25 ? `${r}` : h.toFixed(1)
-                  }
-                  // لون الرقم الأول: أخضر (صحيح) / أصفر (قصر أو طول طفيف) / أحمر (مبالغة) / رمادي (غير مقاس)
-                  const perfColor =
-                    unreliable ? 'text-stone-400'
-                    : m.zone === 'OK' ? 'text-emerald-600'
-                    : (m.zone === 'SHORT' || m.zone === 'LONG') ? 'text-amber-500'
-                    : 'text-red-500'   // CRITICAL_SHORT / CRITICAL_LONG / unknown
+          {/* Low quality warning */}
+          {lowQualityAudio && (
+            <div className="warn-banner">
+              <strong>⚠ تعذّر تحليل معظم التسجيل.</strong>{' '}
+              نظام المحاذاة الصوتية لم يتمكن من الربط بين الصوت والنص لـ
+              {' '}<strong>{arDigit(cpaeFallbackCount)} من {arDigit(totalRef)}</strong> كلمة.
+              التقييمات قد لا تعكس التلاوة الفعلية — يُفضَّل إعادة التسجيل في بيئة هادئة.
+            </div>
+          )}
+
+          {/* Ayah review */}
+          {alignments.length > 0 && (
+            <div className="ayah-review">
+              <h3 className="ar-title">مُراجَعة الآية</h3>
+              <p className="ayat-line t-quran" dir="rtl">
+                {alignments.map(entry => {
+                  const cls = statusToWordClass(entry.status)
+                  const events = eventsMap.get(entry.word_index) ?? []
+                  const ruleNames = events.map(e => RULE_AR[e.applied_rule ?? e.event_type] ?? (e.applied_rule ?? e.event_type)).join(' / ')
+                  const word = entry.status === 'MISSED' ? entry.reference_word : (entry.asr_word || entry.reference_word)
+                  const tip = ruleNames || (entry.status !== 'MATCH' ? entry.status : '')
                   return (
-                    <div key={i} className="flex items-center justify-between rounded-lg bg-white px-3 py-2 shadow-sm">
-                      {/* يمين: الكلمة ونوع المد */}
-                      <div className="flex flex-col">
-                        <span className="font-quran text-base font-bold text-stone-800 leading-tight">{m.word_text || '\u2014'}</span>
-                        <span className="font-ui text-[10px] text-stone-400 leading-tight">
-                          {m.madd_label_ar}
-                          {m.performance_transformed && (
-                            <span className="text-indigo-400 mr-1">· {m.performance_mode === 'WAQF' ? 'وقف' : 'وصل'}</span>
-                          )}
-                        </span>
-                      </div>
-                      {/* يسار: عدّاد الحركات (المنجز / المعياري) */}
-                      <div className="flex flex-col items-end">
-                        {unreliable ? (
-                          <>
-                            <span className="font-ui text-[10px] text-stone-500 leading-tight">
-                              المرجع: <span className="tabular-nums text-stone-700 font-semibold">{fmtHarakaat(refHarakaat)}</span> حركات (~{Math.round(m.ref_ms)}ms)
-                            </span>
-                            <span className="font-ui text-[10px] text-stone-400 leading-tight">
-                              مدة الكلمة: <span className="tabular-nums">{Math.round(m.measured_ms)}ms</span>
-                            </span>
-                            <span className="font-ui text-[9px] text-stone-400 italic leading-tight">غير مقاس صوتياً</span>
-                          </>
-                        ) : (
-                          <>
-                            <div className="flex items-baseline gap-0.5 font-ui">
-                              <span className={`text-xl font-bold tabular-nums ${perfColor}`}>{fmtHarakaat(measuredHarakaat)}</span>
-                              <span className="text-stone-300 text-lg">/</span>
-                              <span className="text-base text-stone-500 tabular-nums">{fmtHarakaat(refHarakaat)}</span>
-                              <span className="font-ui text-[9px] text-stone-400 mr-1">حركات</span>
-                            </div>
-                            {m.inconsistent_with_peers && (
-                              <span className="font-ui text-[9px] text-amber-600 leading-tight">غير منضبط مع مثله</span>
-                            )}
-                          </>
-                        )}
-                      </div>
-                    </div>
+                    <span key={entry.word_index}>
+                      <span className={`word ${cls}`} title={tip || undefined}>{word}</span>{' '}
+                    </span>
                   )
                 })}
-              </>
-            )}
+              </p>
+            </div>
+          )}
 
-            {/* ── تفخيم/ترقيق (لام الجلالة + الحروف المستعلية) ── */}
-            {tafkhimItems.length > 0 && (
-              <div className="mt-6">
-                <h3 className="font-ui text-sm font-bold text-stone-700 mb-2">
-                  التفخيم والترقيق
-                  <span className="font-ui text-xs text-stone-400 mr-2">
-                    ({tafkhimMeasured.length} مقاس صوتياً من {tafkhimItems.length})
-                  </span>
-                </h3>
-                {baselineHz && (
-                  <p className="font-ui text-[10px] text-stone-400 mb-2">
-                    بصمة القارئ الصوتية: F2 الأساسي = <span className="tabular-nums">{Math.round(baselineHz)}</span> Hz
-                  </p>
-                )}
-                {tafkhimIssues.length > 0 && (
-                  <p className="font-ui text-xs text-amber-600 mb-1">
-                    {tafkhimIssues.length} ملاحظة تستدعي المراجعة
-                  </p>
-                )}
-                <div className="space-y-1">
-                  {tafkhimItems.map((t, i) => {
-                    const isLam = t.kind === 'lam_jalalah'
-                    const label = isLam
-                      ? (t.expected === 'TARQIQ' ? 'ترقيق لام الجلالة' : 'تفخيم لام الجلالة')
-                      : `تفخيم ${t.letter_name === 'khaa' ? 'الخاء' : t.letter_name === 'saad' ? 'الصاد' : t.letter_name === 'daad' ? 'الضاد' : t.letter_name === 'taa' ? 'الطاء' : t.letter_name === 'zhaa' ? 'الظاء' : t.letter_name === 'ghayn' ? 'الغين' : t.letter_name === 'qaaf' ? 'القاف' : t.letter_name}`
-                    const isIssue = t.verdict === 'ISSUE' || t.verdict === 'WEAK_TAFKHIM' ||
-                      (isLam && t.expected && t.detected && t.expected !== t.detected && t.detected !== 'AMBIGUOUS')
-                    const isMeasured = t.acoustic === 'MEASURED'
-                    const colorCls = !isMeasured ? 'text-stone-400'
-                      : isIssue ? 'text-red-500'
-                      : 'text-emerald-600'
-                    return (
-                      <div key={i} className="flex items-center justify-between rounded-lg bg-white px-3 py-1.5 shadow-sm">
-                        <div className="flex flex-col">
-                          <span className="font-quran text-sm font-bold text-stone-800 leading-tight">{t.word_text}</span>
-                          <span className="font-ui text-[10px] text-stone-400 leading-tight">{label}</span>
-                        </div>
-                        <div className="flex flex-col items-end">
-                          {isMeasured && t.f2_min_hz ? (
-                            <>
-                              <span className={`font-ui text-xs font-bold ${colorCls} tabular-nums`}>
-                                {Math.round(t.f2_min_hz)} Hz
-                                {t.f2_ratio != null && (
-                                  <span className="font-normal text-stone-400 mr-1">
-                                    (نسبة {t.f2_ratio.toFixed(2)})
-                                  </span>
-                                )}
-                              </span>
-                              <span className={`font-ui text-[10px] leading-tight ${colorCls}`}>
-                                {t.detected === 'TAFKHIM_OK' ? 'تفخيم صحيح' :
-                                 t.detected === 'WEAK_TAFKHIM' ? 'تفخيم ضعيف' :
-                                 t.detected === 'TAFKHIM' ? 'تفخيم' :
-                                 t.detected === 'TARQIQ' ? 'ترقيق' :
-                                 t.detected === 'AMBIGUOUS' ? 'ضمن النطاق' : '—'}
-                              </span>
-                            </>
-                          ) : (
-                            <span className="font-ui text-[10px] text-stone-400 italic">بدون قياس صوتي</span>
-                          )}
-                        </div>
-                      </div>
-                    )
-                  })}
+          {/* Findings */}
+          {findings.length > 0 && (
+            <div className="findings-row">
+              {findings.map((f, i) => (
+                <div key={i} className={`finding finding-${f.kind}`}>
+                  <div className="finding-head">
+                    <span className={`finding-dot dot-${f.kind}`} />
+                    <span className="finding-word t-quran">{f.word}</span>
+                    <span className="finding-rule">{f.rule}</span>
+                  </div>
+                  <p className="finding-desc">{f.desc}</p>
                 </div>
-              </div>
-            )}
-          </div>
-        )}
+              ))}
+            </div>
+          )}
 
-        {/* ── TAB: AUDIO (المراجعة الصوتية) ── */}
+          {/* Actions */}
+          <div className="results-actions">
+            <button className="btn btn-primary" onClick={onUploadAnother}>
+              تَقْييم تِلاوة جَديدة <ArrowLeft />
+            </button>
+            <button
+              className="btn btn-ghost"
+              onClick={async () => {
+                if (reportRef.current) await exportToPDF(reportRef.current)
+              }}
+            >حفظ التقرير</button>
+            <button
+              className="btn btn-ghost"
+              onClick={() => setTab('audio')}
+            >اِسمَع التِّلاوة الصَّحيحة</button>
+          </div>
+        </div>
+
+        {/* Deep-data tabs */}
+        <div className="rp-tabs">
+          {TAB_ORDER.map(id => (
+            <button
+              key={id}
+              className={`rp-tab ${tab === id ? 'active' : ''}`}
+              onClick={() => setTab(id)}
+            >
+              {id === 'summary' && 'التقرير'}
+              {id === 'words' && 'الكلمات'}
+              {id === 'madd' && 'المد'}
+              {id === 'audio' && 'الصوت'}
+              {id === 'details' && 'التفاصيل'}
+            </button>
+          ))}
+          <span className="rp-tab-indicator" style={tabIndicatorStyle} />
+        </div>
+
+        {/* Tab panels */}
+        {tab === 'summary' && <SummaryPanel hr={hr} />}
+        {tab === 'words' && (
+          <WordsPanel
+            alignments={alignments} eventsMap={eventsMap} errorDist={errorDist}
+          />
+        )}
+        {tab === 'madd' && (
+          <MaddPanel
+            items={maddItems} lowQualityAudio={lowQualityAudio}
+            fallbackCount={cpaeFallbackCount} totalRef={totalRef}
+            tafkhimItems={tafkhimItems} tafkhimMeasured={tafkhimMeasured}
+            tafkhimIssues={tafkhimIssues} baselineHz={baselineHz}
+            saktaItems={saktaItems}
+          />
+        )}
         {tab === 'audio' && (
-          <AudioReviewTab audioUrl={audioUrl} surah={surah} ayahStart={ayahStart} ayahEnd={ayahEnd} />
+          <AudioPanel
+            audioUrl={audioUrl ?? null} surah={surah}
+            ayahStart={ayahStart} ayahEnd={ayahEnd}
+          />
         )}
-
-        {/* ── TAB: DETAILS (التفاصيل) ── */}
         {tab === 'details' && (
-          <div className="space-y-3">
-            {/* Waqf */}
-            {waqfItems.length > 0 && (
-              <div>
-                <p className="font-ui text-xs font-semibold text-stone-600 mb-1.5">الوقوف</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {waqfItems.map(ev => (
-                    <span key={ev.ayah_code} className={`px-2 py-0.5 rounded-full border font-ui text-[10px] ${ev.is_waqf ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-stone-50 text-stone-500 border-stone-200'}`}>
-                      <span className="font-quran text-xs">{ev.word_text || ev.ayah_code}</span>
-                      <span className="opacity-60 mr-1">{ev.is_waqf ? 'وقف' : 'وصل'}</span>
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-            {/* Pipeline */}
-            {report.pipeline_status !== 'EXACT' && (
-              <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-1.5">
-                <p className="font-ui text-[10px] text-amber-700">المطابقة: {report.pipeline_status}</p>
-              </div>
-            )}
-            {/* ASR */}
-            {report.asr_text && (
-              <details className="bg-white rounded-xl p-3">
-                <summary className="font-ui text-xs font-semibold text-stone-600 cursor-pointer">النص المستخرج</summary>
-                <p className="font-quran text-sm text-stone-700 leading-loose mt-2" dir="rtl">{report.asr_text}</p>
-              </details>
-            )}
-            {/* Behavior */}
-            {(report.behavior_events ?? []).length > 0 && (
-              <div>
-                <p className="font-ui text-xs font-semibold text-stone-600 mb-1">سلوك القارئ</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {(report.behavior_events ?? []).map((be, i) => (
-                    <span key={i} className="px-2 py-0.5 rounded-full border border-blue-200 bg-blue-50 font-ui text-[10px] text-blue-700">
-                      {be.type === 'REPETITION' ? `تكرار: ${be.word ?? ''}` : 'إعادة'}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
+          <DetailsPanel report={report} waqfItems={waqfItems} />
         )}
-
       </div>
     </div>
   )
 }
 
-// ─── Audio Review Tab ────────────────────────────────────────────────────────
+// ─── Score Ring ─────────────────────────────────────────────────────────────
 
-function AudioReviewTab({ audioUrl, surah, ayahStart, ayahEnd }: {
-  audioUrl?: string | null; surah: number; ayahStart: number; ayahEnd: number
+function ScoreRing({ pct }: { pct: number }) {
+  const r = 52, C = 2 * Math.PI * r
+  const off = Math.max(0, Math.min(C, C - (pct / 100) * C))
+  return (
+    <div className="score-ring-lg">
+      <svg viewBox="0 0 120 120">
+        <circle cx="60" cy="60" r={r} stroke="rgba(201,169,97,0.15)" strokeWidth="6" fill="none" />
+        <circle
+          cx="60" cy="60" r={r}
+          stroke="url(#sg)" strokeWidth="6" fill="none"
+          strokeDasharray={C} strokeDashoffset={off}
+          transform="rotate(-90 60 60)" strokeLinecap="round"
+        />
+        <defs>
+          <linearGradient id="sg" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor="#E0BE74" />
+            <stop offset="100%" stopColor="#C9A961" />
+          </linearGradient>
+        </defs>
+      </svg>
+      <div className="score-num-lg t-display">
+        {arDigit(pct)}<span>٪</span>
+      </div>
+    </div>
+  )
+}
+
+// ─── Summary Panel (narrative) ─────────────────────────────────────────────
+
+function SummaryPanel({ hr }: { hr: HafizReport | null }): ReactNode {
+  if (!hr) {
+    return (
+      <div className="rp-panel">
+        <p style={{ color: 'var(--cream-dim)', fontSize: 14, textAlign: 'center' }}>
+          التقرير النصي غير متوفّر لهذه التلاوة.
+        </p>
+      </div>
+    )
+  }
+  const sections = [
+    { t: 'دقة الكلمات',     v: hr.accuracy_section },
+    { t: 'أحكام التجويد',   v: hr.tajweed_section },
+    { t: 'أحكام المد',      v: hr.madd_section },
+    { t: 'الوقف',           v: hr.waqf_section },
+    { t: 'التفخيم والترقيق', v: hr.ra_section },
+    { t: 'تماثل المدود',    v: hr.consistency_section },
+    { t: 'سلوك القارئ',     v: hr.behavior_section },
+  ].filter(s => s.v && s.v.trim())
+  return (
+    <div className="rp-panel narrative">
+      {hr.opening && <p>{hr.opening}</p>}
+      {sections.map(s => (
+        <div key={s.t} className="narr-block">
+          <div className="narr-title">{s.t}</div>
+          <div className="narr-text">{s.v}</div>
+        </div>
+      ))}
+      {hr.recommendations && hr.recommendations.length > 0 && (
+        <div className="recs">
+          <h4>التوصيات</h4>
+          <ol>{hr.recommendations.map((r, i) => <li key={i}>{r}</li>)}</ol>
+        </div>
+      )}
+      {hr.closing && <p className="narr-closing">{hr.closing}</p>}
+    </div>
+  )
+}
+
+// ─── Words Panel ────────────────────────────────────────────────────────────
+
+function WordsPanel({
+  alignments, eventsMap, errorDist,
+}: {
+  alignments: WordAlignmentEntry[]
+  eventsMap: Map<number, TajweedEventEntry[]>
+  errorDist: ErrorDistribution[]
+}) {
+  return (
+    <div className="rp-panel">
+      <h3>الكلمات المُقيَّمة</h3>
+      <div className="word-grid">
+        {alignments.map(entry => {
+          const word = entry.status === 'MISSED' ? entry.reference_word : (entry.asr_word || entry.reference_word)
+          const evs = eventsMap.get(entry.word_index) ?? []
+          const ruleNames = evs.map(e => RULE_AR[e.applied_rule ?? e.event_type] ?? (e.applied_rule ?? e.event_type))
+          const marker = {
+            MATCH: '', LOW_CONFIDENCE_MATCH: '?', SUBSTITUTION: '≠',
+            SUFFIX_MATCH: '+', TASHKEEL_MISMATCH: '~', CPAE_FALLBACK: '·',
+            EXTRA: '+', MISSED: '—',
+          }[entry.status] ?? ''
+          const tip = ruleNames.length ? ruleNames.join(' · ') : entry.status !== 'MATCH' ? entry.status : undefined
+          return (
+            <span key={entry.word_index} className={`wchip s-${entry.status}`} title={tip}>
+              {marker && <span className="wchip-marker">{marker}</span>}
+              {word}
+            </span>
+          )
+        })}
+      </div>
+      <div className="legend">
+        {[
+          ['var(--emerald-bright)', 'مطابق'],
+          ['var(--gold)', 'ثقة منخفضة / استبدال'],
+          ['#F0B070', 'حرف زائد / تشكيل'],
+          ['var(--red-deep)', 'مفقود / غير مسموع'],
+        ].map(([c, l]) => (
+          <span key={l} className="legend-item">
+            <span className="legend-swatch" style={{ background: c }} />{l}
+          </span>
+        ))}
+      </div>
+
+      {errorDist.length > 0 && (
+        <div>
+          <h3 style={{ marginTop: 8 }}>توزيع الأحكام</h3>
+          {errorDist.map(ed => {
+            const total = Math.max(ed.total, 1)
+            return (
+              <div key={ed.rule_ar} className="dist-row">
+                <div className="dist-head">
+                  <span>{ed.rule_ar}</span>
+                  <span>{arDigit(ed.ok)} / {arDigit(ed.total)}</span>
+                </div>
+                <div className="dist-bar">
+                  {ed.ok > 0 && <span className="seg-ok" style={{ width: `${(ed.ok / total) * 100}%` }} />}
+                  {ed.warning > 0 && <span className="seg-warn" style={{ width: `${(ed.warning / total) * 100}%` }} />}
+                  {ed.error > 0 && <span className="seg-err" style={{ width: `${(ed.error / total) * 100}%` }} />}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── Madd Panel ────────────────────────────────────────────────────────────
+
+function MaddPanel({
+  items, lowQualityAudio, fallbackCount, totalRef,
+  tafkhimItems, tafkhimMeasured, tafkhimIssues, baselineHz,
+  saktaItems,
+}: {
+  items: MaddBarEntry[]
+  lowQualityAudio: boolean
+  fallbackCount: number
+  totalRef: number
+  tafkhimItems: TafkhimEntry[]
+  tafkhimMeasured: TafkhimEntry[]
+  tafkhimIssues: TafkhimEntry[]
+  baselineHz: number | null
+  saktaItems: SaktaEntry[]
+}) {
+  const fmtH = (h: number) => {
+    const r = Math.round(h)
+    return Math.abs(h - r) < 0.25 ? `${arDigit(r)}` : arDigit(h.toFixed(1))
+  }
+
+  return (
+    <div className="rp-panel">
+      <h3>أحكام المد</h3>
+      {lowQualityAudio && (
+        <div className="warn-banner" style={{ fontSize: 12 }}>
+          <strong>جودة الصوت منخفضة</strong> — تعذّرت محاذاة {arDigit(fallbackCount)} من {arDigit(totalRef)} كلمة.
+          قياسات المدّ التالية غير موثوقة.
+        </div>
+      )}
+      {items.length === 0 ? (
+        <p style={{ color: 'var(--cream-dim)', fontSize: 13, textAlign: 'center', padding: 24 }}>
+          لا توجد أحكام مدّ في هذا النطاق.
+        </p>
+      ) : (
+        <>
+          <p style={{ color: 'var(--cream-dim)', fontSize: 12 }}>
+            {arDigit(items.filter(m => m.zone === 'OK').length)} / {arDigit(items.length)} ضمن النطاق
+          </p>
+          {items.map((m, i) => {
+            const measuredH = m.harakah_ms > 0 ? m.measured_ms / m.harakah_ms : 0
+            const refH = m.harakah_ms > 0 ? m.ref_ms / m.harakah_ms : 0
+            const unreliable = m.measurement_reliable === false || m.verdict === 'PENDING'
+            const cls =
+              unreliable ? 'madd-none' :
+              m.zone === 'OK' ? 'madd-ok' :
+              (m.zone === 'SHORT' || m.zone === 'LONG') ? 'madd-warn' : 'madd-err'
+            return (
+              <div key={i} className="madd-card">
+                <div className="madd-left">
+                  <div className="mw">{m.word_text || '—'}</div>
+                  <div className="ml">
+                    {m.madd_label_ar}
+                    {m.performance_transformed && (
+                      <span className="tag-mode">· {m.performance_mode === 'WAQF' ? 'عند الوقف' : 'عند الوصل'}</span>
+                    )}
+                  </div>
+                </div>
+                <div className="madd-right">
+                  {unreliable ? (
+                    <>
+                      <div className="mv" style={{ fontSize: 13 }}>
+                        <span className="ref">المرجع {fmtH(refH)}</span>
+                        <span className="unit">حركات</span>
+                      </div>
+                      <div className="note">غير مقاس صوتياً</div>
+                    </>
+                  ) : (
+                    <>
+                      <div className={`mv ${cls}`}>
+                        <span>{fmtH(measuredH)}</span>
+                        <span className="sep">/</span>
+                        <span className="ref">{fmtH(refH)}</span>
+                        <span className="unit">حركات</span>
+                      </div>
+                      {m.inconsistent_with_peers && (
+                        <div className="note">غير منضبط مع مثله</div>
+                      )}
+                    </>
+                  )}
+                </div>
+              </div>
+            )
+          })}
+        </>
+      )}
+
+      {/* Tafkhim / Tarqiq */}
+      {tafkhimItems.length > 0 && (
+        <>
+          <h3 style={{ marginTop: 12 }}>التفخيم والترقيق</h3>
+          <p style={{ color: 'var(--cream-dim)', fontSize: 11 }}>
+            {arDigit(tafkhimMeasured.length)} مقاس صوتياً من {arDigit(tafkhimItems.length)}
+            {baselineHz != null && (
+              <> · بصمة القارئ: F2 = <span style={{ fontVariantNumeric: 'tabular-nums' }}>{arDigit(Math.round(baselineHz))}</span> Hz</>
+            )}
+          </p>
+          {tafkhimIssues.length > 0 && (
+            <p style={{ color: 'var(--gold-bright)', fontSize: 12 }}>
+              {arDigit(tafkhimIssues.length)} ملاحظة تستدعي المراجعة
+            </p>
+          )}
+          {tafkhimItems.map((t, i) => {
+            const isLam = t.kind === 'lam_jalalah'
+            const label = isLam
+              ? (t.expected === 'TARQIQ' ? 'ترقيق لام الجلالة' : 'تفخيم لام الجلالة')
+              : `تفخيم ${t.letter_name ? (LETTER_AR[t.letter_name] ?? t.letter_name) : ''}`
+            const isIssue = t.verdict === 'ISSUE' || t.verdict === 'WEAK_TAFKHIM' ||
+              (isLam && t.expected && t.detected && t.expected !== t.detected && t.detected !== 'AMBIGUOUS')
+            const measured = t.acoustic === 'MEASURED'
+            const cls = !measured ? 'madd-none' : isIssue ? 'madd-err' : 'madd-ok'
+            return (
+              <div key={i} className="madd-card">
+                <div className="madd-left">
+                  <div className="mw">{t.word_text}</div>
+                  <div className="ml">{label}</div>
+                </div>
+                <div className="madd-right">
+                  {measured && t.f2_min_hz != null ? (
+                    <>
+                      <div className={`mv ${cls}`} style={{ fontSize: 14 }}>
+                        {arDigit(Math.round(t.f2_min_hz))} Hz
+                        {t.f2_ratio != null && (
+                          <span className="ref" style={{ marginInlineStart: 6, fontSize: 12 }}>
+                            (نسبة {t.f2_ratio.toFixed(2)})
+                          </span>
+                        )}
+                      </div>
+                      <div className={`note ${cls}`} style={{ color: 'inherit' }}>
+                        {t.detected === 'TAFKHIM_OK' ? 'تفخيم صحيح' :
+                         t.detected === 'WEAK_TAFKHIM' ? 'تفخيم ضعيف' :
+                         t.detected === 'TAFKHIM' ? 'تفخيم' :
+                         t.detected === 'TARQIQ' ? 'ترقيق' :
+                         t.detected === 'AMBIGUOUS' ? 'ضمن النطاق' : '—'}
+                      </div>
+                    </>
+                  ) : (
+                    <div className="note" style={{ fontStyle: 'italic' }}>بدون قياس صوتي</div>
+                  )}
+                </div>
+              </div>
+            )
+          })}
+        </>
+      )}
+
+      {/* Sakta — 5 canonical + Anfal-Tawbah juncture */}
+      {saktaItems.length > 0 && (
+        <>
+          <h3 style={{ marginTop: 12 }}>السكت</h3>
+          <p style={{ color: 'var(--cream-dim)', fontSize: 11 }}>
+            {arDigit(saktaItems.length)} موضع سكت — سكتات رواية حفص عن عاصم
+          </p>
+          {saktaItems.map((s, i) => {
+            const measured = s.acoustic === 'MEASURED'
+            const isIssue = s.verdict === 'ISSUE'
+            const isWeak = s.verdict === 'WEAK'
+            const cls = !measured ? 'madd-none' : isIssue ? 'madd-err' : isWeak ? 'madd-warn' : 'madd-ok'
+            const obligAr = s.obligation === 'WAJIB' ? 'واجب' : 'جائز'
+            const verdictAr =
+              s.probe_verdict === 'MISSING' ? 'لم يُنفَّذ' :
+              s.probe_verdict === 'TOO_SHORT' ? 'قصير' :
+              s.probe_verdict === 'TOO_LONG' ? 'طويل' :
+              s.probe_verdict === 'OVER_WAQF' ? 'وقف كامل' :
+              s.probe_verdict === 'OK' ? 'منضبط' : '—'
+            return (
+              <div key={i} className="madd-card">
+                <div className="madd-left">
+                  <div className="mw">{s.word_text}</div>
+                  <div className="ml">سكت {obligAr}</div>
+                </div>
+                <div className="madd-right">
+                  {measured && s.gap_ms != null ? (
+                    <>
+                      <div className={`mv ${cls}`} style={{ fontSize: 14 }}>
+                        {arDigit(Math.round(s.gap_ms))} ms
+                      </div>
+                      <div className={`note ${cls}`} style={{ color: 'inherit' }}>
+                        {verdictAr}
+                      </div>
+                    </>
+                  ) : (
+                    <div className="note" style={{ fontStyle: 'italic' }}>بدون قياس</div>
+                  )}
+                </div>
+              </div>
+            )
+          })}
+        </>
+      )}
+    </div>
+  )
+}
+
+// ─── Audio Panel ────────────────────────────────────────────────────────────
+
+function AudioPanel({
+  audioUrl, surah, ayahStart, ayahEnd,
+}: {
+  audioUrl: string | null; surah: number; ayahStart: number; ayahEnd: number
 }) {
   const [reciter, setReciter] = useState<string>(RECITERS[0].id)
-  const [playingAyah, setPlayingAyah] = useState<number | null>(null)
-  const refAudioRef = useRef<HTMLAudioElement>(null)
-
+  const [playing, setPlaying] = useState<number | null>(null)
+  const ref = useRef<HTMLAudioElement>(null)
   const ayahs = Array.from({ length: ayahEnd - ayahStart + 1 }, (_, i) => ayahStart + i)
 
-  const playAyah = (ayah: number) => {
-    if (refAudioRef.current) {
-      refAudioRef.current.src = ayahAudioUrl(reciter, surah, ayah)
-      refAudioRef.current.play()
-      setPlayingAyah(ayah)
-      refAudioRef.current.onended = () => setPlayingAyah(null)
+  const play = (a: number) => {
+    if (ref.current) {
+      ref.current.src = ayahAudioUrl(reciter, surah, a)
+      ref.current.play().catch(() => {})
+      setPlaying(a)
+      ref.current.onended = () => setPlaying(null)
     }
   }
 
   return (
-    <div className="space-y-4">
-      {/* User recording */}
-      <div className="bg-white rounded-xl shadow-sm p-3 space-y-2">
-        <p className="font-ui text-xs font-bold text-emerald-800">تلاوتك</p>
-        {audioUrl ? (
-          <audio controls className="w-full h-10" src={audioUrl} preload="metadata" />
-        ) : (
-          <p className="font-ui text-xs text-stone-400 text-center py-3">الملف الصوتي غير متاح</p>
-        )}
-      </div>
-
-      {/* Reference reciters */}
-      <div className="bg-white rounded-xl shadow-sm p-3 space-y-3">
-        <p className="font-ui text-xs font-bold text-emerald-800">تلاوة مرجعية</p>
-
-        {/* Reciter selector */}
-        <div className="flex flex-wrap gap-1.5">
-          {RECITERS.map(r => (
-            <button key={r.id} onClick={() => { setReciter(r.id); setPlayingAyah(null) }}
-              className={`px-2.5 py-1 rounded-full font-ui text-[11px] transition-colors border
-                ${reciter === r.id
-                  ? 'bg-emerald-700 text-white border-emerald-700'
-                  : 'bg-white text-stone-600 border-stone-200 hover:border-emerald-300'}`}>
-              {r.short}
-            </button>
-          ))}
-        </div>
-
-        {/* Ayah buttons */}
-        <div className="space-y-1">
-          {ayahs.map(ayah => (
-            <button key={ayah} onClick={() => playAyah(ayah)}
-              className={`w-full flex items-center justify-between px-3 py-2 rounded-lg border transition-colors font-ui text-sm
-                ${playingAyah === ayah
-                  ? 'bg-emerald-50 border-emerald-300 text-emerald-800'
-                  : 'bg-stone-50 border-stone-200 text-stone-600 hover:border-emerald-200'}`}>
-              <span>الآية {ayah}</span>
-              <span className="text-base">{playingAyah === ayah ? '\u23f8' : '\u25b6'}</span>
-            </button>
-          ))}
-        </div>
-
-        {/* Hidden audio element */}
-        <audio ref={refAudioRef} preload="none" />
-
-        <p className="font-ui text-[9px] text-stone-400 text-center">
-          المصدر: EveryAyah.com — استمع للقارئ المرجعي ثم قارن بتلاوتك
+    <div className="rp-panel">
+      <h3>تلاوتك</h3>
+      {audioUrl ? (
+        <audio controls src={audioUrl} preload="metadata" />
+      ) : (
+        <p style={{ color: 'var(--cream-dim)', fontSize: 13, textAlign: 'center', padding: 14 }}>
+          الملف الصوتي غير متاح
         </p>
+      )}
+
+      <h3>تلاوة مرجعية</h3>
+      <div className="reciter-pills">
+        {RECITERS.map(r => (
+          <button
+            key={r.id}
+            className={`reciter-pill ${reciter === r.id ? 'active' : ''}`}
+            onClick={() => { setReciter(r.id); setPlaying(null) }}
+          >{r.short}</button>
+        ))}
       </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {ayahs.map(a => (
+          <button
+            key={a}
+            className={`ayah-row ${playing === a ? 'on' : ''}`}
+            onClick={() => play(a)}
+          >
+            <span>الآية {arDigit(a)}</span>
+            <span style={{ fontSize: 16 }}>{playing === a ? '⏸' : '▶'}</span>
+          </button>
+        ))}
+      </div>
+      <audio ref={ref} preload="none" />
+
+      <p style={{ color: 'var(--cream-dim)', fontSize: 10, textAlign: 'center' }}>
+        المصدر: EveryAyah.com — استمع للقارئ المرجعي ثم قارن بتلاوتك
+      </p>
     </div>
   )
 }
 
-// ─── Mini stat (inside header) ───────────────────────────────────────────────
+// ─── Details Panel ──────────────────────────────────────────────────────────
 
-function MiniStat({ label, value, good }: { label: string; value: string; good: boolean }) {
+function DetailsPanel({
+  report, waqfItems,
+}: {
+  report: EvaluateFileResponse
+  waqfItems: EvaluateFileResponse['ayah_boundary_waqf']
+}) {
+  const behaviorEvents = report.behavior_events ?? []
+  const tajweedEvents = report.tajweed_events ?? []
+  const warnEvents = tajweedEvents.filter(e => e.tajweed_check_status === 'WARNING' || e.tajweed_check_status === 'ERROR')
+
   return (
-    <div className={`rounded-lg px-1.5 py-1 text-center ${good ? 'bg-emerald-900/30' : 'bg-red-900/20'}`}>
-      <p className={`font-ui font-bold text-sm ${good ? 'text-emerald-200' : 'text-red-300'}`}>{value}</p>
-      <p className="font-ui text-[9px] text-emerald-300/70">{label}</p>
+    <div className="rp-panel">
+      {/* Waqf */}
+      {waqfItems && waqfItems.length > 0 && (
+        <div>
+          <h3>الوقوف</h3>
+          <div className="waqf-chips">
+            {waqfItems.map(ev => (
+              <span key={ev.ayah_code} className={`waqf-chip ${ev.is_waqf ? 'on' : ''}`}>
+                <span className="qw t-quran">{ev.word_text || ev.ayah_code}</span>
+                <span style={{ opacity: 0.7 }}>{ev.is_waqf ? 'وقف' : 'وصل'}</span>
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Pipeline */}
+      {report.pipeline_status && report.pipeline_status !== 'EXACT' && (
+        <div>
+          <h3>حالة المطابقة</h3>
+          <span className="pill warn">{report.pipeline_status}</span>
+        </div>
+      )}
+
+      {/* Tajweed event summary */}
+      {tajweedEvents.length > 0 && (
+        <div>
+          <h3>أحداث التجويد</h3>
+          <p style={{ color: 'var(--cream-dim)', fontSize: 12 }}>
+            إجمالي {arDigit(tajweedEvents.length)}
+            {' · '}صحيح {arDigit(tajweedEvents.filter(e => e.tajweed_check_status === 'OK').length)}
+            {' · '}تحذير {arDigit(tajweedEvents.filter(e => e.tajweed_check_status === 'WARNING').length)}
+            {' · '}خطأ {arDigit(tajweedEvents.filter(e => e.tajweed_check_status === 'ERROR').length)}
+          </p>
+          {warnEvents.length > 0 && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
+              {warnEvents.slice(0, 20).map((ev, i) => (
+                <span key={i} className={`pill ${ev.tajweed_check_status === 'ERROR' ? 'err' : 'warn'}`}>
+                  <span className="t-quran" style={{ fontSize: 14 }}>{ev.word_text}</span>
+                  <span style={{ opacity: 0.75 }}>{RULE_AR[ev.applied_rule ?? ev.event_type] ?? (ev.applied_rule ?? ev.event_type)}</span>
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Behavior */}
+      {behaviorEvents.length > 0 && (
+        <div>
+          <h3>سلوك القارئ</h3>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            {behaviorEvents.map((be, i) => (
+              <span key={i} className="pill blue">
+                {be.type === 'REPETITION' ? `تكرار: ${be.word ?? ''}` : 'إعادة من أول الآية'}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ASR text */}
+      {report.asr_text && (
+        <details>
+          <summary>النص المُستخرَج من التسجيل</summary>
+          <p className="asr">{report.asr_text}</p>
+        </details>
+      )}
     </div>
+  )
+}
+
+// ─── Icons ──────────────────────────────────────────────────────────────────
+
+function AudioFile() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden>
+      <path d="M4 2h8l4 4v12H4V2z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
+      <path d="M12 2v4h4M8 12v3M10 10v5M12 11v4M14 13v1" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+    </svg>
+  )
+}
+function ArrowLeft() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden>
+      <path d="M9 3L4 7l5 4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
   )
 }

@@ -147,6 +147,21 @@ export interface TafkhimEntry {
   lam_form?: string                  // for lam_jalalah
 }
 
+// حكم السكت (5 سكتات قانونية + مفترق الأنفال/التوبة)
+export interface SaktaEntry {
+  word_index: number
+  word_text: string
+  obligation: 'WAJIB' | 'JAIZ'
+  variant_id: string | null
+  gap_ms: number | null
+  probe_verdict: 'OK' | 'TOO_SHORT' | 'TOO_LONG' | 'MISSING' | 'OVER_WAQF' | null
+  probe_status: 'OK' | 'ERROR' | 'WARNING' | 'INFO' | null
+  verdict: string                 // OK | ISSUE | WEAK | PENDING
+  acoustic: 'MEASURED' | 'UNMEASURABLE'
+  confidence: number
+  description: string
+}
+
 // بيانات شريط المد البصري (من word_gated_summary.madd_summary)
 export interface MaddBarSegment {
   id: string
@@ -251,6 +266,7 @@ export interface EvaluateFileResponse {
   word_gated_summary: {
     madd_summary?: MaddBarEntry[]
     tafkhim_summary?: TafkhimEntry[]
+    sakta_summary?: SaktaEntry[]
     reciter_baseline_hz?: number | null
     [key: string]: unknown
   } | null
