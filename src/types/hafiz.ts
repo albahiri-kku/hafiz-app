@@ -74,7 +74,7 @@ export interface HeardEntry {
 }
 
 export type RecitationMode = 'tilawa' | 'hifz'
-export type AppPhase = 'start' | 'reciting' | 'summary' | 'mushaf_browse' | 'upload' | 'evaluating' | 'report'
+export type AppPhase = 'landing' | 'start' | 'reciting' | 'summary' | 'mushaf_browse' | 'upload' | 'evaluating' | 'report'
 
 export interface WordAlignmentEntry {
   word_index: number

@@ -15,6 +15,7 @@ import SessionSummary from './components/SessionSummary'
 import MushafPage from './components/MushafPage'
 import UploadScreen from './components/UploadScreen'
 import ReportScreen from './components/ReportScreen'
+import LandingPage from './pages/LandingPage'
 
 const API_BASE = import.meta.env.VITE_API_URL ?? ''
 const API_KEY  = import.meta.env.VITE_API_KEY  ?? ''
@@ -25,9 +26,11 @@ const EMPTY_STATS: SessionStats = {
 
 export default function App() {
   const _initialPhase: AppPhase = (() => {
-    if (typeof window === 'undefined') return 'start'
+    if (typeof window === 'undefined') return 'landing'
     const params = new URLSearchParams(window.location.search)
-    return params.get('upload') === '1' ? 'upload' : 'start'
+    if (params.get('upload') === '1') return 'upload'
+    if (params.get('app') === '1') return 'start'
+    return 'landing'
   })()
   const [phase, setPhase]           = useState<AppPhase>(_initialPhase)
   const [mode, setMode]             = useState<RecitationMode>('tilawa')
@@ -280,6 +283,10 @@ export default function App() {
   }, [endTrackingSession])
 
   // ─── Render ───────────────────────────────────────────────────────────────
+  if (phase === 'landing') {
+    return <LandingPage onStart={() => setPhase('upload')} />
+  }
+
   if (phase === 'start') {
     return (
       <StartScreen

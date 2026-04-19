@@ -1,441 +1,552 @@
-/* LandingPage.css — Hafiz landing page styles */
+/* =========================================================
+   حافظ — Landing Page Design System (Midnight + Gold)
+   Scoped under .hafiz-landing to avoid Tailwind collisions
+   ========================================================= */
 
-:root {
-  --hafiz-green-dark: #1a2a1a;
-  --hafiz-green-mid:  #2d4a2d;
-  --hafiz-gold:       #C8860A;
-  --hafiz-gold-light: #F0C050;
-  --hafiz-cream:      #F5F0E8;
-}
+.hafiz-landing {
+  --bg-deep: #0B1410;
+  --bg-night: #0F1A14;
+  --bg-elev: #14241C;
+  --ink: #0A1410;
+  --cream: #F4E9D1;
+  --cream-soft: #E8D9B8;
+  --cream-dim: #C9BFA4;
+  --gold: #C9A961;
+  --gold-bright: #E0BE74;
+  --gold-deep: #8B6F2F;
+  --emerald: #1F5C42;
+  --emerald-bright: #2A7A57;
+  --emerald-deep: #0F3D2A;
+  --line: rgba(201, 169, 97, 0.18);
+  --line-strong: rgba(201, 169, 97, 0.42);
 
-/* ── Reset / base ───────────────────────────────────────────────────────── */
+  --f-display: "Amiri", "Reem Kufi", "Scheherazade New", serif;
+  --f-quran: "Amiri Quran", "Amiri", "Scheherazade New", serif;
+  --f-sans: "Readex Pro", "IBM Plex Sans Arabic", system-ui, sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, monospace;
 
-.lp {
-  font-family: 'Traditional Arabic', 'Amiri', 'Scheherazade New', system-ui, serif;
+  --s1: 4px;  --s2: 8px;  --s3: 12px; --s4: 16px;
+  --s5: 24px; --s6: 32px; --s7: 48px; --s8: 64px;
+  --s9: 96px; --s10: 128px;
+
   direction: rtl;
-  background: var(--hafiz-cream);
-  color: var(--hafiz-green-dark);
+  background:
+    radial-gradient(ellipse 80% 50% at 50% 0%, rgba(31, 92, 66, 0.18), transparent 70%),
+    radial-gradient(ellipse 60% 40% at 80% 100%, rgba(201, 169, 97, 0.08), transparent 70%),
+    var(--bg-deep);
+  color: var(--cream);
+  font-family: var(--f-sans);
+  font-size: 16px;
+  line-height: 1.6;
   min-height: 100vh;
   overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
-/* ── Navbar ─────────────────────────────────────────────────────────────── */
+.hafiz-landing *,
+.hafiz-landing *::before,
+.hafiz-landing *::after { box-sizing: border-box; }
 
-.lp-nav {
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 5vw;
-  height: 60px;
-  background: var(--hafiz-green-dark);
-  border-bottom: 2px solid var(--hafiz-gold);
-}
-
-.lp-nav-logo {
-  font-size: 1.5rem;
-  font-weight: bold;
-  color: var(--hafiz-gold-light);
-  letter-spacing: 0.02em;
-  text-decoration: none;
-}
-
-.lp-nav-links {
-  display: flex;
-  gap: 1.5rem;
-  list-style: none;
-  margin: 0;
+.hafiz-landing a { color: inherit; text-decoration: none; cursor: pointer; }
+.hafiz-landing button {
+  font: inherit; color: inherit; background: none; border: none; cursor: pointer;
   padding: 0;
 }
+.hafiz-landing h1, .hafiz-landing h2, .hafiz-landing h3, .hafiz-landing h4 {
+  margin: 0; font-weight: 700;
+}
+.hafiz-landing p, .hafiz-landing ul { margin: 0; padding: 0; }
+.hafiz-landing ul { list-style: none; }
 
-.lp-nav-links a {
-  color: var(--hafiz-cream);
-  text-decoration: none;
-  font-size: 1rem;
-  opacity: 0.85;
-  transition: opacity 0.2s, color 0.2s;
+/* ---------- Typography ---------- */
+.hafiz-landing .t-quran { font-family: var(--f-quran); font-weight: 400; line-height: 2; }
+.hafiz-landing .t-display { font-family: var(--f-display); font-weight: 700; letter-spacing: -0.01em; }
+.hafiz-landing .t-eyebrow {
+  font-family: var(--f-sans); font-size: 12px; font-weight: 500;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--gold); display: inline-flex; align-items: center; gap: 12px;
+}
+.hafiz-landing .t-eyebrow::before,
+.hafiz-landing .t-eyebrow::after {
+  content: ""; height: 1px; width: 32px; background: var(--gold-deep);
 }
 
-.lp-nav-links a:hover {
-  opacity: 1;
-  color: var(--hafiz-gold-light);
+/* ---------- Layout ---------- */
+.hafiz-landing .wrap {
+  max-width: 1200px !important;
+  width: 100%;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  padding-left: var(--s6);
+  padding-right: var(--s6);
+}
+.hafiz-landing .wrap-narrow {
+  max-width: 920px !important;
+  width: 100%;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  padding-left: var(--s6);
+  padding-right: var(--s6);
 }
 
-.lp-nav-cta {
-  background: var(--hafiz-gold);
-  color: var(--hafiz-green-dark) !important;
-  padding: 6px 18px;
-  border-radius: 20px;
-  font-weight: bold;
-  opacity: 1 !important;
-  transition: background 0.2s !important;
+/* ---------- Buttons ---------- */
+.hafiz-landing .btn {
+  display: inline-flex; align-items: center; gap: 12px;
+  padding: 14px 28px; border-radius: 999px;
+  font-family: var(--f-sans); font-size: 15px; font-weight: 500;
+  transition: all 0.25s ease; white-space: nowrap;
+}
+.hafiz-landing .btn-primary {
+  background: linear-gradient(180deg, var(--gold-bright), var(--gold));
+  color: var(--bg-deep); box-shadow: 0 8px 30px -10px rgba(201, 169, 97, 0.6);
+}
+.hafiz-landing .btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 40px -10px rgba(201, 169, 97, 0.8);
+}
+.hafiz-landing .btn-ghost {
+  border: 1px solid var(--line-strong); color: var(--cream);
+  background: transparent;
+}
+.hafiz-landing .btn-ghost:hover { background: rgba(201, 169, 97, 0.08); border-color: var(--gold); }
+.hafiz-landing .btn-sm { padding: 9px 18px; font-size: 13px; }
+.hafiz-landing .btn-lg { padding: 18px 36px; font-size: 17px; }
+
+/* ---------- Ornament divider ---------- */
+.hafiz-landing .ornament-divider {
+  display: flex; align-items: center; justify-content: center;
+  gap: 16px; color: var(--gold); width: 100%; max-width: 480px;
+}
+.hafiz-landing .ornament-divider::before,
+.hafiz-landing .ornament-divider::after {
+  content: ""; flex: 1; max-width: 120px; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--gold-deep), transparent);
 }
 
-.lp-nav-cta:hover {
-  background: var(--hafiz-gold-light) !important;
+/* ---------- Keyframes ---------- */
+@keyframes hl-wave {
+  0%, 100% { transform: scaleY(0.3); }
+  50% { transform: scaleY(1); }
+}
+@keyframes hl-float-slow {
+  0%, 100% { transform: translateY(0) rotate(0); }
+  50% { transform: translateY(-12px) rotate(2deg); }
+}
+@keyframes hl-fade-up {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes hl-pulse-ring {
+  0% { box-shadow: 0 0 0 0 rgba(42,122,87,0.7); }
+  100% { box-shadow: 0 0 0 12px rgba(42,122,87,0); }
+}
+.hafiz-landing .fade-up { animation: hl-fade-up 0.8s ease-out both; }
+
+/* ---------- Header ---------- */
+.hafiz-landing .site-header {
+  position: sticky; top: 0; z-index: 50;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  background: rgba(11, 20, 16, 0.7);
+  border-bottom: 1px solid var(--line);
+}
+.hafiz-landing .header-inner {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 18px var(--s6);
+}
+.hafiz-landing .brand { display: flex; align-items: center; gap: 12px; }
+.hafiz-landing .brand-mark { width: 38px; height: 38px; color: var(--gold); }
+.hafiz-landing .brand-text .brand-name {
+  font-size: 22px; color: rgb(218, 220, 154); line-height: 1;
+  font-family: var(--f-display); font-weight: 700;
+}
+.hafiz-landing .brand-text .brand-sub {
+  font-size: 10px; color: var(--gold); letter-spacing: 0.2em;
+  text-transform: uppercase; margin-top: 2px;
+}
+.hafiz-landing .nav { display: flex; gap: 32px; }
+.hafiz-landing .nav a {
+  font-size: 14px; color: var(--cream-dim);
+  transition: color 0.2s; position: relative; padding: 4px 0;
+}
+.hafiz-landing .nav a:hover,
+.hafiz-landing .nav a.active { color: var(--gold); }
+.hafiz-landing .nav a.active::after {
+  content: ''; position: absolute; bottom: -4px; right: 0; left: 0;
+  height: 1px; background: var(--gold);
+}
+.hafiz-landing .header-actions { display: flex; gap: 12px; align-items: center; }
+
+/* ---------- Hero ---------- */
+.hafiz-landing .hero {
+  position: relative; display: flex; align-items: center;
+  padding: 32px 0 56px; overflow: hidden;
+}
+.hafiz-landing .hero-ornament { position: absolute; pointer-events: none; opacity: 0.6; }
+.hafiz-landing .hero-ornament-1 {
+  right: -40px; top: 0; width: 240px; height: 380px;
+  animation: hl-float-slow 12s ease-in-out infinite;
+}
+.hafiz-landing .hero-ornament-2 {
+  left: 8%; bottom: 5%; width: 200px; height: 200px;
+  animation: hl-float-slow 16s ease-in-out infinite reverse;
+}
+.hafiz-landing .hero-grid {
+  display: grid; grid-template-columns: 1.1fr 1fr; gap: 64px;
+  align-items: center; position: relative; z-index: 1;
+}
+.hafiz-landing .hero-copy { display: flex; flex-direction: column; gap: 20px; }
+.hafiz-landing .hero-title {
+  display: flex; flex-direction: column; gap: 6px;
+  line-height: 1.1; color: var(--cream);
+}
+.hafiz-landing .hero-title-xl {
+  font-size: clamp(32px, 4.2vw, 56px);
+  white-space: nowrap;
+}
+.hafiz-landing .hero-title-md {
+  font-size: clamp(24px, 3vw, 40px);
+  white-space: nowrap;
+}
+.hafiz-landing .gold-text {
+  background: linear-gradient(135deg, var(--gold-bright) 0%, var(--gold) 50%, var(--gold-deep) 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.hafiz-landing .hero-lede {
+  font-size: 18px; line-height: 1.8; color: var(--cream-dim); max-width: 540px;
+}
+.hafiz-landing .hero-cta { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 8px; }
+.hafiz-landing .hero-stats {
+  display: flex; gap: 32px; padding-top: 20px; border-top: 1px solid var(--line);
+}
+.hafiz-landing .stat-n { font-size: 26px; color: var(--gold); font-family: var(--f-display); }
+.hafiz-landing .stat-label { font-size: 12px; color: var(--cream-dim); margin-top: 4px; letter-spacing: 0.05em; }
+.hafiz-landing .scroll-hint {
+  position: absolute; bottom: 24px; left: 50%; transform: translateX(-50%);
+  display: flex; flex-direction: column; align-items: center; gap: 12px;
+  font-size: 11px; letter-spacing: 0.3em; color: var(--cream-dim); opacity: 0.6;
 }
 
-/* ── Hero ───────────────────────────────────────────────────────────────── */
+/* ---------- Recitation Card (hero demo) ---------- */
+.hafiz-landing .rec-card {
+  background: linear-gradient(165deg, rgba(31,92,66,0.18), rgba(15,26,20,0.6));
+  border: 1px solid var(--line-strong); border-radius: 20px; padding: 20px;
+  box-shadow: 0 30px 80px -30px rgba(0,0,0,0.6), inset 0 1px 0 rgba(201, 169, 97, 0.15);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  display: flex; flex-direction: column; gap: 14px;
+}
+.hafiz-landing .rec-card-header {
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 12px; color: var(--cream-dim);
+}
+.hafiz-landing .rec-meta { display: flex; gap: 8px; align-items: center; }
+.hafiz-landing .rec-surah { color: var(--gold); font-weight: 500; }
+.hafiz-landing .rec-status { display: flex; align-items: center; gap: 8px; color: var(--emerald-bright); }
+.hafiz-landing .rec-pulse {
+  width: 8px; height: 8px; border-radius: 50%; background: #2A7A57;
+  animation: hl-pulse-ring 2s infinite;
+}
+.hafiz-landing .rec-ayah-frame {
+  position: relative; padding: 22px 22px; border: 1px solid var(--line);
+  border-radius: 14px; background: rgba(11, 20, 16, 0.4);
+}
+.hafiz-landing .ornament-corner { position: absolute; width: 18px; height: 18px; color: var(--gold); }
+.hafiz-landing .ornament-corner.tl { top: -1px; right: -1px; }
+.hafiz-landing .ornament-corner.tr { top: -1px; left: -1px; transform: scaleX(-1); }
+.hafiz-landing .ornament-corner.bl { bottom: -1px; right: -1px; transform: scaleY(-1); }
+.hafiz-landing .ornament-corner.br { bottom: -1px; left: -1px; transform: scale(-1); }
+.hafiz-landing .rec-ayah {
+  font-size: 22px; color: var(--cream); text-align: center; line-height: 2.1;
+}
+.hafiz-landing .word {
+  position: relative; transition: all 0.2s; padding: 0 2px; border-radius: 4px;
+}
+.hafiz-landing .word.err {
+  color: #FF8B6B; text-decoration: underline wavy #FF8B6B;
+  text-underline-offset: 8px; text-decoration-thickness: 1px; cursor: pointer;
+}
+.hafiz-landing .word.warn {
+  color: var(--gold-bright); text-decoration: underline dotted var(--gold);
+  text-underline-offset: 8px; cursor: pointer;
+}
+.hafiz-landing .word[data-tip]:hover::after {
+  content: attr(data-tip); position: absolute; bottom: calc(100% + 12px);
+  left: 50%; transform: translateX(-50%);
+  background: var(--bg-night); border: 1px solid var(--line-strong);
+  padding: 8px 14px; border-radius: 8px; font-size: 12px; white-space: nowrap;
+  color: var(--cream); z-index: 10; font-family: var(--f-sans);
+}
+.hafiz-landing .ayah-mark {
+  display: inline-block; margin-right: 8px; width: 32px; height: 32px;
+  line-height: 32px;
+  background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><g fill='none' stroke='%23C9A961' stroke-width='1'><circle cx='16' cy='16' r='14'/><circle cx='16' cy='16' r='11'/></g></svg>") center/contain no-repeat;
+  text-align: center; font-size: 13px; color: var(--gold); font-family: var(--f-sans);
+}
+.hafiz-landing .rec-wave {
+  display: flex; align-items: center; justify-content: center;
+  gap: 3px; height: 40px;
+}
+.hafiz-landing .wave-bar {
+  width: 3px;
+  background: linear-gradient(180deg, var(--gold-bright), var(--gold-deep));
+  border-radius: 2px;
+  animation: hl-wave 1.4s ease-in-out infinite; transform-origin: center;
+}
+.hafiz-landing .rec-chips { display: flex; gap: 8px; flex-wrap: wrap; }
+.hafiz-landing .chip {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 8px 12px; border-radius: 999px; font-size: 12px; border: 1px solid;
+}
+.hafiz-landing .chip-good {
+  background: rgba(31,92,66,0.2); border-color: rgba(42,122,87,0.4); color: #6FBF93;
+}
+.hafiz-landing .chip-warn {
+  background: rgba(201,169,97,0.12); border-color: rgba(201,169,97,0.4); color: var(--gold-bright);
+}
+.hafiz-landing .chip-err {
+  background: rgba(255,139,107,0.1); border-color: rgba(255,139,107,0.3); color: #FF8B6B;
+}
+.hafiz-landing .chip-icon { font-weight: bold; font-size: 14px; }
+.hafiz-landing .chip-value {
+  opacity: 0.8; font-size: 11px; padding-right: 8px;
+  border-right: 1px solid currentColor; margin-right: 4px;
+}
+.hafiz-landing .rec-controls {
+  display: flex; align-items: center; gap: 16px;
+  padding-top: 16px; border-top: 1px solid var(--line);
+}
+.hafiz-landing .rec-btn {
+  width: 48px; height: 48px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center; transition: all 0.2s;
+}
+.hafiz-landing .rec-btn-mic {
+  background: linear-gradient(180deg, var(--gold-bright), var(--gold));
+  color: var(--bg-deep); box-shadow: 0 6px 24px -4px rgba(201,169,97,0.5);
+}
+.hafiz-landing .rec-btn-mic:hover { transform: scale(1.05); }
+.hafiz-landing .rec-btn-ghost { border: 1px solid var(--line-strong); color: var(--cream-dim); }
+.hafiz-landing .rec-progress { flex: 1; }
+.hafiz-landing .rec-progress-track {
+  height: 4px; background: rgba(201,169,97,0.15); border-radius: 2px; overflow: hidden;
+}
+.hafiz-landing .rec-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--gold), var(--gold-bright));
+  border-radius: 2px;
+}
+.hafiz-landing .rec-time {
+  font-size: 11px; color: var(--cream-dim); margin-top: 6px; font-variant-numeric: tabular-nums;
+}
 
-.lp-hero {
-  min-height: calc(100vh - 60px);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  padding: 60px 5vw 80px;
-  background:
-    radial-gradient(ellipse at 50% 0%, rgba(200,134,10,0.12) 0%, transparent 60%),
-    linear-gradient(170deg, var(--hafiz-green-dark) 0%, #0f1f0f 100%);
-  color: var(--hafiz-cream);
-  position: relative;
+/* ---------- Sections ---------- */
+.hafiz-landing .section { padding: 96px 0; position: relative; }
+.hafiz-landing .section-head {
+  text-align: center; margin-bottom: 56px;
+  display: flex; flex-direction: column; align-items: center; gap: 16px;
+}
+.hafiz-landing .section-title {
+  font-size: clamp(28px, 3.2vw, 42px); color: var(--cream);
+  max-width: 720px; line-height: 1.3;
+}
+.hafiz-landing .steps-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; }
+.hafiz-landing .step-card {
+  position: relative; padding: 32px 24px;
+  border: 1px solid var(--line); border-radius: 18px;
+  background: rgba(20, 36, 28, 0.3); transition: all 0.3s;
+}
+.hafiz-landing .step-card:hover {
+  border-color: var(--line-strong); transform: translateY(-4px);
+  background: rgba(20, 36, 28, 0.5);
+}
+.hafiz-landing .step-num {
+  font-size: 56px; color: var(--gold); opacity: 0.5;
+  line-height: 1; margin-bottom: 16px; font-family: var(--f-display);
+}
+.hafiz-landing .step-title {
+  font-size: 20px; color: var(--cream); margin-bottom: 8px; font-family: var(--f-display);
+}
+.hafiz-landing .step-desc { color: var(--cream-dim); font-size: 14px; line-height: 1.7; }
+.hafiz-landing .features-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+.hafiz-landing .feature-card {
+  padding: 36px 28px; border: 1px solid var(--line); border-radius: 18px;
+  background: linear-gradient(165deg, rgba(20,36,28,0.4), rgba(15,26,20,0.2));
+  transition: all 0.3s;
+}
+.hafiz-landing .feature-card:hover {
+  border-color: var(--gold-deep);
+  background: linear-gradient(165deg, rgba(31,92,66,0.2), rgba(15,26,20,0.4));
+}
+.hafiz-landing .feature-icon {
+  width: 56px; height: 56px; padding: 14px;
+  background: rgba(201,169,97,0.08); border-radius: 14px;
+  color: var(--gold); margin-bottom: 24px;
+}
+.hafiz-landing .feature-icon svg { width: 100%; height: 100%; }
+.hafiz-landing .feature-title {
+  font-size: 22px; color: var(--cream); margin-bottom: 10px; font-family: var(--f-display);
+}
+.hafiz-landing .feature-desc { color: var(--cream-dim); line-height: 1.7; font-size: 14px; }
+
+.hafiz-landing .showcase {
+  padding: 100px 0; position: relative; overflow: hidden;
+  border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
+}
+.hafiz-landing .showcase-bg { position: absolute; inset: 0; opacity: 0.5; }
+.hafiz-landing .showcase-bg svg { width: 100%; height: 100%; }
+.hafiz-landing .showcase-inner {
+  position: relative; text-align: center;
+  display: flex; flex-direction: column; gap: 36px; align-items: center;
+}
+.hafiz-landing .showcase-verse {
+  font-size: clamp(32px, 4vw, 56px); color: var(--cream); line-height: 1.6;
+}
+.hafiz-landing .showcase-meta { color: var(--gold); font-size: 13px; letter-spacing: 0.2em; }
+
+.hafiz-landing .pricing-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; align-items: stretch;
+}
+.hafiz-landing .plan-card {
+  position: relative; padding: 40px 32px;
+  border: 1px solid var(--line); border-radius: 20px;
+  background: rgba(20, 36, 28, 0.3);
+  display: flex; flex-direction: column; gap: 16px;
+}
+.hafiz-landing .plan-hl {
+  border-color: var(--gold);
+  background: linear-gradient(165deg, rgba(201,169,97,0.1), rgba(15,26,20,0.4));
+  box-shadow: 0 20px 60px -20px rgba(201,169,97,0.3);
+}
+.hafiz-landing .plan-badge {
+  position: absolute; top: -14px; left: 50%; transform: translateX(-50%);
+  background: linear-gradient(180deg, var(--gold-bright), var(--gold));
+  color: var(--bg-deep); padding: 6px 16px; border-radius: 999px;
+  font-size: 11px; font-weight: 600; letter-spacing: 0.05em;
+}
+.hafiz-landing .plan-name { font-size: 18px; color: var(--cream); font-family: var(--f-display); }
+.hafiz-landing .plan-desc { font-size: 13px; color: var(--cream-dim); }
+.hafiz-landing .plan-price {
+  font-size: 36px; color: var(--gold); line-height: 1;
+  padding: 8px 0 16px; border-bottom: 1px solid var(--line); font-family: var(--f-display);
+}
+.hafiz-landing .plan-features {
+  display: flex; flex-direction: column; gap: 12px; flex: 1; padding: 8px 0;
+}
+.hafiz-landing .plan-features li {
+  display: flex; gap: 12px; align-items: center;
+  color: var(--cream-dim); font-size: 14px;
+}
+.hafiz-landing .plan-features svg { color: var(--gold); flex-shrink: 0; }
+.hafiz-landing .plan-cta { justify-content: center; margin-top: 8px; }
+
+.hafiz-landing .cta-band {
+  padding: 100px 0; text-align: center; position: relative;
+  background: linear-gradient(165deg, rgba(31,92,66,0.2), rgba(15,26,20,0.4));
+  border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
   overflow: hidden;
 }
-
-.lp-hero::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60' viewBox='0 0 60 60'%3E%3Cpath d='M30 5 L35 25 L55 25 L40 37 L46 57 L30 45 L14 57 L20 37 L5 25 L25 25 Z' fill='none' stroke='rgba(200,134,10,0.07)' stroke-width='1'/%3E%3C/svg%3E") repeat;
-  pointer-events: none;
+.hafiz-landing .cta-inner {
+  position: relative; display: flex; flex-direction: column; gap: 24px; align-items: center;
 }
-
-.lp-hero-badge {
-  display: inline-block;
-  padding: 4px 14px;
-  border: 1px solid var(--hafiz-gold);
-  border-radius: 20px;
-  color: var(--hafiz-gold-light);
-  font-size: 0.9rem;
-  margin-bottom: 24px;
-  letter-spacing: 0.05em;
+.hafiz-landing .cta-orn-l,
+.hafiz-landing .cta-orn-r {
+  position: absolute; width: 200px; height: 200px; opacity: 0.4; pointer-events: none;
 }
+.hafiz-landing .cta-orn-l { right: -80px; top: -40px; }
+.hafiz-landing .cta-orn-r { left: -80px; bottom: -40px; }
+.hafiz-landing .cta-title { font-size: clamp(40px, 5vw, 64px); color: var(--cream); }
+.hafiz-landing .cta-sub { font-size: 17px; color: var(--cream-dim); max-width: 540px; }
 
-.lp-hero-title {
-  font-size: clamp(2.8rem, 8vw, 5.5rem);
-  font-weight: 900;
-  color: var(--hafiz-gold-light);
-  margin: 0 0 16px;
-  line-height: 1.1;
-  text-shadow: 0 2px 20px rgba(200,134,10,0.3);
+.hafiz-landing .footer { padding: 80px 0 32px; border-top: 1px solid var(--line); }
+.hafiz-landing .footer-inner {
+  display: grid; grid-template-columns: 1.5fr 2fr; gap: 48px; padding-bottom: 48px;
 }
-
-.lp-hero-subtitle {
-  font-size: clamp(1.1rem, 3vw, 1.5rem);
-  color: rgba(245,240,232,0.85);
-  max-width: 600px;
-  margin: 0 auto 40px;
-  line-height: 1.7;
+.hafiz-landing .footer-brand { display: flex; gap: 16px; align-items: flex-start; }
+.hafiz-landing .footer-brand .brand-mark { width: 48px; height: 48px; flex-shrink: 0; color: var(--gold); }
+.hafiz-landing .footer-tag {
+  color: var(--cream-dim); font-size: 14px; line-height: 1.7; max-width: 320px; margin-top: 8px;
 }
-
-.lp-hero-actions {
-  display: flex;
-  gap: 16px;
-  justify-content: center;
-  flex-wrap: wrap;
+.hafiz-landing .footer-cols { display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px; }
+.hafiz-landing .footer-cols h4 {
+  font-size: 13px; color: var(--gold); margin-bottom: 16px;
+  letter-spacing: 0.1em; text-transform: uppercase; font-family: var(--f-sans); font-weight: 500;
 }
-
-.lp-btn-primary {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  background: var(--hafiz-gold);
-  color: var(--hafiz-green-dark);
-  font-family: inherit;
-  font-size: 1.1rem;
-  font-weight: bold;
-  padding: 14px 32px;
-  border: none;
-  border-radius: 30px;
-  cursor: pointer;
-  text-decoration: none;
-  transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
-  box-shadow: 0 4px 20px rgba(200,134,10,0.35);
+.hafiz-landing .footer-cols a {
+  display: block; padding: 6px 0; font-size: 14px;
+  color: var(--cream-dim); transition: color 0.2s;
 }
-
-.lp-btn-primary:hover {
-  background: var(--hafiz-gold-light);
-  transform: translateY(-2px);
-  box-shadow: 0 6px 28px rgba(200,134,10,0.5);
+.hafiz-landing .footer-cols a:hover { color: var(--cream); }
+.hafiz-landing .footer-bottom {
+  display: flex; justify-content: space-between; align-items: center;
+  padding-top: 32px; border-top: 1px solid var(--line); font-size: 13px; color: var(--cream-dim);
 }
+.hafiz-landing .footer-aya { color: var(--gold); font-size: 18px; font-family: var(--f-quran); }
 
-.lp-btn-secondary {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  background: transparent;
-  color: var(--hafiz-cream);
-  font-family: inherit;
-  font-size: 1.1rem;
-  padding: 14px 28px;
-  border: 1px solid rgba(245,240,232,0.35);
-  border-radius: 30px;
-  cursor: pointer;
-  text-decoration: none;
-  transition: border-color 0.2s, background 0.2s;
+/* ---------- Responsive ---------- */
+@media (max-width: 1100px) {
+  .hafiz-landing .hero-grid { gap: 40px; }
+  .hafiz-landing .steps-grid { grid-template-columns: repeat(2, 1fr); }
+  .hafiz-landing .features-grid { grid-template-columns: repeat(2, 1fr); }
+  .hafiz-landing .pricing-grid { grid-template-columns: 1fr; max-width: 520px; margin: 0 auto; }
+  .hafiz-landing .plan-hl { transform: none; }
 }
-
-.lp-btn-secondary:hover {
-  border-color: var(--hafiz-gold);
-  background: rgba(200,134,10,0.1);
+@media (max-width: 860px) {
+  .hafiz-landing .section { padding: 80px 0; }
+  .hafiz-landing .section-head { margin-bottom: 48px; }
+  .hafiz-landing .header-inner { padding: 14px 20px; }
+  .hafiz-landing .nav { display: none; }
+  .hafiz-landing .header-actions .btn:not(.btn-primary) { display: none; }
+  .hafiz-landing .brand-text .brand-sub { display: none; }
+  .hafiz-landing .hero { min-height: auto; padding: 40px 0 60px; }
+  .hafiz-landing .hero-grid { grid-template-columns: 1fr; gap: 40px; }
+  .hafiz-landing .hero-copy { text-align: center; align-items: center; }
+  .hafiz-landing .hero-lede { max-width: 100%; }
+  .hafiz-landing .hero-cta { justify-content: center; }
+  .hafiz-landing .hero-ornament-1,
+  .hafiz-landing .hero-ornament-2 { display: none; }
+  .hafiz-landing .hero-stats { justify-content: center; gap: 32px; flex-wrap: wrap; }
+  .hafiz-landing .scroll-hint { display: none; }
+  .hafiz-landing .steps-grid,
+  .hafiz-landing .features-grid { grid-template-columns: 1fr; }
+  .hafiz-landing .footer-inner { grid-template-columns: 1fr; gap: 32px; }
+  .hafiz-landing .footer-cols { grid-template-columns: repeat(2, 1fr); gap: 24px; }
+  .hafiz-landing .footer-bottom { flex-direction: column; gap: 12px; text-align: center; }
+  .hafiz-landing .rec-ayah { font-size: 22px; line-height: 2.2; }
 }
-
-.lp-hero-scroll {
-  position: absolute;
-  bottom: 24px;
-  left: 50%;
-  transform: translateX(-50%);
-  color: rgba(245,240,232,0.4);
-  font-size: 1.5rem;
-  animation: bounce 2s infinite;
+@media (max-width: 560px) {
+  .hafiz-landing .section { padding: 60px 0; }
+  .hafiz-landing .header-inner { padding: 12px 16px; }
+  .hafiz-landing .brand-mark { width: 32px; height: 32px; }
+  .hafiz-landing .brand-text .brand-name { font-size: 18px; }
+  .hafiz-landing .btn-sm { padding: 8px 14px; font-size: 12px; }
+  .hafiz-landing .hero-lede { font-size: 15px; line-height: 1.7; }
+  .hafiz-landing .hero-cta { flex-direction: column; width: 100%; }
+  .hafiz-landing .hero-cta .btn { width: 100%; justify-content: center; }
+  .hafiz-landing .hero-stats { gap: 20px; padding-top: 24px; }
+  .hafiz-landing .stat-n { font-size: 26px; }
+  .hafiz-landing .rec-card { padding: 18px; border-radius: 18px; }
+  .hafiz-landing .rec-ayah-frame { padding: 22px 16px; }
+  .hafiz-landing .rec-ayah { font-size: 18px; line-height: 2; }
+  .hafiz-landing .chip { padding: 6px 10px; font-size: 11px; }
+  .hafiz-landing .step-card,
+  .hafiz-landing .feature-card { padding: 24px 20px; }
+  .hafiz-landing .step-num { font-size: 42px; }
+  .hafiz-landing .feature-icon { width: 44px; height: 44px; padding: 10px; margin-bottom: 16px; }
+  .hafiz-landing .feature-title { font-size: 18px; }
+  .hafiz-landing .showcase { padding: 64px 0; }
+  .hafiz-landing .plan-card { padding: 28px 22px; }
+  .hafiz-landing .plan-price { font-size: 30px; }
+  .hafiz-landing .cta-band { padding: 64px 0; }
+  .hafiz-landing .cta-orn-l,
+  .hafiz-landing .cta-orn-r { display: none; }
+  .hafiz-landing .footer { padding: 56px 0 24px; }
+  .hafiz-landing .footer-cols { grid-template-columns: 1fr; }
 }
-
-@keyframes bounce {
-  0%, 100% { transform: translateX(-50%) translateY(0); }
-  50%       { transform: translateX(-50%) translateY(8px); }
-}
-
-/* ── Section base ───────────────────────────────────────────────────────── */
-
-.lp-section {
-  padding: 80px 5vw;
-}
-
-.lp-section-label {
-  text-align: center;
-  font-size: 0.85rem;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-  color: var(--hafiz-gold);
-  margin-bottom: 12px;
-}
-
-.lp-section-title {
-  text-align: center;
-  font-size: clamp(1.7rem, 4vw, 2.5rem);
-  font-weight: 800;
-  color: var(--hafiz-green-dark);
-  margin: 0 0 16px;
-}
-
-.lp-section-desc {
-  text-align: center;
-  color: #4a5a4a;
-  max-width: 560px;
-  margin: 0 auto 56px;
-  line-height: 1.7;
-  font-size: 1.05rem;
-}
-
-/* ── Features ───────────────────────────────────────────────────────────── */
-
-.lp-features {
-  background: var(--hafiz-cream);
-}
-
-.lp-features-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 24px;
-  max-width: 1100px;
-  margin: 0 auto;
-}
-
-.lp-feature-card {
-  background: #fff;
-  border: 1px solid rgba(200,134,10,0.2);
-  border-radius: 16px;
-  padding: 28px 24px;
-  text-align: center;
-  transition: box-shadow 0.2s, transform 0.2s;
-}
-
-.lp-feature-card:hover {
-  box-shadow: 0 8px 32px rgba(200,134,10,0.15);
-  transform: translateY(-4px);
-}
-
-.lp-feature-icon {
-  font-size: 2.2rem;
-  margin-bottom: 16px;
-}
-
-.lp-feature-title {
-  font-size: 1.15rem;
-  font-weight: 700;
-  color: var(--hafiz-green-dark);
-  margin: 0 0 10px;
-}
-
-.lp-feature-desc {
-  font-size: 0.95rem;
-  color: #4a5a4a;
-  line-height: 1.65;
-  margin: 0;
-}
-
-/* ── Steps ──────────────────────────────────────────────────────────────── */
-
-.lp-steps {
-  background: linear-gradient(150deg, var(--hafiz-green-dark) 0%, #0f1f0f 100%);
-  color: var(--hafiz-cream);
-}
-
-.lp-steps .lp-section-title {
-  color: var(--hafiz-gold-light);
-}
-
-.lp-steps .lp-section-desc {
-  color: rgba(245,240,232,0.75);
-}
-
-.lp-steps-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-  max-width: 700px;
-  margin: 0 auto;
-}
-
-.lp-step {
-  display: flex;
-  align-items: flex-start;
-  gap: 20px;
-  padding: 28px 0;
-  border-bottom: 1px solid rgba(200,134,10,0.15);
-}
-
-.lp-step:last-child {
-  border-bottom: none;
-}
-
-.lp-step-num {
-  flex-shrink: 0;
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  background: var(--hafiz-gold);
-  color: var(--hafiz-green-dark);
-  font-weight: 900;
-  font-size: 1.1rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.lp-step-body {
-  flex: 1;
-}
-
-.lp-step-title {
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: var(--hafiz-gold-light);
-  margin: 0 0 6px;
-}
-
-.lp-step-desc {
-  font-size: 0.95rem;
-  color: rgba(245,240,232,0.75);
-  margin: 0;
-  line-height: 1.6;
-}
-
-/* ── Stats strip ────────────────────────────────────────────────────────── */
-
-.lp-stats {
-  background: var(--hafiz-gold);
-  padding: 40px 5vw;
-}
-
-.lp-stats-inner {
-  display: flex;
-  justify-content: center;
-  gap: clamp(32px, 8vw, 80px);
-  flex-wrap: wrap;
-  max-width: 900px;
-  margin: 0 auto;
-  text-align: center;
-}
-
-.lp-stat-num {
-  font-size: clamp(2rem, 5vw, 3rem);
-  font-weight: 900;
-  color: var(--hafiz-green-dark);
-  display: block;
-}
-
-.lp-stat-label {
-  font-size: 0.9rem;
-  color: rgba(26,42,26,0.7);
-}
-
-/* ── CTA ────────────────────────────────────────────────────────────────── */
-
-.lp-cta {
-  background: var(--hafiz-cream);
-  text-align: center;
-}
-
-.lp-cta-box {
-  max-width: 640px;
-  margin: 0 auto;
-  background: linear-gradient(140deg, var(--hafiz-green-dark), #0f1f0f);
-  border: 1px solid var(--hafiz-gold);
-  border-radius: 24px;
-  padding: 60px 40px;
-}
-
-.lp-cta-title {
-  font-size: clamp(1.6rem, 4vw, 2.2rem);
-  color: var(--hafiz-gold-light);
-  font-weight: 800;
-  margin: 0 0 16px;
-}
-
-.lp-cta-desc {
-  color: rgba(245,240,232,0.8);
-  line-height: 1.7;
-  margin: 0 0 32px;
-  font-size: 1rem;
-}
-
-/* ── Footer ─────────────────────────────────────────────────────────────── */
-
-.lp-footer {
-  background: var(--hafiz-green-dark);
-  border-top: 2px solid var(--hafiz-gold);
-  padding: 32px 5vw;
-  text-align: center;
-}
-
-.lp-footer-text {
-  color: rgba(245,240,232,0.5);
-  font-size: 0.9rem;
-  margin: 0;
-}
-
-.lp-footer-text a {
-  color: var(--hafiz-gold);
-  text-decoration: none;
-}
-
-/* ── Responsive ─────────────────────────────────────────────────────────── */
-
-@media (max-width: 600px) {
-  .lp-nav-links {
-    display: none;
-  }
-
-  .lp-step {
-    flex-direction: column;
-    gap: 12px;
-  }
-
-  .lp-cta-box {
-    padding: 40px 24px;
+@media (prefers-reduced-motion: reduce) {
+  .hafiz-landing *,
+  .hafiz-landing *::before,
+  .hafiz-landing *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
   }
 }
