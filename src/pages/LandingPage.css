@@ -555,25 +555,25 @@
    Recite Page (Upload + Record)
    ========================================================= */
 .hafiz-landing .recite-upload {
-  padding: 48px 24px 72px; min-height: 100vh;
+  padding: 28px 20px 48px; min-height: 100vh;
   display: flex; align-items: flex-start; justify-content: center;
 }
 .hafiz-landing .ru-container {
-  width: 100%; max-width: 720px;
-  display: flex; flex-direction: column; gap: 28px;
+  width: 100%; max-width: 680px;
+  display: flex; flex-direction: column; gap: 20px;
 }
 .hafiz-landing .ru-head {
-  text-align: center; display: flex; flex-direction: column; gap: 12px; align-items: center;
+  text-align: center; display: flex; flex-direction: column; gap: 8px; align-items: center;
 }
-.hafiz-landing .ru-title { font-size: clamp(28px, 3.8vw, 42px); color: var(--cream); }
+.hafiz-landing .ru-title { font-size: clamp(22px, 3vw, 34px); color: var(--cream); }
 .hafiz-landing .ru-sub {
-  font-size: 14px; color: var(--cream-dim); line-height: 1.8; max-width: 520px;
+  font-size: 13px; color: var(--cream-dim); line-height: 1.75; max-width: 480px;
 }
 
 .hafiz-landing .ru-card {
-  padding: 32px; border: 1px solid var(--line-strong); border-radius: 22px;
+  padding: 22px; border: 1px solid var(--line-strong); border-radius: 18px;
   background: linear-gradient(165deg, rgba(20,36,28,0.4), rgba(15,26,20,0.4));
-  display: flex; flex-direction: column; gap: 24px;
+  display: flex; flex-direction: column; gap: 16px;
   backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
   box-shadow: 0 30px 80px -30px rgba(0,0,0,0.6);
 }
@@ -585,8 +585,8 @@
   border: 1px solid var(--line); border-radius: 12px;
 }
 .hafiz-landing .ru-tab {
-  display: inline-flex; align-items: center; justify-content: center; gap: 10px;
-  padding: 11px 16px; font-size: 13px; color: var(--cream-dim);
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 9px 14px; font-size: 12px; color: var(--cream-dim);
   border-radius: 8px; position: relative; z-index: 1; transition: color 0.25s;
 }
 .hafiz-landing .ru-tab:hover { color: var(--cream); }
@@ -602,9 +602,9 @@
 
 /* Dropzone */
 .hafiz-landing .dropzone {
-  border: 1.5px dashed var(--line-strong); border-radius: 16px;
-  padding: 40px 24px; text-align: center;
-  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  border: 1.5px dashed var(--line-strong); border-radius: 14px;
+  padding: 28px 20px; text-align: center;
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
   cursor: pointer; transition: all 0.25s;
   background: rgba(11, 20, 16, 0.3);
 }
@@ -643,15 +643,15 @@
   padding: 20px 8px; display: flex; flex-direction: column; align-items: center; gap: 14px;
 }
 .hafiz-landing .rec-orb {
-  position: relative; width: 140px; height: 140px;
-  display: flex; align-items: center; justify-content: center; margin: 12px 0;
+  position: relative; width: 120px; height: 120px;
+  display: flex; align-items: center; justify-content: center; margin: 8px 0;
 }
 .hafiz-landing .rec-orb .orb-ring {
   position: absolute; border-radius: 50%; border: 1px solid var(--gold);
 }
 .hafiz-landing .rec-orb .orb-ring:nth-child(1) { width: 70px; height: 70px; opacity: 0.6; }
 .hafiz-landing .rec-orb .orb-ring:nth-child(2) { width: 100px; height: 100px; opacity: 0.4; }
-.hafiz-landing .rec-orb .orb-ring:nth-child(3) { width: 140px; height: 140px; opacity: 0.2; }
+.hafiz-landing .rec-orb .orb-ring:nth-child(3) { width: 120px; height: 120px; opacity: 0.2; }
 .hafiz-landing .rec-orb.live .orb-ring { animation: hl-ring-pulse 2s ease-out infinite; }
 .hafiz-landing .rec-orb.live .orb-ring:nth-child(2) { animation-delay: 0.5s; }
 .hafiz-landing .rec-orb.live .orb-ring:nth-child(3) { animation-delay: 1s; }
@@ -687,8 +687,8 @@
 
 /* Scope picker */
 .hafiz-landing .ru-scope {
-  display: flex; flex-direction: column; gap: 14px; padding: 18px;
-  background: rgba(11, 20, 16, 0.4); border: 1px solid var(--line); border-radius: 14px;
+  display: flex; flex-direction: column; gap: 10px; padding: 14px;
+  background: rgba(11, 20, 16, 0.4); border: 1px solid var(--line); border-radius: 12px;
 }
 .hafiz-landing .scope-head {
   display: flex; justify-content: space-between; align-items: center;
@@ -722,10 +722,10 @@
 }
 .hafiz-landing .field input,
 .hafiz-landing .field select {
-  width: 100%; padding: 10px 14px;
+  width: 100%; padding: 8px 12px;
   background: rgba(11,20,16,0.6); border: 1px solid var(--line);
-  border-radius: 10px; color: var(--cream); font-family: var(--f-sans);
-  font-size: 13px; transition: border 0.2s;
+  border-radius: 8px; color: var(--cream); font-family: var(--f-sans);
+  font-size: 12px; transition: border 0.2s;
 }
 .hafiz-landing .field input:focus,
 .hafiz-landing .field select:focus { outline: none; border-color: var(--gold); }
