@@ -204,7 +204,11 @@ export default function ReportScreen({ report, surah, ayahStart, ayahEnd, onUplo
   const errorDist: ErrorDistribution[] = hr?.error_distribution ?? []
 
   const tafkhimItems: TafkhimEntry[] = (report.word_gated_summary?.tafkhim_summary ?? []) as TafkhimEntry[]
-  const saktaItems: SaktaEntry[] = (report.word_gated_summary?.sakta_summary ?? []) as SaktaEntry[]
+  const _saktaSum = report.word_gated_summary?.sakta_summary as
+    | { entries?: SaktaEntry[] } | SaktaEntry[] | undefined
+  const saktaItems: SaktaEntry[] = Array.isArray(_saktaSum)
+    ? (_saktaSum as SaktaEntry[])
+    : (((_saktaSum as { entries?: SaktaEntry[] } | undefined)?.entries) ?? [])
   const baselineHz = (report.word_gated_summary?.reciter_baseline_hz ?? null) as number | null
   const tafkhimMeasured = tafkhimItems.filter(t => t.acoustic === 'MEASURED')
   const tafkhimIssues = tafkhimMeasured.filter(t =>
@@ -729,25 +733,27 @@ function MaddPanel({
             {arDigit(saktaItems.length)} موضع سكت — سكتات رواية حفص عن عاصم
           </p>
           {saktaItems.map((s, i) => {
-            const measured = s.acoustic === 'MEASURED'
             const isIssue = s.verdict === 'ISSUE'
-            const isWeak = s.verdict === 'WEAK'
-            const cls = !measured ? 'madd-none' : isIssue ? 'madd-err' : isWeak ? 'madd-warn' : 'madd-ok'
-            const obligAr = s.obligation === 'WAJIB' ? 'واجب' : 'جائز'
+            const isWarn = s.verdict === 'WARNING'
+            const isInfo = s.verdict === 'INFO'
+            const cls = isIssue ? 'madd-err' : isWarn ? 'madd-warn' : isInfo ? 'madd-none' : 'madd-ok'
+            const obligAr = s.obligation === 'WAJIB' ? 'واجبة' : 'جائزة'
             const verdictAr =
               s.probe_verdict === 'MISSING' ? 'لم يُنفَّذ' :
               s.probe_verdict === 'TOO_SHORT' ? 'قصير' :
               s.probe_verdict === 'TOO_LONG' ? 'طويل' :
               s.probe_verdict === 'OVER_WAQF' ? 'وقف كامل' :
               s.probe_verdict === 'OK' ? 'منضبط' : '—'
+            const trig = s.trigger_word ?? ''
+            const nxt = s.next_word ?? ''
             return (
               <div key={i} className="madd-card">
                 <div className="madd-left">
-                  <div className="mw">{s.word_text}</div>
+                  <div className="mw">{trig}{nxt ? ` ← ${nxt}` : ''}</div>
                   <div className="ml">سكت {obligAr}</div>
                 </div>
                 <div className="madd-right">
-                  {measured && s.gap_ms != null ? (
+                  {s.gap_ms != null ? (
                     <>
                       <div className={`mv ${cls}`} style={{ fontSize: 14 }}>
                         {arDigit(Math.round(s.gap_ms))} ms
