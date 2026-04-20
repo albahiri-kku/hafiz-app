@@ -292,6 +292,13 @@ export default function ReportScreen({ report, surah, ayahStart, ayahEnd, onUplo
                 {findings.length > 0 && (
                   <><span className="dot">·</span><span>اكتُشِفت {arDigit(findings.length)} ملاحظة</span></>
                 )}
+                {report.maqam_detection && report.maqam_detection.maqam !== 'UNKNOWN' && (
+                  <><span className="dot">·</span><span>المقام: {
+                    { sikah: 'السيكاه', saba: 'الصبا', kurd: 'الكرد', rast: 'الرست' }[
+                      report.maqam_detection.maqam
+                    ] ?? report.maqam_detection.maqam
+                  } ({Math.round(report.maqam_detection.confidence * 100)}%)</span></>
+                )}
               </div>
             </div>
             <div className="score-pod">
