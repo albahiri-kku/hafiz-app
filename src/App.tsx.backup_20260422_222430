@@ -1,17 +1,3 @@
-/**
- * App.final.tsx — DROP-IN REPLACEMENT for hafiz-app/src/App.tsx
- *
- * Changes vs. the existing App.tsx (surgical additions only):
- *   1. New imports:         LoginScreen, MyAccount, AccountChip
- *   2. New local type:      Phase = AppPhase | 'login' | 'account'
- *   3. PHASE_TO_PATH map:   two new keys (login, account)
- *   4. pathToPhase():       two new path matches
- *   5. Render logic:        two new early returns + AccountChip on landing
- *
- * Everything else is byte-identical to the existing App.tsx.
- * All existing behaviour preserved (phases, history, refs, hooks, handlers).
- */
-
 import { useState, useCallback, useEffect, useRef } from 'react'
 import type {
   RecitationMode, AppPhase, AyahData, EvaluationResponse, SessionStats, HeardEntry,
@@ -30,10 +16,6 @@ import MushafPage from './components/MushafPage'
 import UploadScreen from './components/UploadScreen'
 import ReportScreen from './components/ReportScreen'
 import LandingPage from './pages/LandingPage'
-// NEW: institutional layer UI
-import LoginScreen from './components/LoginScreen'
-import MyAccount from './components/MyAccount'
-import AccountChip from './components/AccountChip'
 
 const API_BASE = import.meta.env.VITE_API_URL ?? ''
 const API_KEY  = import.meta.env.VITE_API_KEY  ?? ''
@@ -42,12 +24,8 @@ const EMPTY_STATS: SessionStats = {
   totalAyahs: 0, correct: 0, errors: 0, reviews: 0, holds: 0, history: [],
 }
 
-// NEW: locally extend AppPhase with the two institutional screens
-// (no change to types/hafiz.ts required)
-type Phase = AppPhase | 'login' | 'account'
-
 // ─── URL ↔ phase mapping ────────────────────────────────────────────────────
-const PHASE_TO_PATH: Record<Phase, string> = {
+const PHASE_TO_PATH: Record<AppPhase, string> = {
   landing: '/',
   upload: '/recite',
   evaluating: '/recite',
@@ -56,31 +34,26 @@ const PHASE_TO_PATH: Record<Phase, string> = {
   reciting: '/app',
   summary: '/app',
   mushaf_browse: '/mushaf',
-  login: '/login',        // NEW
-  account: '/account',    // NEW
 }
-
-function pathToPhase(pathname: string, search: string): Phase {
+function pathToPhase(pathname: string, search: string): AppPhase {
   // Back-compat with legacy ?upload=1 / ?app=1 query params
   const params = new URLSearchParams(search)
   if (params.get('upload') === '1') return 'upload'
   if (params.get('app') === '1') return 'start'
   const p = pathname.replace(/\/+$/, '') || '/'
-  if (p === '/recite')  return 'upload'
-  if (p === '/report')  return 'report'
-  if (p === '/app')     return 'start'
-  if (p === '/mushaf')  return 'mushaf_browse'
-  if (p === '/login')   return 'login'     // NEW
-  if (p === '/account') return 'account'   // NEW
+  if (p === '/recite') return 'upload'
+  if (p === '/report') return 'report'
+  if (p === '/app') return 'start'
+  if (p === '/mushaf') return 'mushaf_browse'
   return 'landing'
 }
 
 export default function App() {
-  const _initialPhase: Phase = (() => {
+  const _initialPhase: AppPhase = (() => {
     if (typeof window === 'undefined') return 'landing'
     return pathToPhase(window.location.pathname, window.location.search)
   })()
-  const [phase, setPhase]           = useState<Phase>(_initialPhase)
+  const [phase, setPhase]           = useState<AppPhase>(_initialPhase)
 
   // Sync URL ↔ phase (pushState on phase change, popstate on back/forward)
   useEffect(() => {
@@ -99,7 +72,6 @@ export default function App() {
     window.addEventListener('popstate', onPop)
     return () => window.removeEventListener('popstate', onPop)
   }, [])
-
   const [mode, setMode]             = useState<RecitationMode>('tilawa')
   const [sessionId, setSessionId]   = useState('')
   const [ayahData, setAyahData]     = useState<AyahData | null>(null)
@@ -110,7 +82,7 @@ export default function App() {
   const [evalError, setEvalError]   = useState<string | null>(null)
   const [currentWordIndex, setCurrentWordIndex] = useState(-1)
   const [mushafPage, setMushafPage] = useState(1)
-  // ─── evaluate-file state ──────────────────────────────────────────────
+  // ─── evaluate-file state ──────────────────────────────────────────────────
   const [fileReport, setFileReport]       = useState<EvaluateFileResponse | null>(null)
   const [uploadedAudioUrl, setUploadedAudioUrl] = useState<string | null>(null)
   const [fileUploadError, setFileUploadError] = useState<string | null>(null)
@@ -126,7 +98,8 @@ export default function App() {
   const sessionStartRef = useRef<number>(0)
   const waitingForEvalTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // ─── Word-level tracking session (Mushaf viewer) ──────────────────────
+
+  // ─── Word-level tracking session (Mushaf viewer) ──────────────────────────
   const {
     trackingState: mushafTracking,
     startSession:  startTrackingSession,
@@ -143,10 +116,10 @@ export default function App() {
   const correctWordsRef = useRef<Set<string>>(new Set())
   const wrongWordsRef   = useRef<Set<string>>(new Set())
 
-  // ─── Stream result handler ref — populated after liveStop is available ──
+  // ─── Stream result handler ref — populated after liveStop is available ────
   const streamResultRef = useRef<(r: StreamResponse) => void>(() => {})
 
-  // ─── Live recitation hook ──────────────────────────────────────────────
+  // ─── Live recitation hook ─────────────────────────────────────────────────
   const { active, start: liveStart, stop: liveStop, pauseSending: livePauseSending } = useLiveRecitation({
     sessionId,
     apiBase: API_BASE,
@@ -158,6 +131,7 @@ export default function App() {
   // Wire the actual handler every render — captures latest liveStop / ayahDataRef
   streamResultRef.current = (r: StreamResponse) => {
     if (r.status === 'word_evaluated') {
+      // استخدم word_results (الكل) إذا توفر، وإلا word_result (الأخير فقط)
       const allWords = (r.word_results && r.word_results.length > 0)
         ? r.word_results
         : r.word_result ? [r.word_result] : []
@@ -187,9 +161,11 @@ export default function App() {
           setWordColorMap((prev) => ({ ...prev, [wr.word_index]: _color }))
         }
         setCurrentWordIndex(wr.word_index)
+        // إذا كانت آخر كلمة في الآية → انتظر تأكيد ayah_complete من الخادم
         const totalWords = ayahDataRef.current?.words.length ?? 0
         if (totalWords > 0 && wr.word_index >= totalWords - 1) {
           setWaitingForEval(true)
+          // safety timeout — إذا لم يأتِ ayah_complete خلال 10s نُلغي المؤشر
           if (waitingForEvalTimerRef.current) clearTimeout(waitingForEvalTimerRef.current)
           waitingForEvalTimerRef.current = setTimeout(() => setWaitingForEval(false), 10_000)
         }
@@ -203,6 +179,8 @@ export default function App() {
         setPhase('summary')
         return
       }
+      // توقف 2 ثانية قبل إرسال chunks للآية التالية
+      // يمنع SILENCE_GUARD من تصنيف أول كلمات الآية الجديدة كـ VAD_MISSED
       livePauseSending(600)
       if (waitingForEvalTimerRef.current) clearTimeout(waitingForEvalTimerRef.current)
       setWaitingForEval(false)
@@ -215,6 +193,7 @@ export default function App() {
           setResult(null)
           setCurrentWordIndex(-1)
           setWordColorMap({})
+          // heardLog يتراكم عبر الآيات — لا نمسحه هنا
         })
         .catch((e) => setEvalError(e instanceof Error ? e.message : 'خطأ في تحميل الآية'))
 
@@ -226,7 +205,7 @@ export default function App() {
     }
   }
 
-  // ─── Start session ────────────────────────────────────────────────────
+  // ─── Start session ────────────────────────────────────────────────────────
   const handleStart = useCallback(async (ayahCode: string | undefined, selectedMode: RecitationMode) => {
     setStartLoading(true)
     setStartError(null)
@@ -260,7 +239,7 @@ export default function App() {
     }
   }, [liveStart])
 
-  // ─── End session ──────────────────────────────────────────────────────
+  // ─── End session ──────────────────────────────────────────────────────────
   const handleEndSession = useCallback(() => {
     liveStop()
     setPhase('summary')
@@ -286,7 +265,7 @@ export default function App() {
     setWaitingForEval(false)
   }, [liveStop])
 
-  // ─── evaluate-file handlers ──────────────────────────────────────────
+  // ─── evaluate-file handlers ──────────────────────────────────────────────
   const handleUploadFile = useCallback(() => {
     setFileUploadError(null)
     setFileReport(null)
@@ -301,7 +280,8 @@ export default function App() {
     setFileSurah(surah)
     setFileAyahStart(start)
     setFileAyahEnd(end)
-    setPhase('evaluating')
+    setPhase('evaluating')      // ← phase انتقالية أثناء الانتظار
+    // حفظ URL الملف الصوتي للتشغيل لاحقاً في تبويب المراجعة
     if (uploadedAudioUrl) URL.revokeObjectURL(uploadedAudioUrl)
     setUploadedAudioUrl(URL.createObjectURL(file))
     try {
@@ -312,6 +292,7 @@ export default function App() {
         autoDetect ? null : end,
         autoDetect,
       )
+      // عند الكشف التلقائي: استخدم القيم المُكتشفة لعرض التقرير
       if (autoDetect && report.surah_number && report.ayah_start && report.ayah_end) {
         setFileSurah(report.surah_number)
         setFileAyahStart(report.ayah_start)
@@ -322,13 +303,13 @@ export default function App() {
     } catch (e) {
       console.error('[hafiz] evaluateFile error:', e)
       setFileUploadError(e instanceof Error ? e.message : 'حدث خطأ أثناء التقييم')
-      setPhase('upload')
+      setPhase('upload')        // ← ارجع للـ upload ليظهر الخطأ
     } finally {
       setFileLoading(false)
     }
-  }, [uploadedAudioUrl])
+  }, [])
 
-  // ─── Mushaf browse handlers ──────────────────────────────────────────
+  // ─── Mushaf browse handlers ───────────────────────────────────────────────
   const handleBrowseMushaf = useCallback(async () => {
     setMushafPage(1)
     setPhase('mushaf_browse')
@@ -340,40 +321,9 @@ export default function App() {
     setPhase('start')
   }, [endTrackingSession])
 
-  // ─── Render ──────────────────────────────────────────────────────────
-
-  // NEW: institutional screens — early returns BEFORE legacy landing
-  if (phase === 'login') {
-    return (
-      <LoginScreen
-        onAuthenticated={() => setPhase('account')}
-        onBack={() => setPhase('landing')}
-      />
-    )
-  }
-
-  if (phase === 'account') {
-    return (
-      <MyAccount
-        onLogout={() => setPhase('landing')}
-      />
-    )
-  }
-
+  // ─── Render ───────────────────────────────────────────────────────────────
   if (phase === 'landing') {
-    return (
-      <>
-        <AccountChip
-          onNavigate={(path) => {
-            if (typeof window !== 'undefined') {
-              window.history.pushState({}, '', path)
-            }
-            setPhase(pathToPhase(path, ''))
-          }}
-        />
-        <LandingPage onStart={() => setPhase('upload')} />
-      </>
-    )
+    return <LandingPage onStart={() => setPhase('upload')} />
   }
 
   if (phase === 'start') {
@@ -413,6 +363,7 @@ export default function App() {
 
   if (phase === 'report') {
     if (!fileReport) {
+      // حالة غير متوقعة — أعِد التوجيه للبداية
       return (
         <UploadScreen
           onEvaluate={handleEvaluateFile}
@@ -442,6 +393,7 @@ export default function App() {
   if (phase === 'mushaf_browse') {
     return (
       <div className="min-h-screen bg-parchment-50 flex flex-col" dir="rtl">
+        {/* Toolbar */}
         <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-stone-200 sticky top-0 z-10">
           <button
             onClick={handleMushafBack}
@@ -471,6 +423,7 @@ export default function App() {
           </div>
         </div>
 
+        {/* Mushaf page */}
         <div className="flex-1 overflow-y-auto py-4 px-2">
           <MushafPage
             pageNumber={mushafPage}
@@ -502,12 +455,14 @@ export default function App() {
         />
       )}
 
+      {/* Error notice */}
       {evalError && (
         <div className="mx-4 mt-3 bg-red-50 border border-red-200 rounded-xl px-3 py-2">
           <p className="font-ui text-xs text-red-600">{evalError}</p>
         </div>
       )}
 
+      {/* Ayah display */}
       {ayahData ? (
         <AyahDisplay
           words={ayahData.words}
@@ -524,6 +479,7 @@ export default function App() {
         </div>
       )}
 
+      {/* Waiting-for-eval indicator */}
       {waitingForEval && (
         <div className="mx-4 mb-1 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 flex items-center gap-2">
           <span className="inline-block w-3 h-3 rounded-full bg-amber-400 animate-pulse" />
@@ -531,12 +487,14 @@ export default function App() {
         </div>
       )}
 
+      {/* Recording status strip */}
       <MicButton
         phase={active ? 'recording' : 'idle'}
         audioLevel={0}
         silenceCountdown={0}
       />
 
+      {/* End session button */}
       <div className="flex justify-center pb-1">
         <button
           onClick={handleEndSession}
@@ -546,6 +504,7 @@ export default function App() {
         </button>
       </div>
 
+      {/* Stats bar */}
       <div className="bg-white border-t border-stone-100 px-6 py-2 flex justify-around">
         <StatPill label="صحيح" value={stats.correct} color="text-emerald-600" />
         <StatPill label="خطأ" value={stats.errors} color="text-red-500" />

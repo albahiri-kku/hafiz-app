@@ -110,17 +110,21 @@ function arDigit(n: number | string): string {
 
 function statusToWordClass(s: WordAlignmentEntry['status']): string {
   switch (s) {
-    case 'MATCH': return 'good'
+    case 'MATCH':
     case 'LOW_CONFIDENCE_MATCH':
+    case 'CPAE_FALLBACK': return ''
     case 'SUBSTITUTION':
     case 'SUFFIX_MATCH':
     case 'TASHKEEL_MISMATCH': return 'warn'
-    case 'CPAE_FALLBACK':
     case 'MISSED': return 'err'
     case 'EXTRA': return 'extra'
     default: return ''
   }
 }
+
+const CONFIRMED_ERROR_STATUSES = new Set<WordAlignmentEntry['status']>([
+  'SUBSTITUTION', 'SUFFIX_MATCH', 'TASHKEEL_MISMATCH', 'MISSED',
+])
 
 interface MetricData { label: string; v: number | null; kind: 'ok' | 'warn' | 'err' | 'none' }
 
@@ -219,12 +223,11 @@ export default function ReportScreen({ report, surah, ayahStart, ayahEnd, onUplo
   // Compute findings: top 5 issue words
   const findings = useMemo(() => {
     const out: Array<{ kind: 'err' | 'warn' | 'ok'; word: string; rule: string; desc: string }> = []
-    // 1. missed / substitution / CPAE_FALLBACK
+    // 1. missed / substitution (confirmed only — CPAE_FALLBACK is alignment uncertainty, not a recitation error)
     for (const w of alignments) {
       if (out.length >= 5) break
       if (w.status === 'MISSED') out.push({ kind: 'err', word: w.reference_word, rule: 'كلمة مفقودة', desc: 'لم تُقرأ هذه الكلمة.' })
       else if (w.status === 'SUBSTITUTION') out.push({ kind: 'warn', word: w.asr_word || w.reference_word, rule: 'استبدال كلمة', desc: `المرجع: ${w.reference_word}` })
-      else if (w.status === 'CPAE_FALLBACK') out.push({ kind: 'err', word: w.reference_word || w.asr_word, rule: 'غير مسموعة', desc: 'لم يتمكن النظام من محاذاة الصوت بهذه الكلمة.' })
     }
     // 2. madd errors
     for (const m of maddItems) {
@@ -344,12 +347,14 @@ export default function ReportScreen({ report, surah, ayahStart, ayahEnd, onUplo
                 {alignments.map(entry => {
                   const cls = statusToWordClass(entry.status)
                   const events = eventsMap.get(entry.word_index) ?? []
-                  const ruleNames = events.map(e => RULE_AR[e.applied_rule ?? e.event_type] ?? (e.applied_rule ?? e.event_type)).join(' / ')
+                  const warnEvs = events.filter(e => e.tajweed_check_status === 'WARNING' || e.tajweed_check_status === 'ERROR')
+                  const ruleNames = warnEvs.map(e => RULE_AR[e.applied_rule ?? e.event_type] ?? (e.applied_rule ?? e.event_type)).join(' / ')
                   const word = entry.status === 'MISSED' ? entry.reference_word : (entry.asr_word || entry.reference_word)
-                  const tip = ruleNames || (entry.status !== 'MATCH' ? entry.status : '')
+                  const highlight = cls === 'warn' || cls === 'err'
+                  const tip = highlight ? (ruleNames || entry.status) : undefined
                   return (
                     <span key={entry.word_index}>
-                      <span className={`word ${cls}`} title={tip || undefined}>{word}</span>{' '}
+                      <span className={`word ${highlight ? cls : ''}`} title={tip}>{word}</span>{' '}
                     </span>
                   )
                 })}
@@ -518,34 +523,41 @@ function WordsPanel({
   eventsMap: Map<number, TajweedEventEntry[]>
   errorDist: ErrorDistribution[]
 }) {
+  const issueAlignments = alignments.filter(w => CONFIRMED_ERROR_STATUSES.has(w.status))
+  const distWithIssues = errorDist.filter(ed => (ed.warning + ed.error) > 0)
   return (
     <div className="rp-panel">
-      <h3>الكلمات المُقيَّمة</h3>
-      <div className="word-grid">
-        {alignments.map(entry => {
-          const word = entry.status === 'MISSED' ? entry.reference_word : (entry.asr_word || entry.reference_word)
-          const evs = eventsMap.get(entry.word_index) ?? []
-          const ruleNames = evs.map(e => RULE_AR[e.applied_rule ?? e.event_type] ?? (e.applied_rule ?? e.event_type))
-          const marker = {
-            MATCH: '', LOW_CONFIDENCE_MATCH: '?', SUBSTITUTION: '≠',
-            SUFFIX_MATCH: '+', TASHKEEL_MISMATCH: '~', CPAE_FALLBACK: '·',
-            EXTRA: '+', MISSED: '—',
-          }[entry.status] ?? ''
-          const tip = ruleNames.length ? ruleNames.join(' · ') : entry.status !== 'MATCH' ? entry.status : undefined
-          return (
-            <span key={entry.word_index} className={`wchip s-${entry.status}`} title={tip}>
-              {marker && <span className="wchip-marker">{marker}</span>}
-              {word}
-            </span>
-          )
-        })}
-      </div>
+      <h3>الكلمات التي تحتاج مراجعة</h3>
+      {issueAlignments.length === 0 ? (
+        <p style={{ color: 'var(--cream-dim)', fontSize: 13, textAlign: 'center', padding: 18 }}>
+          لم تُرصد أخطاء مؤكدة في الكلمات.
+        </p>
+      ) : (
+        <div className="word-grid">
+          {issueAlignments.map(entry => {
+            const word = entry.status === 'MISSED' ? entry.reference_word : (entry.asr_word || entry.reference_word)
+            const evs = eventsMap.get(entry.word_index) ?? []
+            const ruleNames = evs
+              .filter(e => e.tajweed_check_status === 'WARNING' || e.tajweed_check_status === 'ERROR')
+              .map(e => RULE_AR[e.applied_rule ?? e.event_type] ?? (e.applied_rule ?? e.event_type))
+            const marker = {
+              SUBSTITUTION: '≠', SUFFIX_MATCH: '+', TASHKEEL_MISMATCH: '~', MISSED: '—',
+            }[entry.status as string] ?? ''
+            const tip = ruleNames.length ? ruleNames.join(' · ') : entry.status
+            return (
+              <span key={entry.word_index} className={`wchip s-${entry.status}`} title={tip}>
+                {marker && <span className="wchip-marker">{marker}</span>}
+                {word}
+              </span>
+            )
+          })}
+        </div>
+      )}
       <div className="legend">
         {[
-          ['var(--emerald-bright)', 'مطابق'],
-          ['var(--gold)', 'ثقة منخفضة / استبدال'],
-          ['#F0B070', 'حرف زائد / تشكيل'],
-          ['var(--red-deep)', 'مفقود / غير مسموع'],
+          ['var(--gold)', 'استبدال / تشكيل'],
+          ['#F0B070', 'حرف زائد'],
+          ['var(--red-deep)', 'مفقود'],
         ].map(([c, l]) => (
           <span key={l} className="legend-item">
             <span className="legend-swatch" style={{ background: c }} />{l}
@@ -553,21 +565,21 @@ function WordsPanel({
         ))}
       </div>
 
-      {errorDist.length > 0 && (
+      {distWithIssues.length > 0 && (
         <div>
-          <h3 style={{ marginTop: 8 }}>توزيع الأحكام</h3>
-          {errorDist.map(ed => {
-            const total = Math.max(ed.total, 1)
+          <h3 style={{ marginTop: 8 }}>الملاحظات حسب الفئة</h3>
+          {distWithIssues.map(ed => {
+            const issues = ed.warning + ed.error
+            const denom = Math.max(issues, 1)
             return (
               <div key={ed.rule_ar} className="dist-row">
                 <div className="dist-head">
                   <span>{ed.rule_ar}</span>
-                  <span>{arDigit(ed.ok)} / {arDigit(ed.total)}</span>
+                  <span>{arDigit(issues)} ملاحظة</span>
                 </div>
                 <div className="dist-bar">
-                  {ed.ok > 0 && <span className="seg-ok" style={{ width: `${(ed.ok / total) * 100}%` }} />}
-                  {ed.warning > 0 && <span className="seg-warn" style={{ width: `${(ed.warning / total) * 100}%` }} />}
-                  {ed.error > 0 && <span className="seg-err" style={{ width: `${(ed.error / total) * 100}%` }} />}
+                  {ed.warning > 0 && <span className="seg-warn" style={{ width: `${(ed.warning / denom) * 100}%` }} />}
+                  {ed.error > 0 && <span className="seg-err" style={{ width: `${(ed.error / denom) * 100}%` }} />}
                 </div>
               </div>
             )
@@ -609,87 +621,71 @@ function MaddPanel({
           قياسات المدّ التالية غير موثوقة.
         </div>
       )}
-      {items.length === 0 ? (
-        <p style={{ color: 'var(--cream-dim)', fontSize: 13, textAlign: 'center', padding: 24 }}>
-          لا توجد أحكام مدّ في هذا النطاق.
-        </p>
-      ) : (
-        <>
-          <p style={{ color: 'var(--cream-dim)', fontSize: 12 }}>
-            {arDigit(items.filter(m => m.zone === 'OK').length)} / {arDigit(items.length)} ضمن النطاق
-          </p>
-          {items.map((m, i) => {
-            const measuredH = m.harakah_ms > 0 ? m.measured_ms / m.harakah_ms : 0
-            const refH = m.harakah_ms > 0 ? m.ref_ms / m.harakah_ms : 0
-            const unreliable = m.measurement_reliable === false || m.verdict === 'PENDING'
-            const cls =
-              unreliable ? 'madd-none' :
-              m.zone === 'OK' ? 'madd-ok' :
-              (m.zone === 'SHORT' || m.zone === 'LONG') ? 'madd-warn' : 'madd-err'
-            return (
-              <div key={i} className="madd-card">
-                <div className="madd-left">
-                  <div className="mw">{m.word_text || '—'}</div>
-                  <div className="ml">
-                    {m.madd_label_ar}
-                    {m.performance_transformed && (
-                      <span className="tag-mode">· {m.performance_mode === 'WAQF' ? 'عند الوقف' : 'عند الوصل'}</span>
+      {(() => {
+        const maddIssues = items.filter(m => {
+          const unreliable = m.measurement_reliable === false || m.verdict === 'PENDING'
+          return !unreliable && m.zone !== 'OK'
+        })
+        if (maddIssues.length === 0) {
+          return (
+            <p style={{ color: 'var(--cream-dim)', fontSize: 13, textAlign: 'center', padding: 18 }}>
+              لا توجد ملاحظات مؤكدة على المدود.
+            </p>
+          )
+        }
+        return (
+          <>
+            <p style={{ color: 'var(--cream-dim)', fontSize: 12 }}>
+              {arDigit(maddIssues.length)} مدّ يحتاج مراجعة
+            </p>
+            {maddIssues.map((m, i) => {
+              const measuredH = m.harakah_ms > 0 ? m.measured_ms / m.harakah_ms : 0
+              const refH = m.harakah_ms > 0 ? m.ref_ms / m.harakah_ms : 0
+              const cls = (m.zone === 'SHORT' || m.zone === 'LONG') ? 'madd-warn' : 'madd-err'
+              return (
+                <div key={i} className="madd-card">
+                  <div className="madd-left">
+                    <div className="mw">{m.word_text || '—'}</div>
+                    <div className="ml">
+                      {m.madd_label_ar}
+                      {m.performance_transformed && (
+                        <span className="tag-mode">· {m.performance_mode === 'WAQF' ? 'عند الوقف' : 'عند الوصل'}</span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="madd-right">
+                    <div className={`mv ${cls}`}>
+                      <span>{fmtH(measuredH)}</span>
+                      <span className="sep">/</span>
+                      <span className="ref">{fmtH(refH)}</span>
+                      <span className="unit">حركات</span>
+                    </div>
+                    {m.inconsistent_with_peers && (
+                      <div className="note">غير منضبط مع مثله</div>
                     )}
                   </div>
                 </div>
-                <div className="madd-right">
-                  {unreliable ? (
-                    <>
-                      <div className="mv" style={{ fontSize: 13 }}>
-                        <span className="ref">المرجع {fmtH(refH)}</span>
-                        <span className="unit">حركات</span>
-                      </div>
-                      <div className="note">غير مقاس صوتياً</div>
-                    </>
-                  ) : (
-                    <>
-                      <div className={`mv ${cls}`}>
-                        <span>{fmtH(measuredH)}</span>
-                        <span className="sep">/</span>
-                        <span className="ref">{fmtH(refH)}</span>
-                        <span className="unit">حركات</span>
-                      </div>
-                      {m.inconsistent_with_peers && (
-                        <div className="note">غير منضبط مع مثله</div>
-                      )}
-                    </>
-                  )}
-                </div>
-              </div>
-            )
-          })}
-        </>
-      )}
+              )
+            })}
+          </>
+        )
+      })()}
 
-      {/* Tafkhim / Tarqiq */}
-      {tafkhimItems.length > 0 && (
+      {/* Tafkhim / Tarqiq — confirmed issues only */}
+      {tafkhimIssues.length > 0 && (
         <>
           <h3 style={{ marginTop: 12 }}>التفخيم والترقيق</h3>
-          <p style={{ color: 'var(--cream-dim)', fontSize: 11 }}>
-            {arDigit(tafkhimMeasured.length)} مقاس صوتياً من {arDigit(tafkhimItems.length)}
+          <p style={{ color: 'var(--gold-bright)', fontSize: 12 }}>
+            {arDigit(tafkhimIssues.length)} ملاحظة تستدعي المراجعة
             {baselineHz != null && (
               <> · بصمة القارئ: F2 = <span style={{ fontVariantNumeric: 'tabular-nums' }}>{arDigit(Math.round(baselineHz))}</span> Hz</>
             )}
           </p>
-          {tafkhimIssues.length > 0 && (
-            <p style={{ color: 'var(--gold-bright)', fontSize: 12 }}>
-              {arDigit(tafkhimIssues.length)} ملاحظة تستدعي المراجعة
-            </p>
-          )}
-          {tafkhimItems.map((t, i) => {
+          {tafkhimIssues.map((t, i) => {
             const isLam = t.kind === 'lam_jalalah'
             const label = isLam
               ? (t.expected === 'TARQIQ' ? 'ترقيق لام الجلالة' : 'تفخيم لام الجلالة')
               : `تفخيم ${t.letter_name ? (LETTER_AR[t.letter_name] ?? t.letter_name) : ''}`
-            const isIssue = t.verdict === 'ISSUE' || t.verdict === 'WEAK_TAFKHIM' ||
-              (isLam && t.expected && t.detected && t.expected !== t.detected && t.detected !== 'AMBIGUOUS')
-            const measured = t.acoustic === 'MEASURED'
-            const cls = !measured ? 'madd-none' : isIssue ? 'madd-err' : 'madd-ok'
             return (
               <div key={i} className="madd-card">
                 <div className="madd-left">
@@ -697,27 +693,19 @@ function MaddPanel({
                   <div className="ml">{label}</div>
                 </div>
                 <div className="madd-right">
-                  {measured && t.f2_min_hz != null ? (
-                    <>
-                      <div className={`mv ${cls}`} style={{ fontSize: 14 }}>
-                        {arDigit(Math.round(t.f2_min_hz))} Hz
-                        {t.f2_ratio != null && (
-                          <span className="ref" style={{ marginInlineStart: 6, fontSize: 12 }}>
-                            (نسبة {t.f2_ratio.toFixed(2)})
-                          </span>
-                        )}
-                      </div>
-                      <div className={`note ${cls}`} style={{ color: 'inherit' }}>
-                        {t.detected === 'TAFKHIM_OK' ? 'تفخيم صحيح' :
-                         t.detected === 'WEAK_TAFKHIM' ? 'تفخيم ضعيف' :
-                         t.detected === 'TAFKHIM' ? 'تفخيم' :
-                         t.detected === 'TARQIQ' ? 'ترقيق' :
-                         t.detected === 'AMBIGUOUS' ? 'ضمن النطاق' : '—'}
-                      </div>
-                    </>
-                  ) : (
-                    <div className="note" style={{ fontStyle: 'italic' }}>بدون قياس صوتي</div>
+                  {t.f2_min_hz != null && (
+                    <div className="mv madd-err" style={{ fontSize: 14 }}>
+                      {arDigit(Math.round(t.f2_min_hz))} Hz
+                      {t.f2_ratio != null && (
+                        <span className="ref" style={{ marginInlineStart: 6, fontSize: 12 }}>
+                          (نسبة {t.f2_ratio.toFixed(2)})
+                        </span>
+                      )}
+                    </div>
                   )}
+                  <div className="note madd-err" style={{ color: 'inherit' }}>
+                    {t.detected === 'WEAK_TAFKHIM' ? 'تفخيم ضعيف' : 'لم يتحقق الحكم المتوقّع'}
+                  </div>
                 </div>
               </div>
             )
@@ -725,18 +713,13 @@ function MaddPanel({
         </>
       )}
 
-      {/* Sakta — 5 canonical + Anfal-Tawbah juncture */}
-      {saktaItems.length > 0 && (
+      {/* Sakta — confirmed issues only (exclude OK and JAIZ INFO) */}
+      {saktaItems.filter(s => s.verdict === 'ISSUE' || s.verdict === 'WARNING').length > 0 && (
         <>
           <h3 style={{ marginTop: 12 }}>السكت</h3>
-          <p style={{ color: 'var(--cream-dim)', fontSize: 11 }}>
-            {arDigit(saktaItems.length)} موضع سكت — سكتات رواية حفص عن عاصم
-          </p>
-          {saktaItems.map((s, i) => {
+          {saktaItems.filter(s => s.verdict === 'ISSUE' || s.verdict === 'WARNING').map((s, i) => {
             const isIssue = s.verdict === 'ISSUE'
-            const isWarn = s.verdict === 'WARNING'
-            const isInfo = s.verdict === 'INFO'
-            const cls = isIssue ? 'madd-err' : isWarn ? 'madd-warn' : isInfo ? 'madd-none' : 'madd-ok'
+            const cls = isIssue ? 'madd-err' : 'madd-warn'
             const obligAr = s.obligation === 'WAJIB' ? 'واجبة' : 'جائزة'
             const verdictAr =
               s.probe_verdict === 'MISSING' ? 'لم يُنفَّذ' :
@@ -853,15 +836,15 @@ function DetailsPanel({
 
   return (
     <div className="rp-panel">
-      {/* Waqf */}
-      {waqfItems && waqfItems.length > 0 && (
+      {/* Waqf — only missed stops (wasl where waqf expected) */}
+      {waqfItems && waqfItems.filter(w => !w.is_waqf).length > 0 && (
         <div>
-          <h3>الوقوف</h3>
+          <h3>وقوف لم تُطبَّق</h3>
           <div className="waqf-chips">
-            {waqfItems.map(ev => (
-              <span key={ev.ayah_code} className={`waqf-chip ${ev.is_waqf ? 'on' : ''}`}>
+            {waqfItems.filter(w => !w.is_waqf).map(ev => (
+              <span key={ev.ayah_code} className="waqf-chip">
                 <span className="qw t-quran">{ev.word_text || ev.ayah_code}</span>
-                <span style={{ opacity: 0.7 }}>{ev.is_waqf ? 'وقف' : 'وصل'}</span>
+                <span style={{ opacity: 0.7 }}>وصل</span>
               </span>
             ))}
           </div>
@@ -876,14 +859,12 @@ function DetailsPanel({
         </div>
       )}
 
-      {/* Tajweed event summary */}
-      {tajweedEvents.length > 0 && (
+      {/* Tajweed events — issues only */}
+      {warnEvents.length > 0 && (
         <div>
-          <h3>أحداث التجويد</h3>
+          <h3>ملاحظات التجويد</h3>
           <p style={{ color: 'var(--cream-dim)', fontSize: 12 }}>
-            إجمالي {arDigit(tajweedEvents.length)}
-            {' · '}صحيح {arDigit(tajweedEvents.filter(e => e.tajweed_check_status === 'OK').length)}
-            {' · '}تحذير {arDigit(tajweedEvents.filter(e => e.tajweed_check_status === 'WARNING').length)}
+            تحذير {arDigit(tajweedEvents.filter(e => e.tajweed_check_status === 'WARNING').length)}
             {' · '}خطأ {arDigit(tajweedEvents.filter(e => e.tajweed_check_status === 'ERROR').length)}
           </p>
           {warnEvents.length > 0 && (

@@ -1,13 +1,44 @@
+/**
+ * api.final.ts — DROP-IN REPLACEMENT for hafiz-app/src/services/api.ts
+ *
+ * SINGLE behavioural change vs. the existing file:
+ *   authHeaders() now also injects `Authorization: Bearer <token>` when the
+ *   user is logged in (token stored in localStorage under "hafiz:token").
+ *
+ * Everything else is byte-identical to the current services/api.ts:
+ *   - Same API_BASE / API_KEY env variables
+ *   - Same request() wrapper
+ *   - Same api object with all existing methods
+ *   - Same trackingApi object unchanged
+ *
+ * Result:
+ *   - Guest users: unchanged behaviour (no Authorization header sent)
+ *   - Logged-in users: every request (incl. /evaluate-file) carries the
+ *     bearer token, enabling the backend write-through hook to attribute
+ *     evaluations to the user + optionally trigger SM-2 auto-attempts.
+ */
+
 import type { AyahData, EvaluationResponse, SessionStartResponse, EvaluateFileResponse } from '../types/hafiz'
 import type { MushafPageData, TrackingState } from '../components/MushafPage/types'
+import { getStoredToken } from '../api/institutionalApi'   // NEW: institutional token source
 
 // In dev, Vite proxies /api → localhost:8000
 // In production, set VITE_API_URL (e.g. https://hafiz-production.up.railway.app)
 const API_BASE   = import.meta.env.VITE_API_URL ?? ''
 const API_KEY    = import.meta.env.VITE_API_KEY  ?? ''
 
+/**
+ * Build headers for every backend call.
+ * Always includes X-API-Key if VITE_API_KEY is set (unchanged).
+ * Additionally includes Authorization: Bearer <token> if the user is
+ * logged in via the institutional layer (NEW, zero effect when logged out).
+ */
 function authHeaders(): HeadersInit {
-  return API_KEY ? { 'X-API-Key': API_KEY } : {}
+  const headers: Record<string, string> = {}
+  if (API_KEY) headers['X-API-Key'] = API_KEY
+  const token = getStoredToken()
+  if (token) headers['Authorization'] = `Bearer ${token}`
+  return headers
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
@@ -78,6 +109,7 @@ export const api = {
 
 // ---------------------------------------------------------------------------
 // Tracking API — word-level Tajweed session for the Mushaf viewer
+// (Unchanged from the existing services/api.ts)
 // ---------------------------------------------------------------------------
 
 export interface TrackingSessionState {
