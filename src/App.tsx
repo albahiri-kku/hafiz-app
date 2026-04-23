@@ -371,7 +371,10 @@ export default function App() {
             setPhase(pathToPhase(path, ''))
           }}
         />
-        <LandingPage onStart={() => setPhase('upload')} />
+        <LandingPage
+          onStart={() => setPhase('upload')}
+          onSignIn={() => setPhase('login')}
+        />
       </>
     )
   }

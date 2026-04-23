@@ -398,7 +398,7 @@ function CreatePlanForm({
 
 function PlanCard({
   plan,
-  onChanged,
+  onChanged: _onChanged,
 }: {
   plan: MemorizationPlan;
   onChanged: () => void;
@@ -664,3 +664,4 @@ function EmptyBox({ message }: { message: string }) {
 }
 
 export default MyAccount;
+

@@ -26,19 +26,13 @@ export interface AccountChipProps {
 export default function AccountChip({ onNavigate }: AccountChipProps) {
   const { account, loading } = useAuth()
 
+  // Never render while rehydrating — avoids flash of wrong state
   if (loading) return null
 
-  if (!account) {
-    return (
-      <button
-        onClick={() => onNavigate('/login')}
-        className="fixed top-3 z-50 text-sm bg-white/95 border border-stone-200 shadow-sm rounded-full px-3 py-1.5 text-emerald-700 hover:text-emerald-900 hover:shadow transition font-ui"
-        style={{ insetInlineEnd: 12 }}
-      >
-        تسجيل الدخول
-      </button>
-    )
-  }
+  // Guest view: LandingPage has its own "تسجيل الدخول" button in its header.
+  // We don't show a duplicate floating one; AccountChip only appears for
+  // authenticated users as an account indicator + navigation shortcut.
+  if (!account) return null
 
   const displayName = account.full_name_ar || `المستخدم #${account.user_id}`
   const initial = displayName.charAt(0)
