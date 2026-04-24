@@ -21,3 +21,15 @@ npm-debug.log*
 .DS_Store
 Thumbs.db
 .vercel
+
+
+# Forensics files from mojibake incident (2026-04-24, commit befc851)
+ReportScreen.tsx.backup_*
+before_befc851.tsx
+check_original.py
+find_mojibake_strings.py
+fix_report_screen.py
+infected_files.txt
+scan_encoding.py
+scan_mojibake.py
+make_settings.py
