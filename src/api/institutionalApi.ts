@@ -22,6 +22,9 @@ import type {
   PlanDueOut,
   PlanProgress,
   RegisterRequest,
+  TotpDisableRequest,
+  TotpEnrollBeginResponse,
+  TotpEnrollConfirmResponse,
 } from "../types/institutional";
 import { InstitutionalApiError } from "../types/institutional";
 
@@ -138,7 +141,13 @@ async function jsonFetch<T>(path: string, init: JsonFetchInit = {}): Promise<T> 
 }
 
 function humanizeError(status: number, detail: unknown): string {
-  if (status === 401) return "بيانات الدخول غير صحيحة.";
+  if (status === 401) {
+    // Distinguish "needs second factor" from "creds wrong" — both are 401
+    // but the frontend reacts very differently. The backend marks the
+    // first case with detail === "totp_required".
+    if (detail === "totp_required") return "أدخل رمز التحقّق الثاني.";
+    return "بيانات الدخول غير صحيحة.";
+  }
   if (status === 403) return "ليست لديك صلاحية لهذا الإجراء.";
   if (status === 404) return "المورد غير موجود.";
   if (status === 409) return "الحساب موجود بالفعل.";
@@ -150,9 +159,20 @@ function humanizeError(status: number, detail: unknown): string {
     }
     return "بيانات غير صالحة.";
   }
+  if (status === 429) return "محاولات كثيرة. حاول بعد ١٠ دقائق.";
   if (status === 503) return "الخدمة غير متاحة مؤقتاً.";
   if (status >= 500) return "حدث خطأ في الخادم. حاول لاحقاً.";
   return typeof detail === "string" ? detail : "حدث خطأ غير متوقع.";
+}
+
+/** True iff the error is a 401 whose body indicates `totp_required`.
+ *  Useful for the LoginScreen to switch to the TOTP challenge UI. */
+export function isTotpRequiredError(e: unknown): boolean {
+  return (
+    e instanceof InstitutionalApiError &&
+    e.status === 401 &&
+    e.detail === "totp_required"
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -167,6 +187,8 @@ export async function login(body: LoginRequest): Promise<LoginResponse> {
   if (body.institution_slug?.trim()) {
     payload.institution_slug = body.institution_slug.trim();
   }
+  if (body.totp_code?.trim()) payload.totp_code = body.totp_code.trim();
+  if (body.recovery_code?.trim()) payload.recovery_code = body.recovery_code.trim();
   const data = await jsonFetch<LoginResponse>(
     "/api/v1/institutional/auth/login",
     { method: "POST", body: payload, skipAuth: true },
@@ -205,6 +227,36 @@ export async function logout(): Promise<void> {
   } finally {
     clearStoredAuth();
   }
+}
+
+// ---------------------------------------------------------------------------
+// TOTP MFA
+// ---------------------------------------------------------------------------
+
+export async function totpEnrollBegin(): Promise<TotpEnrollBeginResponse> {
+  return jsonFetch<TotpEnrollBeginResponse>(
+    "/api/v1/institutional/auth/totp/enroll/begin",
+    { method: "POST", body: {} },
+  );
+}
+
+export async function totpEnrollConfirm(
+  code: string,
+): Promise<TotpEnrollConfirmResponse> {
+  return jsonFetch<TotpEnrollConfirmResponse>(
+    "/api/v1/institutional/auth/totp/enroll/confirm",
+    { method: "POST", body: { code: code.trim() } },
+  );
+}
+
+export async function totpDisable(body: TotpDisableRequest): Promise<void> {
+  const payload: TotpDisableRequest = {};
+  if (body.code?.trim()) payload.code = body.code.trim();
+  if (body.recovery_code?.trim()) payload.recovery_code = body.recovery_code.trim();
+  await jsonFetch<void>(
+    "/api/v1/institutional/auth/totp/disable",
+    { method: "POST", body: payload },
+  );
 }
 
 // ---------------------------------------------------------------------------

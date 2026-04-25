@@ -34,6 +34,8 @@ import LandingPage from './pages/LandingPage'
 import LoginScreen from './components/LoginScreen'
 import MyAccount from './components/MyAccount'
 import AccountChip from './components/AccountChip'
+import TotpEnrollWizard from './components/TotpEnrollWizard'
+import { logout as apiLogout } from './api/institutionalApi'
 
 const API_BASE = import.meta.env.VITE_API_URL ?? ''
 const API_KEY  = import.meta.env.VITE_API_KEY  ?? ''
@@ -44,7 +46,7 @@ const EMPTY_STATS: SessionStats = {
 
 // NEW: locally extend AppPhase with the two institutional screens
 // (no change to types/hafiz.ts required)
-type Phase = AppPhase | 'login' | 'account'
+type Phase = AppPhase | 'login' | 'account' | 'totp_enroll'
 
 // ─── URL ↔ phase mapping ────────────────────────────────────────────────────
 const PHASE_TO_PATH: Record<Phase, string> = {
@@ -56,8 +58,9 @@ const PHASE_TO_PATH: Record<Phase, string> = {
   reciting: '/app',
   summary: '/app',
   mushaf_browse: '/mushaf',
-  login: '/login',        // NEW
-  account: '/account',    // NEW
+  login: '/login',                       // NEW
+  account: '/account',                   // NEW
+  totp_enroll: '/account/security/setup',// NEW (forced TOTP enrollment)
 }
 
 function pathToPhase(pathname: string, search: string): Phase {
@@ -70,8 +73,9 @@ function pathToPhase(pathname: string, search: string): Phase {
   if (p === '/report')  return 'report'
   if (p === '/app')     return 'start'
   if (p === '/mushaf')  return 'mushaf_browse'
-  if (p === '/login')   return 'login'     // NEW
-  if (p === '/account') return 'account'   // NEW
+  if (p === '/login')   return 'login'
+  if (p === '/account') return 'account'
+  if (p === '/account/security/setup') return 'totp_enroll'
   return 'landing'
 }
 
@@ -347,7 +351,23 @@ export default function App() {
     return (
       <LoginScreen
         onAuthenticated={() => setPhase('account')}
+        onEnrollmentRequired={() => setPhase('totp_enroll')}
         onBack={() => setPhase('landing')}
+      />
+    )
+  }
+
+  if (phase === 'totp_enroll') {
+    return (
+      <TotpEnrollWizard
+        forced
+        onComplete={() => setPhase('account')}
+        onCancel={async () => {
+          // The session token is enrollment-scoped — useless for anything else.
+          // Drop it and send the user back to /login.
+          try { await apiLogout() } catch { /* ignore */ }
+          setPhase('login')
+        }}
       />
     )
   }
