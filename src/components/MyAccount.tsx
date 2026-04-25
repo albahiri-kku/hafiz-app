@@ -25,6 +25,8 @@ import type {
   MemorizationPlan,
   PlanProgress,
 } from "../types/institutional";
+import MyAccountSecurity from "./MyAccountSecurity";
+import TotpEnrollWizard from "./TotpEnrollWizard";
 
 type TabId = "overview" | "plans" | "groups" | "reports" | "settings";
 
@@ -551,6 +553,7 @@ function ReportsTab() {
 function SettingsTab({ onLogout }: { onLogout: () => void }) {
   const { account, refresh } = useAuth();
   const [refreshing, setRefreshing] = useState(false);
+  const [enrolling, setEnrolling] = useState(false);
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -562,6 +565,19 @@ function SettingsTab({ onLogout }: { onLogout: () => void }) {
   };
 
   if (!account) return null;
+
+  // Re-enrollment from settings — full-screen wizard takeover.
+  if (enrolling) {
+    return (
+      <TotpEnrollWizard
+        onComplete={async () => {
+          setEnrolling(false);
+          await refresh();
+        }}
+        onCancel={() => setEnrolling(false)}
+      />
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -617,6 +633,16 @@ function SettingsTab({ onLogout }: { onLogout: () => void }) {
           من مسؤول النظام.
         </p>
       </section>
+
+      {/* Admin-only TOTP panel — renders null for non-admins. */}
+      <MyAccountSecurity
+        roles={account.roles}
+        totpEnrolled={Boolean(account.totp_enrolled)}
+        onStartEnroll={() => setEnrolling(true)}
+        onDisabled={async () => {
+          await refresh();
+        }}
+      />
     </div>
   );
 }
