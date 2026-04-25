@@ -375,7 +375,7 @@ export function LoginScreen({
                 className="font-medium hover:underline"
                 style={{ color: HAFIZ_GREEN }}
               >
-                تسجيل مؤسسة
+                تسجيل جهة تعليمية
               </button>
               <span className="text-slate-300">|</span>
               <button
