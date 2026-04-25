@@ -7,7 +7,10 @@ export default function AboutPage() {
 
       {/* ── Navbar ─────────────────────────────────────────────────────── */}
       <nav className="lp-nav">
-        <Link to="/" className="lp-nav-logo">حافِظ</Link>
+        <Link to="/" className="lp-nav-logo" style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
+          <img src="/icons/hafiz-logo-white.png" alt="" style={{ width: 36, height: 36, objectFit: 'contain' }} />
+          <span>حافِظ</span>
+        </Link>
         <ul className="lp-nav-links">
           <li><Link to="/">الرئيسية</Link></li>
           <li><Link to="/app?upload=1" className="lp-nav-cta">التطبيق</Link></li>

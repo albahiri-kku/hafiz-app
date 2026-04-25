@@ -43,8 +43,12 @@ export default function StartScreen({ onStart, onBrowseMushaf, onUploadFile, loa
   return (
     <div className="min-h-screen bg-parchment-50 flex flex-col items-center justify-center p-6" dir="rtl">
       {/* Logo */}
-      <div className="mb-8 text-center">
-        <h1 className="font-quran text-5xl text-emerald-800 mb-2">حافِظ</h1>
+      <div className="mb-8 text-center flex flex-col items-center">
+        <img
+          src="/icons/hafiz-logo.png"
+          alt="حافِظ"
+          className="w-24 h-24 mb-3 object-contain"
+        />
         <p className="font-ui text-stone-500 text-sm">تقييم التلاوة القرآنية بالذكاء الاصطناعي</p>
       </div>
 
