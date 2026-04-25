@@ -23,6 +23,9 @@
 
 import { useCallback, useState, type ComponentType, type SVGProps } from "react";
 import { useAuth } from "../hooks/useAuth";
+import { isTotpRequiredError } from "../api/institutionalApi";
+import TotpChallenge from "./TotpChallenge";
+import type { LoginResponse } from "../types/institutional";
 
 const ALLOW_REGISTRATION =
   (import.meta.env?.VITE_ALLOW_REGISTRATION as string | undefined) === "1";
@@ -77,8 +80,13 @@ const ACCOUNT_OPTIONS: ReadonlyArray<{
 ];
 
 export interface LoginScreenProps {
-  /** Called after successful auth. Redirect target is caller's responsibility. */
-  onAuthenticated?: () => void;
+  /** Called after a full-scope login. */
+  onAuthenticated?: (response?: LoginResponse) => void;
+  /** Called after a login that returns scope=enrollment_required. The
+   *  parent should switch to the TOTP enrollment wizard. If not provided,
+   *  enrollment-required logins fall through to onAuthenticated (which
+   *  preserves backward compatibility for callers unaware of the flow). */
+  onEnrollmentRequired?: (response: LoginResponse) => void;
   /** Optional: called when user clicks "back to home" link. */
   onBack?: () => void;
   /** Label shown at top. Defaults to "بوابة الدخول — حافِظ". */
@@ -87,6 +95,7 @@ export interface LoginScreenProps {
 
 export function LoginScreen({
   onAuthenticated,
+  onEnrollmentRequired,
   onBack,
   title = "بوابة الدخول — حافِظ",
 }: LoginScreenProps) {
@@ -99,6 +108,25 @@ export function LoginScreen({
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [busy, setBusy] = useState(false);
+  const [pendingTotp, setPendingTotp] = useState<{
+    institution_slug?: string;
+    email: string;
+    password: string;
+  } | null>(null);
+
+  const handleAuthResult = useCallback(
+    (result: LoginResponse) => {
+      if (result.scope === "enrollment_required") {
+        if (onEnrollmentRequired) {
+          onEnrollmentRequired(result);
+          return;
+        }
+        // Fallback for callers that don't know about the new flow.
+      }
+      onAuthenticated?.(result);
+    },
+    [onAuthenticated, onEnrollmentRequired],
+  );
 
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
@@ -114,26 +142,32 @@ export function LoginScreen({
             accountType === "individual"
               ? undefined
               : institutionSlug.trim() || undefined;
-          await login({
-            institution_slug: slug,
-            email,
-            password,
-          });
+          const credentials = { institution_slug: slug, email, password };
+          try {
+            const result = await login(credentials);
+            handleAuthResult(result);
+          } catch (err) {
+            if (isTotpRequiredError(err)) {
+              setPendingTotp(credentials);
+              return;
+            }
+            throw err;
+          }
         } else {
-          await register({
+          const result = await register({
             email,
             password,
             full_name_ar: fullName.trim() || undefined,
           });
+          handleAuthResult(result);
         }
-        onAuthenticated?.();
       } catch {
         // error is surfaced via useAuth().error
       } finally {
         setBusy(false);
       }
     },
-    [busy, mode, accountType, institutionSlug, email, password, fullName, login, register, clearError, onAuthenticated],
+    [busy, mode, accountType, institutionSlug, email, password, fullName, login, register, clearError, handleAuthResult],
   );
 
   const switchMode = useCallback(
@@ -154,6 +188,26 @@ export function LoginScreen({
 
   const slugLabel = accountType === "halaqa" ? "اسم الحلقة" : "اسم المؤسسة";
   const slugPlaceholder = accountType === "halaqa" ? "مثال: halaqa-rabigh" : "مثال: hafiz-demo";
+
+  // Second-factor step: takes over the screen entirely until resolved.
+  if (pendingTotp) {
+    return (
+      <TotpChallenge
+        baseCredentials={pendingTotp}
+        loginWith={(factor) =>
+          login({
+            ...pendingTotp,
+            ...factor,
+          })
+        }
+        onAuthenticated={(result) => {
+          setPendingTotp(null);
+          handleAuthResult(result);
+        }}
+        onBack={() => setPendingTotp(null)}
+      />
+    );
+  }
 
   return (
     <div

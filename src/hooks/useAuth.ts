@@ -94,6 +94,11 @@ export function useAuth(): UseAuthResult {
       setAccount(data);
       return data;
     } catch (e: unknown) {
+      // 401 totp_required is a control-flow signal, not a user-visible error.
+      // Caller will switch to the TOTP challenge UI; suppress the banner.
+      if (e instanceof InstitutionalApiError && e.detail === "totp_required") {
+        throw e;
+      }
       const msg =
         e instanceof InstitutionalApiError
           ? e.message

@@ -20,6 +20,10 @@ export interface LoginRequest {
   institution_slug?: string;
   email: string;
   password: string;
+  /** Required when the backend returns 401 totp_required. 6 digits. */
+  totp_code?: string;
+  /** Single-use recovery code, alternative to totp_code when device lost. */
+  recovery_code?: string;
 }
 
 export interface RegisterRequest {
@@ -30,6 +34,8 @@ export interface RegisterRequest {
   birth_year?: number;
 }
 
+export type LoginScope = "full" | "enrollment_required";
+
 export interface LoginResponse {
   access_token: string;
   token_type: "bearer";
@@ -39,6 +45,29 @@ export interface LoginResponse {
   roles: RoleSlug[];
   full_name_ar: string | null;
   account_type: AccountType;
+  /** "full" — normal session.
+   *  "enrollment_required" — admin without TOTP must enroll first; the
+   *  token is enrollment-scoped and only /auth/totp/enroll/* accepts it. */
+  scope: LoginScope;
+  /** True iff the user has an active TOTP enrollment. Drives the security
+   *  panel UI in MyAccount (Enable vs. Re-enroll/Disable). */
+  totp_enrolled: boolean;
+}
+
+// ---------- TOTP ----------
+
+export interface TotpEnrollBeginResponse {
+  secret_b32: string;
+  otpauth_uri: string;
+}
+
+export interface TotpEnrollConfirmResponse {
+  recovery_codes: string[];
+}
+
+export interface TotpDisableRequest {
+  code?: string;
+  recovery_code?: string;
 }
 
 export interface MeResponse {
