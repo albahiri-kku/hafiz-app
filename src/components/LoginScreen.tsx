@@ -6,44 +6,94 @@
  *   - Institutional: tenant slug + email + password
  *   - Halqah: tenant slug (same form as institutional)
  *
- * Tabs:
- *   - تسجيل الدخول (login)
- *   - إنشاء حساب فردي (register — only when VITE_ALLOW_REGISTRATION=1
- *     AND the backend flag HAFIZ_INSTITUTIONAL_ALLOW_REGISTRATION=1)
+ * UI:
+ *   - Account-type selector (radio cards) above the form chooses how the
+ *     login payload is shaped: individual → institution_slug undefined;
+ *     institution / halaqa → reveals the slug input.
+ *   - Tabs: تسجيل الدخول (login) | إنشاء حساب — the inline tab is gated
+ *     by VITE_ALLOW_REGISTRATION; the three register entry-points at the
+ *     bottom are always visible.
  *
- * Styling: Tailwind. Replace classes to match your design system.
- * Palette reference (matches hafiz-app design):
+ * Styling: Tailwind + inline brand colors.
  *   primary:   #1F5C42 (emerald-800 equivalent)
- *   accent:    #C9A961 (gold)
+ *   accent:    #C9A84C (hafiz gold)
  *   bg-dark:   #0F1A14
  *   text-body: #1F2937
  */
 
-import { useCallback, useState } from "react";
+import { useCallback, useState, type ComponentType, type SVGProps } from "react";
 import { useAuth } from "../hooks/useAuth";
 
 const ALLOW_REGISTRATION =
   (import.meta.env?.VITE_ALLOW_REGISTRATION as string | undefined) === "1";
 
+const HAFIZ_GOLD = "#C9A84C";
+const HAFIZ_GOLD_SOFT = "#FBF3DD";
+const HAFIZ_GREEN = "#1F5C42";
+
 type TabMode = "login" | "register";
+type AccountType = "individual" | "institution" | "halaqa";
+
+function IndividualIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <circle cx="12" cy="8" r="4" />
+      <path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8" />
+    </svg>
+  );
+}
+
+function InstitutionIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M3 21h18" />
+      <path d="M5 21V7l7-4 7 4v14" />
+      <path d="M9 21v-6h6v6" />
+      <path d="M9 11h.01M12 11h.01M15 11h.01" />
+    </svg>
+  );
+}
+
+function HalaqaIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <circle cx="9" cy="9" r="3.2" />
+      <circle cx="17" cy="10" r="2.6" />
+      <path d="M3 19c0-3 2.7-5.4 6-5.4s6 2.4 6 5.4" />
+      <path d="M14.5 18c.4-2.2 2.3-3.8 4.5-3.8 1 0 1.9.3 2.6.8" />
+    </svg>
+  );
+}
+
+const ACCOUNT_OPTIONS: ReadonlyArray<{
+  id: AccountType;
+  label: string;
+  subtitle: string;
+  Icon: ComponentType<SVGProps<SVGSVGElement>>;
+}> = [
+  { id: "individual",  label: "فرد",            subtitle: "للحفظ والتلاوة الشخصية", Icon: IndividualIcon  },
+  { id: "institution", label: "مؤسسة تعليمية",  subtitle: "للوصول المؤسسي وAPI",    Icon: InstitutionIcon },
+  { id: "halaqa",      label: "حلقة تحفيظ",     subtitle: "للمشرفين والمعلمين",     Icon: HalaqaIcon      },
+];
 
 export interface LoginScreenProps {
   /** Called after successful auth. Redirect target is caller's responsibility. */
   onAuthenticated?: () => void;
   /** Optional: called when user clicks "back to home" link. */
   onBack?: () => void;
-  /** Label shown at top. Defaults to "حافظ — المنصة المؤسسية". */
+  /** Label shown at top. Defaults to "بوابة الدخول — حافِظ". */
   title?: string;
 }
 
 export function LoginScreen({
   onAuthenticated,
   onBack,
-  title = "حافظ — المنصة المؤسسية",
+  title = "بوابة الدخول — حافِظ",
 }: LoginScreenProps) {
   const { login, register, error, clearError } = useAuth();
 
   const [mode, setMode] = useState<TabMode>("login");
+  const [accountType, setAccountType] = useState<AccountType>("individual");
   const [institutionSlug, setInstitutionSlug] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -58,8 +108,14 @@ export function LoginScreen({
       setBusy(true);
       try {
         if (mode === "login") {
+          // accountType controls how institution_slug is derived; the API
+          // contract itself is unchanged.
+          const slug =
+            accountType === "individual"
+              ? undefined
+              : institutionSlug.trim() || undefined;
           await login({
-            institution_slug: institutionSlug.trim() || undefined,
+            institution_slug: slug,
             email,
             password,
           });
@@ -77,7 +133,7 @@ export function LoginScreen({
         setBusy(false);
       }
     },
-    [busy, mode, institutionSlug, email, password, fullName, login, register, clearError, onAuthenticated],
+    [busy, mode, accountType, institutionSlug, email, password, fullName, login, register, clearError, onAuthenticated],
   );
 
   const switchMode = useCallback(
@@ -87,6 +143,17 @@ export function LoginScreen({
     },
     [clearError],
   );
+
+  const goRegister = useCallback(
+    (type: AccountType) => {
+      setAccountType(type);
+      switchMode("register");
+    },
+    [switchMode],
+  );
+
+  const slugLabel = accountType === "halaqa" ? "اسم الحلقة" : "اسم المؤسسة";
+  const slugPlaceholder = accountType === "halaqa" ? "مثال: halaqa-rabigh" : "مثال: hafiz-demo";
 
   return (
     <div
@@ -100,15 +167,52 @@ export function LoginScreen({
         noValidate
       >
         <header className="text-center space-y-1">
-          <h1 className="text-2xl font-bold text-emerald-800">{title}</h1>
+          <h1 className="text-2xl font-bold" style={{ color: HAFIZ_GREEN }}>{title}</h1>
           <p className="text-sm text-slate-500">
             {mode === "login"
-              ? "سجّل دخولك للوصول إلى خطط الحفظ والتقييمات"
+              ? "اختر نوع الحساب وسجّل دخولك"
               : "أنشئ حساباً فردياً لبدء رحلة الحفظ"}
           </p>
         </header>
 
-        {/* Tab switcher */}
+        {/* Account-type selector — login mode only */}
+        {mode === "login" && (
+          <div role="radiogroup" aria-label="نوع الحساب" className="grid grid-cols-3 gap-2">
+            {ACCOUNT_OPTIONS.map(({ id, label, subtitle, Icon }) => {
+              const selected = accountType === id;
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  role="radio"
+                  aria-checked={selected}
+                  onClick={() => setAccountType(id)}
+                  className="text-center p-3 rounded-lg transition-colors flex flex-col items-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  style={{
+                    border: `2px solid ${selected ? HAFIZ_GOLD : "#e2e8f0"}`,
+                    backgroundColor: selected ? HAFIZ_GOLD_SOFT : "#ffffff",
+                  }}
+                >
+                  <Icon width={22} height={22} style={{ color: selected ? HAFIZ_GOLD : HAFIZ_GREEN }} />
+                  <span
+                    className="text-sm font-semibold leading-tight"
+                    style={{ color: selected ? "#5b4a16" : "#334155" }}
+                  >
+                    {label}
+                  </span>
+                  <span
+                    className="text-[10px] leading-snug px-0.5"
+                    style={{ color: selected ? "#7a6824" : "#64748b" }}
+                  >
+                    {subtitle}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Inline tab switcher — gated by feature flag (legacy entry-point) */}
         {ALLOW_REGISTRATION && (
           <div
             role="tablist"
@@ -145,16 +249,13 @@ export function LoginScreen({
           </div>
         )}
 
-        {mode === "login" && (
+        {mode === "login" && accountType !== "individual" && (
           <div>
             <label
               htmlFor="institution_slug"
               className="block text-sm text-slate-700 mb-1"
             >
-              اسم المؤسسة
-              <span className="text-slate-400 text-xs mx-2">
-                (اتركه فارغاً لحساب فردي)
-              </span>
+              {slugLabel}
             </label>
             <input
               id="institution_slug"
@@ -162,7 +263,7 @@ export function LoginScreen({
               autoComplete="organization"
               value={institutionSlug}
               onChange={(e) => setInstitutionSlug(e.target.value)}
-              placeholder="مثال: hafiz-demo"
+              placeholder={slugPlaceholder}
               className="w-full border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
             />
           </div>
@@ -253,6 +354,41 @@ export function LoginScreen({
         <p className="text-center text-xs text-slate-500">
           بالمتابعة فإنك توافق على شروط الاستخدام وسياسة الخصوصية.
         </p>
+
+        {/* Register entry-points — visible in login mode regardless of flag */}
+        {mode === "login" && (
+          <div className="pt-4 border-t border-slate-200 text-center">
+            <p className="text-sm text-slate-500 mb-2">ليس لديك حساب؟</p>
+            <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-sm">
+              <button
+                type="button"
+                onClick={() => goRegister("individual")}
+                className="font-medium hover:underline"
+                style={{ color: HAFIZ_GREEN }}
+              >
+                تسجيل كفرد
+              </button>
+              <span className="text-slate-300">|</span>
+              <button
+                type="button"
+                onClick={() => goRegister("institution")}
+                className="font-medium hover:underline"
+                style={{ color: HAFIZ_GREEN }}
+              >
+                تسجيل مؤسسة
+              </button>
+              <span className="text-slate-300">|</span>
+              <button
+                type="button"
+                onClick={() => goRegister("halaqa")}
+                className="font-medium hover:underline"
+                style={{ color: HAFIZ_GREEN }}
+              >
+                تسجيل حلقة
+              </button>
+            </div>
+          </div>
+        )}
 
         {onBack && (
           <button
