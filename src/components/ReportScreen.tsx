@@ -301,9 +301,14 @@ export default function ReportScreen({ report, surah, ayahStart, ayahEnd, onUplo
                 )}
                 {report.maqam_detection && report.maqam_detection.maqam !== 'UNKNOWN' && (
                   <><span className="dot">·</span><span>المقام: {
-                    { sikah: 'السيكاه', saba: 'الصبا', kurd: 'الكرد', rast: 'الرست' }[
-                      report.maqam_detection.maqam
-                    ] ?? report.maqam_detection.maqam
+                    {
+                      sikah: 'السيكاه',
+                      saba: 'الصبا',
+                      kurd: 'الكرد',
+                      rast: 'الرست',
+                      hijaz: 'الحجاز',
+                      nahawand: 'النهاوند',
+                    }[report.maqam_detection.maqam] ?? report.maqam_detection.maqam
                   } ({Math.round(report.maqam_detection.confidence * 100)}%)</span></>
                 )}
               </div>

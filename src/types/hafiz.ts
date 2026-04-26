@@ -284,7 +284,7 @@ export interface EvaluateFileResponse {
   narrative_report: NarrativeReport | null
   hafiz_report: HafizReport | null
   maqam_detection?: {
-    maqam: 'sikah' | 'saba' | 'kurd' | 'rast' | 'UNKNOWN'
+    maqam: 'sikah' | 'saba' | 'kurd' | 'rast' | 'hijaz' | 'nahawand' | 'UNKNOWN'
     confidence: number
     distance: number
     margin: number
