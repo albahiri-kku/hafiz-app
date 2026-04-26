@@ -299,18 +299,26 @@ export default function ReportScreen({ report, surah, ayahStart, ayahEnd, onUplo
                 {findings.length > 0 && (
                   <><span className="dot">·</span><span>اكتُشِفت {arDigit(findings.length)} ملاحظة</span></>
                 )}
-                {report.maqam_detection && report.maqam_detection.maqam !== 'UNKNOWN' && (
-                  <><span className="dot">·</span><span>المقام: {
-                    {
-                      sikah: 'السيكاه',
-                      saba: 'الصبا',
-                      kurd: 'الكرد',
-                      rast: 'الرست',
-                      hijaz: 'الحجاز',
-                      nahawand: 'النهاوند',
-                    }[report.maqam_detection.maqam] ?? report.maqam_detection.maqam
-                  } ({Math.round(report.maqam_detection.confidence * 100)}%)</span></>
-                )}
+                {(() => {
+                  const md = report.maqam_detection
+                  const labels: Record<string, string> = {
+                    sikah: 'السيكاه', saba: 'الصبا', kurd: 'الكرد',
+                    rast: 'الرست', hijaz: 'الحجاز', nahawand: 'النهاوند',
+                  }
+                  if (md && md.maqam !== 'UNKNOWN') {
+                    return (
+                      <><span className="dot">·</span><span>المقام: {labels[md.maqam] ?? md.maqam} ({Math.round(md.confidence * 100)}%)</span></>
+                    )
+                  }
+                  const isUnknown = md?.maqam === 'UNKNOWN'
+                  const text = isUnknown ? 'المقام: غير محدَّد' : 'المقام: غير متاح'
+                  const tip = isUnknown
+                    ? 'تَتطلَّب التلاوة ميزات لحنية أوضح'
+                    : 'يَتطلَّب تسجيلاً لا يَقلّ عن ١٠ ثوانٍ'
+                  return (
+                    <><span className="dot">·</span><span className="maqam-dim" title={tip}>{text}</span></>
+                  )
+                })()}
               </div>
             </div>
             <div className="score-pod">
@@ -420,7 +428,7 @@ export default function ReportScreen({ report, surah, ayahStart, ayahEnd, onUplo
         </div>
 
         {/* Tab panels */}
-        {tab === 'summary' && <SummaryPanel hr={hr} />}
+        {tab === 'summary' && <SummaryPanel hr={hr} maqamDetection={report.maqam_detection ?? null} />}
         {tab === 'words' && (
           <WordsPanel
             alignments={alignments} eventsMap={eventsMap} errorDist={errorDist}
@@ -480,7 +488,10 @@ function ScoreRing({ pct }: { pct: number }) {
 
 // ─── Summary Panel (narrative) ─────────────────────────────────────────────
 
-function SummaryPanel({ hr }: { hr: HafizReport | null }): ReactNode {
+function SummaryPanel({ hr, maqamDetection }: {
+  hr: HafizReport | null
+  maqamDetection?: EvaluateFileResponse['maqam_detection']
+}): ReactNode {
   if (!hr) {
     return (
       <div className="rp-panel">
@@ -490,6 +501,11 @@ function SummaryPanel({ hr }: { hr: HafizReport | null }): ReactNode {
       </div>
     )
   }
+  const maqamFromBackend = (hr.maqam_section ?? '').trim()
+  const maqamSectionText = maqamFromBackend
+    || (maqamDetection === undefined
+        ? ''
+        : 'لم يُمكن تحديد المقام بثقة كافية لهذه التلاوة.')
   const sections = [
     { t: 'دقة الكلمات',     v: hr.accuracy_section },
     { t: 'أحكام التجويد',   v: hr.tajweed_section },
@@ -498,7 +514,7 @@ function SummaryPanel({ hr }: { hr: HafizReport | null }): ReactNode {
     { t: 'التفخيم والترقيق', v: hr.ra_section },
     { t: 'تماثل المدود',    v: hr.consistency_section },
     { t: 'سلوك القارئ',     v: hr.behavior_section },
-    { t: 'مقام التلاوة',    v: hr.maqam_section },
+    { t: 'مقام التلاوة',    v: maqamSectionText },
   ].filter(s => s.v && s.v.trim())
   return (
     <div className="rp-panel narrative">
