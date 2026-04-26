@@ -172,16 +172,58 @@ export default function ReportScreen({ report, surah, ayahStart, ayahEnd, onUplo
     ? Math.round(maddItems.filter(m => m.zone === 'OK').length / maddItems.length * 100)
     : null
 
+  // الوقف على رؤوس الآي سُنّة لا واجب. الوصل بين الآيات مشروع في حفص ويفعله
+  // كثير من القراء المعتمدين. مصدر الخصم الحقيقي هو waqf_verdict من محرك الوقف
+  // — الذي يرفع خطأً فقط عند ترك وقف لازم. مرآة لمنطق narrative_report.py:
+  // إذا لم يصدر المحرك verdict عقابياً، فالنتيجة 100% بصرف النظر عن عدد
+  // مواضع الوصل التي اختارها القارئ.
   const waqfItems = report.ayah_boundary_waqf ?? []
-  const waqfOk = waqfItems.length > 0
-    ? Math.round(waqfItems.filter(w => w.is_waqf).length / waqfItems.length * 100)
-    : null
+  const waqfVerdict = report.waqf_verdict ?? ''
+  const _WAQF_NON_PENALTY = new Set(['', 'WAQF_OK', 'WAQF_UNCHECKED', 'WAQF_PREFERRED_STOP_SKIPPED'])
+  const waqfOk = _WAQF_NON_PENALTY.has(waqfVerdict)
+    ? 100
+    : (waqfItems.length > 0
+      ? Math.round(waqfItems.filter(w => w.is_waqf).length / waqfItems.length * 100)
+      : null)
 
-  const tajweedTotal = report.tajweed_event_count ?? 0
-  const tajweedOk = report.tajweed_ok_count ?? 0
+  // Tajweed % must EXCLUDE the MADD family. MADD has its own dedicated metric
+  // (المُدود) and including its raw events here double-counts. More importantly,
+  // every MAD_TABII letter emits a "مد طبيعي" event whose tajweed_check_status
+  // often defaults to WARNING when the engine couldn't acoustically verify the
+  // baseline duration — even though the recitation is correct. With ~23 such
+  // WARNING events on a short surah, the raw ratio collapsed to ~12% on what
+  // was actually a perfect tajweed performance (zero real ERRORs). Filter to
+  // non-MADD evaluated events only.
+  const _evaluatedTajweed = (report.tajweed_events ?? []).filter(
+    ev => (ev.tajweed_check_status === 'OK'
+        || ev.tajweed_check_status === 'WARNING'
+        || ev.tajweed_check_status === 'ERROR')
+        && ev.family !== 'MADD',
+  )
+  const tajweedTotal = _evaluatedTajweed.length
+  const tajweedOk = _evaluatedTajweed.filter(ev => ev.tajweed_check_status === 'OK').length
   const tajweedPct = tajweedTotal > 0 ? Math.round((tajweedOk / tajweedTotal) * 100) : null
 
-  // Compute score for ring (weight: accuracy.35 + tajweed.25 + madd.25 + waqf.15)
+  // مَخارج الحُروف = نسبة سلامة التفخيم/الترقيق المقاسة (لام الجلالة + حروف
+  // الاستعلاء). كانت هذه الخانة سابقاً تعرض دقة الكلمات (accuracy) — وهو
+  // مفهوم مختلف تماماً لا علاقة له بمخارج الحروف. الفحص الصوتي للتفخيم
+  // والترقيق هو أقرب مقياس صوتي متاح لجودة المخرج. تُحسب فقط المواضع
+  // المُقاسة فعلياً (acoustic === 'MEASURED'). لا تُحسب TEXT_ONLY لأنها
+  // لم تُفحص صوتياً، ولا الحالات AMBIGUOUS لأنها غير قاطعة.
+  const _measuredTafkhim = (report.word_gated_summary?.tafkhim_summary ?? [])
+    .filter(t => t.acoustic === 'MEASURED' && t.detected !== 'AMBIGUOUS')
+  const _tafkhimOkCount = _measuredTafkhim.filter(t => {
+    if (t.verdict === 'ISSUE' || t.verdict === 'WEAK_TAFKHIM') return false
+    if (t.expected && t.detected && t.expected !== t.detected) return false
+    return true
+  }).length
+  const makharijPct = _measuredTafkhim.length > 0
+    ? Math.round((_tafkhimOkCount / _measuredTafkhim.length) * 100)
+    : null
+
+  // Compute score for ring. أوزان: accuracy.35 + tajweed.25 + madd.25 + waqf.15
+  // ملاحظة: accuracy (دقة نطق الكلمات) مختلف عن مخارج الحروف — يبقى في
+  // المعادلة لأنه يعكس صحة الكلمات نفسها (لا يقاس بشيء آخر).
   const score = useMemo(() => {
     const parts: Array<[number, number]> = []
     if (accuracy != null) parts.push([accuracy, 0.35])
@@ -199,10 +241,10 @@ export default function ReportScreen({ report, surah, ayahStart, ayahEnd, onUplo
   )
 
   const metrics: MetricData[] = [
-    { label: 'مَخارج الحُروف', v: accuracy,   kind: kindFor(accuracy, 85, 70) },
-    { label: 'أحكام التَّجويد', v: tajweedPct, kind: kindFor(tajweedPct, 80, 60) },
-    { label: 'المُدود',         v: maddOk,     kind: kindFor(maddOk, 75, 55) },
-    { label: 'الإيقاع والتَّرتيل', v: waqfOk,  kind: kindFor(waqfOk, 80, 60) },
+    { label: 'مَخارج الحُروف', v: makharijPct, kind: kindFor(makharijPct, 85, 70) },
+    { label: 'أحكام التَّجويد', v: tajweedPct,  kind: kindFor(tajweedPct, 80, 60) },
+    { label: 'المُدود',         v: maddOk,      kind: kindFor(maddOk, 75, 55) },
+    { label: 'الإيقاع والتَّرتيل', v: waqfOk,   kind: kindFor(waqfOk, 80, 60) },
   ]
 
   const errorDist: ErrorDistribution[] = hr?.error_distribution ?? []
@@ -229,12 +271,31 @@ export default function ReportScreen({ report, surah, ayahStart, ayahEnd, onUplo
       if (w.status === 'MISSED') out.push({ kind: 'err', word: w.reference_word, rule: 'كلمة مفقودة', desc: 'لم تُقرأ هذه الكلمة.' })
       else if (w.status === 'SUBSTITUTION') out.push({ kind: 'warn', word: w.asr_word || w.reference_word, rule: 'استبدال كلمة', desc: `المرجع: ${w.reference_word}` })
     }
-    // 2. madd errors
+    // 2. madd errors — يستثنى وجه القصر للمدود متعددة الأوجه
+    // (عارض للسكون 2/4/6، لين 2/4/6، منفصل 2/4/5، صلة كبرى 4/4/5).
+    // إذا وقعت المدة المقاسة قرب وجه القصر (≥40% من المرجع) فهي قراءة معتبرة
+    // ولا تُعرض كخطأ/تنبيه. التصنيف لـ"أقصر من وجه القصر" يحدث فقط عند
+    // ratio < 0.4 (دون الحدّ الأدنى المعتبر).
+    const _MULTI_OPTION_MADDS = new Set([
+      'MAD_ARID_LIS_SUKUN', 'MAD_AARID_LISUKOON',
+      'MAD_LAYN', 'MAD_LEEN',
+      'MAD_JAIZ_MUNFASIL', 'MAD_MUNFASIL',
+      'MAD_SILAH_KUBRA',
+    ])
     for (const m of maddItems) {
       if (out.length >= 5) break
+      const isMultiOption = _MULTI_OPTION_MADDS.has(m.madd_type)
+      // وجه القصر مقبول للمدود متعددة الأوجه — لا تُحوَّل إلى خطأ
+      if (isMultiOption && (m.zone === 'SHORT' || m.zone === 'CRITICAL_SHORT') && m.ratio >= 0.4) {
+        continue
+      }
       if (m.zone === 'CRITICAL_SHORT' || m.verdict === 'ERROR') {
-        const hmRef = m.harakah_ms > 0 ? Math.round(m.ref_ms / m.harakah_ms) : 0
-        out.push({ kind: 'err', word: m.word_text || '—', rule: m.madd_label_ar, desc: `المطلوب حوالي ${arDigit(hmRef)} حركات.` })
+        if (isMultiOption) {
+          out.push({ kind: 'warn', word: m.word_text || '—', rule: m.madd_label_ar, desc: 'أقصر من وجه القصر — تحقّق من إعطاء المد حقّه.' })
+        } else {
+          const hmRef = m.harakah_ms > 0 ? Math.round(m.ref_ms / m.harakah_ms) : 0
+          out.push({ kind: 'err', word: m.word_text || '—', rule: m.madd_label_ar, desc: `المطلوب حوالي ${arDigit(hmRef)} حركات.` })
+        }
       } else if (m.zone === 'SHORT' || m.zone === 'LONG' || m.verdict === 'WARNING') {
         out.push({ kind: 'warn', word: m.word_text || '—', rule: m.madd_label_ar, desc: m.zone === 'SHORT' ? 'المدّ أقل من المطلوب.' : 'المدّ أطول من المطلوب.' })
       }
