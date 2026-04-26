@@ -234,6 +234,7 @@ export interface HafizReport {
   ra_section: string
   behavior_section: string
   consistency_section: string
+  maqam_section: string
   recommendations: string[]
   closing: string
   overall_grade: string       // "ممتاز" | "جيد جداً" | "جيد" | "يحتاج تحسين"

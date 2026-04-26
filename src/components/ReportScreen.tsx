@@ -498,6 +498,7 @@ function SummaryPanel({ hr }: { hr: HafizReport | null }): ReactNode {
     { t: 'التفخيم والترقيق', v: hr.ra_section },
     { t: 'تماثل المدود',    v: hr.consistency_section },
     { t: 'سلوك القارئ',     v: hr.behavior_section },
+    { t: 'مقام التلاوة',    v: hr.maqam_section },
   ].filter(s => s.v && s.v.trim())
   return (
     <div className="rp-panel narrative">
