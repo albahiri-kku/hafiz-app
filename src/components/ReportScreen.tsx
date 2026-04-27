@@ -108,6 +108,28 @@ function arDigit(n: number | string): string {
   return String(n).replace(/[0-9]/g, d => map[d] ?? d)
 }
 
+// Removes a leading basmala (with or without diacritics) from a narrative string.
+// Why: the narrative opens with "بسم الله الرحمن الرحيم. ..." and the user wants
+// only the meaningful follow-up text shown.
+function stripLeadingBasmala(s: string): string {
+  if (!s) return s
+  const DIACRITIC = /[ً-ْٰـۖ-ۭ]/
+  const ALEF = /[أإآٱ]/
+  let normalized = ''
+  const origIdx: number[] = []
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i]
+    if (DIACRITIC.test(c)) continue
+    normalized += ALEF.test(c) ? 'ا' : c
+    origIdx.push(i)
+  }
+  const m = normalized.match(/^\s*بسم\s+الله\s+الرحم[اٰ]?ن\s+الرحيم/)
+  if (!m) return s
+  let endInOrig = m[0].length >= origIdx.length ? s.length : origIdx[m[0].length]
+  while (endInOrig < s.length && /[\s.،,؛:]/.test(s[endInOrig])) endInOrig++
+  return s.slice(endInOrig).trim()
+}
+
 function statusToWordClass(s: WordAlignmentEntry['status']): string {
   switch (s) {
     case 'MATCH':
@@ -168,8 +190,23 @@ export default function ReportScreen({ report, surah, ayahStart, ayahEnd, onUplo
     : `الآيات ${arDigit(ayahStart)}\u2013${arDigit(ayahEnd)}`
 
   const maddItems: MaddBarEntry[] = report.word_gated_summary?.madd_summary ?? []
+  // المدود متعددة الأوجه (عارض/لين/منفصل/صلة كبرى) لا تُخصم على القِصَر
+  // مهما بلغت النسبة — كل أوجهها معتبرة عند الوقف. القياس القصير كاذب في
+  // الغالب (Whisper word-bounds drift). انظر narrative_report.py للشرح
+  // الكامل. التطويل يبقى يُخصم لأنه قابل للقياس موثوقاً.
+  const _MULTI_OPTION_MADD_TYPES = new Set([
+    'MAD_ARID_LIS_SUKUN', 'MAD_AARID_LISUKOON',
+    'MAD_LAYN', 'MAD_LEEN',
+    'MAD_JAIZ_MUNFASIL', 'MAD_MUNFASIL',
+    'MAD_SILAH_KUBRA',
+  ])
+  const _maddIsOk = (m: MaddBarEntry): boolean => {
+    if (m.zone === 'OK') return true
+    if ((m.zone === 'SHORT' || m.zone === 'CRITICAL_SHORT') && _MULTI_OPTION_MADD_TYPES.has(m.madd_type)) return true
+    return false
+  }
   const maddOk = maddItems.length > 0
-    ? Math.round(maddItems.filter(m => m.zone === 'OK').length / maddItems.length * 100)
+    ? Math.round(maddItems.filter(_maddIsOk).length / maddItems.length * 100)
     : null
 
   // الوقف على رؤوس الآي سُنّة لا واجب. الوصل بين الآيات مشروع في حفص ويفعله
@@ -273,35 +310,8 @@ export default function ReportScreen({ report, surah, ayahStart, ayahEnd, onUplo
       if (w.status === 'MISSED') out.push({ kind: 'err', word: w.reference_word, rule: 'كلمة مفقودة', desc: 'لم تُقرأ هذه الكلمة.' })
       else if (w.status === 'SUBSTITUTION') out.push({ kind: 'warn', word: w.asr_word || w.reference_word, rule: 'استبدال كلمة', desc: `المرجع: ${w.reference_word}` })
     }
-    // 2. madd errors — يستثنى وجه القصر للمدود متعددة الأوجه
-    // (عارض للسكون 2/4/6، لين 2/4/6، منفصل 2/4/5، صلة كبرى 4/4/5).
-    // إذا وقعت المدة المقاسة قرب وجه القصر (≥40% من المرجع) فهي قراءة معتبرة
-    // ولا تُعرض كخطأ/تنبيه. التصنيف لـ"أقصر من وجه القصر" يحدث فقط عند
-    // ratio < 0.4 (دون الحدّ الأدنى المعتبر).
-    const _MULTI_OPTION_MADDS = new Set([
-      'MAD_ARID_LIS_SUKUN', 'MAD_AARID_LISUKOON',
-      'MAD_LAYN', 'MAD_LEEN',
-      'MAD_JAIZ_MUNFASIL', 'MAD_MUNFASIL',
-      'MAD_SILAH_KUBRA',
-    ])
-    for (const m of maddItems) {
-      if (out.length >= 5) break
-      const isMultiOption = _MULTI_OPTION_MADDS.has(m.madd_type)
-      // وجه القصر مقبول للمدود متعددة الأوجه — لا تُحوَّل إلى خطأ
-      if (isMultiOption && (m.zone === 'SHORT' || m.zone === 'CRITICAL_SHORT') && m.ratio >= 0.4) {
-        continue
-      }
-      if (m.zone === 'CRITICAL_SHORT' || m.verdict === 'ERROR') {
-        if (isMultiOption) {
-          out.push({ kind: 'warn', word: m.word_text || '—', rule: m.madd_label_ar, desc: 'أقصر من وجه القصر — تحقّق من إعطاء المد حقّه.' })
-        } else {
-          const hmRef = m.harakah_ms > 0 ? Math.round(m.ref_ms / m.harakah_ms) : 0
-          out.push({ kind: 'err', word: m.word_text || '—', rule: m.madd_label_ar, desc: `المطلوب حوالي ${arDigit(hmRef)} حركات.` })
-        }
-      } else if (m.zone === 'SHORT' || m.zone === 'LONG' || m.verdict === 'WARNING') {
-        out.push({ kind: 'warn', word: m.word_text || '—', rule: m.madd_label_ar, desc: m.zone === 'SHORT' ? 'المدّ أقل من المطلوب.' : 'المدّ أطول من المطلوب.' })
-      }
-    }
+    // ملاحظات المد لا تُعرض هنا — تظهر في تبويب "المد" والقسم السردي
+    // فقط، تجنباً للتكرار البصري تحت الآية.
     // 3. tafkhim issues
     for (const t of tafkhimIssues) {
       if (out.length >= 5) break
@@ -329,7 +339,6 @@ export default function ReportScreen({ report, surah, ayahStart, ayahEnd, onUplo
         <div className="rp-topbar">
           <a onClick={onHome}>← الرئيسية</a>
           <div className="rp-actions">
-            {grade && <span className="grade-badge">{grade}</span>}
             <button
               className="btn btn-ghost"
               style={{ padding: '8px 16px', fontSize: 12 }}
@@ -454,22 +463,6 @@ export default function ReportScreen({ report, surah, ayahStart, ayahEnd, onUplo
             </div>
           )}
 
-          {/* Actions */}
-          <div className="results-actions">
-            <button className="btn btn-primary" onClick={onUploadAnother}>
-              تَقْييم تِلاوة جَديدة <ArrowLeft />
-            </button>
-            <button
-              className="btn btn-ghost"
-              onClick={async () => {
-                if (reportRef.current) await exportToPDF(reportRef.current)
-              }}
-            >حفظ التقرير</button>
-            <button
-              className="btn btn-ghost"
-              onClick={() => setTab('audio')}
-            >اِسمَع التِّلاوة الصَّحيحة</button>
-          </div>
         </div>
 
         {/* Deep-data tabs */}
@@ -515,6 +508,23 @@ export default function ReportScreen({ report, surah, ayahStart, ayahEnd, onUplo
         {tab === 'details' && (
           <DetailsPanel report={report} waqfItems={waqfItems} />
         )}
+
+        {/* Footer actions — moved to bottom */}
+        <div className="report-footer-actions">
+          <button className="btn btn-primary" onClick={onUploadAnother}>
+            تَقْييم تِلاوة جَديدة <ArrowLeft />
+          </button>
+          <button
+            className="btn btn-ghost"
+            onClick={async () => {
+              if (reportRef.current) await exportToPDF(reportRef.current)
+            }}
+          >حفظ التقرير</button>
+          <button
+            className="btn btn-ghost"
+            onClick={() => setTab('audio')}
+          >اِسمَع التِّلاوة الصَّحيحة</button>
+        </div>
       </div>
     </div>
   )
@@ -579,9 +589,10 @@ function SummaryPanel({ hr, maqamDetection }: {
     { t: 'سلوك القارئ',     v: hr.behavior_section },
     { t: 'مقام التلاوة',    v: maqamSectionText },
   ].filter(s => s.v && s.v.trim())
+  const opening = stripLeadingBasmala(hr.opening ?? '')
   return (
     <div className="rp-panel narrative">
-      {hr.opening && <p>{hr.opening}</p>}
+      {opening && <p>{opening}</p>}
       {sections.map(s => (
         <div key={s.t} className="narr-block">
           <div className="narr-title">{s.t}</div>
@@ -989,13 +1000,6 @@ function DetailsPanel({
         </div>
       )}
 
-      {/* ASR text */}
-      {report.asr_text && (
-        <details>
-          <summary>النص المُستخرَج من التسجيل</summary>
-          <p className="asr">{report.asr_text}</p>
-        </details>
-      )}
     </div>
   )
 }
