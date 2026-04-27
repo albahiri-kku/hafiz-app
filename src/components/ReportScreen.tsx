@@ -186,23 +186,25 @@ export default function ReportScreen({ report, surah, ayahStart, ayahEnd, onUplo
       ? Math.round(waqfItems.filter(w => w.is_waqf).length / waqfItems.length * 100)
       : null)
 
-  // Tajweed % must EXCLUDE the MADD family. MADD has its own dedicated metric
-  // (المُدود) and including its raw events here double-counts. More importantly,
-  // every MAD_TABII letter emits a "مد طبيعي" event whose tajweed_check_status
-  // often defaults to WARNING when the engine couldn't acoustically verify the
-  // baseline duration — even though the recitation is correct. With ~23 such
-  // WARNING events on a short surah, the raw ratio collapsed to ~12% on what
-  // was actually a perfect tajweed performance (zero real ERRORs). Filter to
-  // non-MADD evaluated events only.
+  // Tajweed %: نعتمد على عدد الأخطاء فقط (ERROR). التحذيرات (WARNING) لا
+  // تُحتسب فاشلة لسببين:
+  //   (1) كل MAD_TABII يصدر حدث "مد طبيعي" بحالة WARNING افتراضياً عندما
+  //       لا يستطيع المحرك التحقق صوتياً من المدة الأساسية، حتى لو كانت
+  //       القراءة صحيحة. تجاهلها يجنّبنا "12%" على تلاوة بصفر أخطاء.
+  //   (2) WARNING عموماً = "للمراجعة"، لا "خطأ مؤكد". فقط ERROR هو خطأ
+  //       قاطع يستحق الخصم في النسبة المعروضة للقارئ.
+  // إذا لم يكن في الآية أي حدث تجويدي مُقيَّم → نعرض 100% (كل ما فُحص سليم)
+  // بدلاً من null المضلل (الذي ظهر سابقاً كـ "—" ويناقض شارة 23 تحذير).
   const _evaluatedTajweed = (report.tajweed_events ?? []).filter(
-    ev => (ev.tajweed_check_status === 'OK'
-        || ev.tajweed_check_status === 'WARNING'
-        || ev.tajweed_check_status === 'ERROR')
-        && ev.family !== 'MADD',
+    ev => ev.tajweed_check_status === 'OK'
+       || ev.tajweed_check_status === 'WARNING'
+       || ev.tajweed_check_status === 'ERROR',
   )
   const tajweedTotal = _evaluatedTajweed.length
-  const tajweedOk = _evaluatedTajweed.filter(ev => ev.tajweed_check_status === 'OK').length
-  const tajweedPct = tajweedTotal > 0 ? Math.round((tajweedOk / tajweedTotal) * 100) : null
+  const tajweedErrors = _evaluatedTajweed.filter(ev => ev.tajweed_check_status === 'ERROR').length
+  const tajweedPct = tajweedTotal > 0
+    ? Math.round((1 - tajweedErrors / tajweedTotal) * 100)
+    : 100
 
   // مَخارج الحُروف = نسبة سلامة التفخيم/الترقيق المقاسة (لام الجلالة + حروف
   // الاستعلاء). كانت هذه الخانة سابقاً تعرض دقة الكلمات (accuracy) — وهو
@@ -915,7 +917,18 @@ function DetailsPanel({
 }) {
   const behaviorEvents = report.behavior_events ?? []
   const tajweedEvents = report.tajweed_events ?? []
-  const warnEvents = tajweedEvents.filter(e => e.tajweed_check_status === 'WARNING' || e.tajweed_check_status === 'ERROR')
+  // عرض الشرائح: نُظهر الأخطاء (ERROR) من كل العائلات، والتحذيرات (WARNING)
+  // من العائلات غير-MADD فقط. تحذيرات MADD = ضوضاء صوتية (المحرك يُعلِّم
+  // "مد طبيعي" بـWARNING عندما يعجز عن تأكيده صوتياً، لا لأن القارئ أخطأ).
+  // كان عرضها يعطي "23 تحذير" متناقضاً مع نتيجة 98% ممتاز.
+  const _isReal = (e: TajweedEventEntry): boolean => {
+    if (e.tajweed_check_status === 'ERROR') return true
+    if (e.tajweed_check_status === 'WARNING' && e.family !== 'MADD') return true
+    return false
+  }
+  const warnEvents = tajweedEvents.filter(_isReal)
+  const _warnCount = warnEvents.filter(e => e.tajweed_check_status === 'WARNING').length
+  const _errCount = warnEvents.filter(e => e.tajweed_check_status === 'ERROR').length
 
   return (
     <div className="rp-panel">
@@ -947,8 +960,7 @@ function DetailsPanel({
         <div>
           <h3>ملاحظات التجويد</h3>
           <p style={{ color: 'var(--cream-dim)', fontSize: 12 }}>
-            تحذير {arDigit(tajweedEvents.filter(e => e.tajweed_check_status === 'WARNING').length)}
-            {' · '}خطأ {arDigit(tajweedEvents.filter(e => e.tajweed_check_status === 'ERROR').length)}
+            تحذير {arDigit(_warnCount)}{' · '}خطأ {arDigit(_errCount)}
           </p>
           {warnEvents.length > 0 && (
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
