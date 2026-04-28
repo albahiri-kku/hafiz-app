@@ -414,10 +414,20 @@
 }
 .hafiz-report .review-banner strong { color: #FFC857; font-weight: 600; }
 
-/* When the recitation is flagged for review, mute the score ring +
-   grade label so the reviewer's eye lands on the banner, not on a
-   confident-looking percentage. The ring still renders for transparency. */
-.hafiz-report .score-pod--review { opacity: 0.5; filter: grayscale(0.6); }
+/* When the recitation is flagged for review, mute the score-pod so the
+   reviewer's eye lands on the banner, not on a confident-looking number.
+   The score ring is replaced with a "—" glyph (see ReportScreen.tsx) and
+   the metrics row is hidden — those percentages are computed from the
+   same low-confidence per-word data the pipeline already rejected. */
+.hafiz-report .score-pod--review { opacity: 0.7; }
+.hafiz-report .score-ring-lg--unmeasured {
+  display: flex; align-items: center; justify-content: center;
+  border: 1px dashed var(--line-strong); border-radius: 50%;
+  background: rgba(201, 169, 97, 0.04);
+}
+.hafiz-report .score-ring-lg--unmeasured .score-num-lg {
+  position: static; font-size: 36px; color: var(--cream-dim); opacity: 0.6;
+}
 
 /* Audio panel */
 .hafiz-report audio { width: 100%; filter: invert(0.92) hue-rotate(180deg); border-radius: 8px; }

@@ -401,7 +401,17 @@ export default function ReportScreen({ report, surah, ayahStart, ayahEnd, onUplo
               </div>
             </div>
             <div className={`score-pod${reviewRequired ? ' score-pod--review' : ''}`}>
-              <ScoreRing pct={score ?? 0} />
+              {reviewRequired ? (
+                /* In review mode the per-section percentages are unreliable
+                   — showing "٩٨٪" next to "بحاجة لمراجعة" is contradictory.
+                   Replace the ring with a single "—" glyph so the eye lands
+                   on the grade label and the banner below. */
+                <div className="score-ring-lg score-ring-lg--unmeasured" aria-label="غير قابل للقياس">
+                  <div className="score-num-lg t-display">—</div>
+                </div>
+              ) : (
+                <ScoreRing pct={score ?? 0} />
+              )}
               <div className="score-label-lg">{grade || ''}</div>
             </div>
           </div>
@@ -418,20 +428,28 @@ export default function ReportScreen({ report, surah, ayahStart, ayahEnd, onUplo
             </div>
           )}
 
-          {/* Metrics */}
-          <div className="metrics-row">
-            {metrics.map(m => (
-              <div key={m.label} className={`metric metric-${m.kind}`}>
-                <div className="metric-head">
-                  <span>{m.label}</span>
-                  <b>{m.v != null ? `${arDigit(m.v)}٪` : '—'}</b>
+          {/* Metrics — hidden in review mode. Each percentage (مخارج/تجويد/مدود/
+              ترتيل) is computed from the same low-confidence per-word data
+              the pipeline already rejected. The audit case showed "٠٪ مخارج"
+              from a single failed lam-jalalah measurement and "١٠٠٪ تجويد"
+              alongside it — both technically correct but useless and
+              contradictory at the headline level. Hide them entirely while
+              the upstream verdict is uncertain. */}
+          {!reviewRequired && (
+            <div className="metrics-row">
+              {metrics.map(m => (
+                <div key={m.label} className={`metric metric-${m.kind}`}>
+                  <div className="metric-head">
+                    <span>{m.label}</span>
+                    <b>{m.v != null ? `${arDigit(m.v)}٪` : '—'}</b>
+                  </div>
+                  <div className="metric-bar">
+                    <div style={{ width: `${m.v ?? 0}%` }} />
+                  </div>
                 </div>
-                <div className="metric-bar">
-                  <div style={{ width: `${m.v ?? 0}%` }} />
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
 
           {/* Low quality warning */}
           {lowQualityAudio && (
