@@ -279,6 +279,13 @@ export default function ReportScreen({ report, surah, ayahStart, ayahEnd, onUplo
     score >= 90 ? 'ممتاز' : score >= 75 ? 'جيد جداً' : score >= 60 ? 'جيد' : 'يحتاج تحسين'
   )
 
+  // Pipeline-level review gate: when the backend has flagged the recitation
+  // for review (LOW_CONFIDENCE_MATCH textual similarity, FinalLabel=REVIEW_NEEDED,
+  // poor CPAE quality), the per-section score ring is unreliable and we must
+  // surface the review request prominently instead of "ممتاز ٩٨٪".
+  const reviewRequired = hr?.review_required === true
+  const reviewReason = hr?.review_reason ?? null
+
   const metrics: MetricData[] = [
     { label: 'مَخارج الحُروف', v: makharijPct, kind: kindFor(makharijPct, 85, 70) },
     { label: 'أحكام التَّجويد', v: tajweedPct,  kind: kindFor(tajweedPct, 80, 60) },
@@ -393,11 +400,23 @@ export default function ReportScreen({ report, surah, ayahStart, ayahEnd, onUplo
                 })()}
               </div>
             </div>
-            <div className="score-pod">
+            <div className={`score-pod${reviewRequired ? ' score-pod--review' : ''}`}>
               <ScoreRing pct={score ?? 0} />
               <div className="score-label-lg">{grade || ''}</div>
             </div>
           </div>
+
+          {/* Review-required banner: suppresses the encouraging headline when
+              the pipeline (final_label, similarity, CPAE quality) signals
+              low confidence. Renders ABOVE metrics so the reviewer reads it
+              before interpreting the per-section percentages. */}
+          {reviewRequired && (
+            <div className="review-banner" role="alert">
+              <strong>⚠ هذه التلاوة بحاجة لمراجعة دقيقة.</strong>{' '}
+              {reviewReason && <span>السبب: {reviewReason}.{' '}</span>}
+              قد لا تعكس النتائج الأداء الحقيقي — يُنصح بإعادة التسجيل في بيئة هادئة، أو عرضها على معلّم قرآن للمراجعة.
+            </div>
+          )}
 
           {/* Metrics */}
           <div className="metrics-row">
