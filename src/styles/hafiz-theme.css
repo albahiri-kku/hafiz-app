@@ -402,6 +402,23 @@
 }
 .hafiz-report .warn-banner strong { color: var(--red); font-weight: 600; }
 
+/* Review-required banner — pipeline-level low-confidence signal.
+   Distinct from warn-banner (audio-quality issue): amber/gold tone to
+   communicate "needs human review" rather than "system failure". */
+.hafiz-report .review-banner {
+  margin-top: 12px;
+  padding: 14px 16px; border-radius: 12px;
+  border: 1px solid rgba(217, 158, 45, 0.45);
+  background: rgba(217, 158, 45, 0.12); color: #F0D08A;
+  font-size: 13px; line-height: 1.7;
+}
+.hafiz-report .review-banner strong { color: #FFC857; font-weight: 600; }
+
+/* When the recitation is flagged for review, mute the score ring +
+   grade label so the reviewer's eye lands on the banner, not on a
+   confident-looking percentage. The ring still renders for transparency. */
+.hafiz-report .score-pod--review { opacity: 0.5; filter: grayscale(0.6); }
+
 /* Audio panel */
 .hafiz-report audio { width: 100%; filter: invert(0.92) hue-rotate(180deg); border-radius: 8px; }
 .hafiz-report .reciter-pills { display: flex; flex-wrap: wrap; gap: 8px; }

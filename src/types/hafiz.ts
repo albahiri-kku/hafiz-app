@@ -237,14 +237,20 @@ export interface HafizReport {
   maqam_section: string
   recommendations: string[]
   closing: string
-  overall_grade: string       // "ممتاز" | "جيد جداً" | "جيد" | "يحتاج تحسين"
-  reader_level: string        // "مبتدئ" | "متوسط" | "متقدم"
+  overall_grade: string       // "ممتاز" | "جيد جداً" | "جيد" | "يحتاج تحسين" | "بحاجة لمراجعة"
+  reader_level: string        // "مبتدئ" | "متوسط" | "متقدم" | "غير محدَّد"
   error_distribution: ErrorDistribution[]
   madd_consistency: {
     consistent: boolean
     violations: unknown[]
     message_ar: string
   } | null
+  // Set true when the upstream pipeline (FinalLabel, similarity score, CPAE
+  // quality) flags the recitation for review. The headline grade is then
+  // "بحاجة لمراجعة" — the per-section diagnostics still render but the UI
+  // must surface the review request prominently rather than the score ring.
+  review_required?: boolean
+  review_reason?: string | null
 }
 
 export interface EvaluateFileResponse {
