@@ -28,13 +28,31 @@ const toArabicIndic = (n: number): string =>
   String(n).split('').map(d => String.fromCharCode(0x0660 + +d)).join('')
 
 // ---------------------------------------------------------------------------
-// Font injection — QCF per-page woff2 (v1.2: ttf → woff2)
+// Font injection — QCF per-page woff2 (v1.3: API_BASE-aware URLs)
 // ---------------------------------------------------------------------------
 // Each page uses its own font-family name so browser caches each independently.
+// Font URLs are resolved against _API_BASE so they reach the API server even
+// when the SPA host (Vercel) does not serve /fonts/* (it rewrites to index.html).
 // Falls back to 'Scheherazade New' / serif when woff2 not loaded yet.
 
 const _injectedPages = new Set<number>()
 let _bsmlInjected = false
+let _surahNameInjected = false
+
+function injectSurahNameFont() {
+  if (_surahNameInjected || document.getElementById('mushaf-surah-name-font')) return
+  _surahNameInjected = true
+  const style = document.createElement('style')
+  style.id = 'mushaf-surah-name-font'
+  style.textContent = `
+    @font-face {
+      font-family: 'SurahNameV4';
+      src: url('${_API_BASE}/fonts/surah-name-v4.ttf') format('truetype');
+      font-display: block;
+    }
+  `
+  document.head.appendChild(style)
+}
 
 function injectPageFont(
   pageNumber: number,
@@ -42,8 +60,10 @@ function injectPageFont(
 ): string {
   const pageStr   = String(pageNumber).padStart(3, '0')
   const fontFamily = `QCFPage${pageStr}`
-  const fontUrl    = `/fonts/pages/QCF_P${pageStr}.woff2`
+  const fontUrl    = `${_API_BASE}/fonts/pages/QCF_P${pageStr}.woff2`
   const styleId    = `qcf-font-page-${pageStr}`
+
+  injectSurahNameFont()
 
   if (!document.getElementById(styleId)) {
     const style = document.createElement('style')
@@ -66,7 +86,7 @@ function injectPageFont(
     bsmlStyle.textContent = `
       @font-face {
         font-family: 'QCF_BSML';
-        src: url('/fonts/pages/QCF_BSML.woff2') format('woff2');
+        src: url('${_API_BASE}/fonts/pages/QCF_BSML.woff2') format('woff2');
         font-display: swap;
       }
     `
