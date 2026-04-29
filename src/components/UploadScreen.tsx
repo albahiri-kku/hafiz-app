@@ -1,6 +1,38 @@
-import { useState, useRef, useCallback, useEffect } from 'react'
+import { useState, useRef, useCallback, useEffect, useMemo } from 'react'
 import { SURAH_NAMES } from '../types/hafiz'
 import '../pages/LandingPage.css'
+
+// Strip diacritics + normalise alif/ya/ta variants so search matches typed letters
+// regardless of harakat or hamza form.
+function normArabic(s: string): string {
+  return s
+    .replace(/[ً-ْٰـ]/g, '')
+    .replace(/[إأآٱ]/g, 'ا')
+    .replace(/ى/g, 'ي')
+    .replace(/ة/g, 'ه')
+    .replace(/ؤ/g, 'و')
+    .replace(/ئ/g, 'ي')
+    .trim()
+}
+
+const SURAH_LIST: { n: number; name: string; norm: string }[] =
+  Array.from({ length: 114 }, (_, i) => i + 1).map((n) => {
+    const name = SURAH_NAMES[n]
+    return { n, name, norm: normArabic(name) }
+  })
+
+function filterSurahs(query: string) {
+  const q = query.trim()
+  if (!q) return SURAH_LIST
+  if (/^\d+$/.test(q)) {
+    return SURAH_LIST.filter((s) => String(s.n).startsWith(q))
+  }
+  const nq = normArabic(q)
+  if (!nq) return SURAH_LIST
+  const prefix = SURAH_LIST.filter((s) => s.norm.startsWith(nq))
+  const others = SURAH_LIST.filter((s) => !s.norm.startsWith(nq) && s.norm.includes(nq))
+  return [...prefix, ...others]
+}
 
 const SURAH_LENGTHS: Record<number, number> = {
   1:7,2:286,3:200,4:176,5:120,6:165,7:206,8:75,9:129,10:109,
@@ -334,20 +366,12 @@ export default function UploadScreen({ onEvaluate, onBack, loading, error }: Pro
               <div className={`scope-fields ${autoDetect ? 'dim' : ''}`}>
                 <div className="field">
                   <label htmlFor="ru-surah">السُّورة</label>
-                  <div className="select-wrap">
-                    <select
-                      id="ru-surah"
-                      value={surah}
-                      onChange={(e) => handleSurahChange(Number(e.target.value))}
-                      disabled={autoDetect}
-                      dir="rtl"
-                    >
-                      {Array.from({ length: 114 }, (_, i) => i + 1).map((s) => (
-                        <option key={s} value={s}>{s}. {SURAH_NAMES[s]}</option>
-                      ))}
-                    </select>
-                    <ChevronDown />
-                  </div>
+                  <SurahCombobox
+                    id="ru-surah"
+                    value={surah}
+                    onChange={handleSurahChange}
+                    disabled={autoDetect}
+                  />
                 </div>
                 <div className="field field-pair">
                   <div>
@@ -402,6 +426,153 @@ export default function UploadScreen({ onEvaluate, onBack, loading, error }: Pro
           </div>
         </div>
       </section>
+    </div>
+  )
+}
+
+/* ═══════════ Surah combobox ═══════════ */
+interface SurahComboboxProps {
+  id: string
+  value: number
+  onChange: (n: number) => void
+  disabled?: boolean
+}
+
+function SurahCombobox({ id, value, onChange, disabled }: SurahComboboxProps) {
+  const [open, setOpen] = useState(false)
+  const [query, setQuery] = useState('')
+  const [activeIdx, setActiveIdx] = useState(0)
+  const wrapRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
+  const listRef = useRef<HTMLUListElement>(null)
+
+  const selectedLabel = `${value}. ${SURAH_NAMES[value]}`
+  const filtered = useMemo(() => filterSurahs(query), [query])
+  const listboxId = `${id}-listbox`
+
+  useEffect(() => {
+    if (!open) return
+    const onDocClick = (e: MouseEvent) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) {
+        closeReset()
+      }
+    }
+    document.addEventListener('mousedown', onDocClick)
+    return () => document.removeEventListener('mousedown', onDocClick)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open])
+
+  useEffect(() => {
+    if (!open) return
+    const list = listRef.current
+    if (!list) return
+    const node = list.children[activeIdx] as HTMLElement | undefined
+    node?.scrollIntoView({ block: 'nearest' })
+  }, [activeIdx, open, filtered.length])
+
+  function openWith(initialQuery = '') {
+    if (disabled) return
+    setQuery(initialQuery)
+    const list = filterSurahs(initialQuery)
+    const sel = list.findIndex((s) => s.n === value)
+    setActiveIdx(sel >= 0 ? sel : 0)
+    setOpen(true)
+  }
+
+  function closeReset() {
+    setOpen(false)
+    setQuery('')
+  }
+
+  function commit(idx: number) {
+    const item = filtered[idx]
+    if (!item) return
+    onChange(item.n)
+    closeReset()
+    inputRef.current?.blur()
+  }
+
+  function onKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (disabled) return
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      if (!open) { openWith(); return }
+      setActiveIdx((i) => Math.min(filtered.length - 1, i + 1))
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      if (!open) { openWith(); return }
+      setActiveIdx((i) => Math.max(0, i - 1))
+    } else if (e.key === 'Enter') {
+      if (open && filtered.length > 0) {
+        e.preventDefault()
+        commit(activeIdx)
+      }
+    } else if (e.key === 'Escape') {
+      if (open) { e.preventDefault(); closeReset() }
+    } else if (e.key === 'Home' && open) {
+      e.preventDefault(); setActiveIdx(0)
+    } else if (e.key === 'End' && open) {
+      e.preventDefault(); setActiveIdx(filtered.length - 1)
+    }
+  }
+
+  function onChangeText(e: React.ChangeEvent<HTMLInputElement>) {
+    const v = e.target.value
+    setQuery(v)
+    if (!open) setOpen(true)
+    setActiveIdx(0)
+  }
+
+  return (
+    <div className="select-wrap surah-combo" ref={wrapRef}>
+      <input
+        id={id}
+        ref={inputRef}
+        type="text"
+        role="combobox"
+        aria-expanded={open}
+        aria-controls={listboxId}
+        aria-autocomplete="list"
+        aria-activedescendant={open && filtered[activeIdx] ? `${id}-opt-${filtered[activeIdx].n}` : undefined}
+        autoComplete="off"
+        spellCheck={false}
+        dir="rtl"
+        disabled={disabled}
+        value={open ? query : selectedLabel}
+        placeholder={open ? 'اكتب اسم السُّورة أو رقمها…' : ''}
+        onFocus={() => { if (!open) openWith() }}
+        onClick={() => { if (!open) openWith() }}
+        onChange={onChangeText}
+        onKeyDown={onKeyDown}
+      />
+      <ChevronDown />
+      {open && (
+        <ul
+          id={listboxId}
+          role="listbox"
+          ref={listRef}
+          className="surah-options"
+          dir="rtl"
+        >
+          {filtered.length === 0 && (
+            <li className="surah-empty">لا توجد سورة مطابقة</li>
+          )}
+          {filtered.map((s, i) => (
+            <li
+              key={s.n}
+              id={`${id}-opt-${s.n}`}
+              role="option"
+              aria-selected={s.n === value}
+              className={`surah-option${i === activeIdx ? ' active' : ''}${s.n === value ? ' selected' : ''}`}
+              onMouseDown={(e) => { e.preventDefault(); commit(i) }}
+              onMouseEnter={() => setActiveIdx(i)}
+            >
+              <span className="so-num">{s.n}</span>
+              <span className="so-name">{s.name}</span>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   )
 }
