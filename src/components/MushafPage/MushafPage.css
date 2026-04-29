@@ -123,9 +123,8 @@
   background: rgba(255, 215, 0, 0.08);
 }
 
-/* QCF per-page font applied via inline style (--qcf-page-font CSS var) */
+/* font-family is set inline on each WordToken (per-page QCF or fallback). */
 .mushaf-line.ayah-line {
-  font-family: var(--qcf-page-font), 'Scheherazade New', serif;
   text-align: justify;
   text-align-last: justify;
 }
@@ -133,7 +132,7 @@
 /* Basmallah: rendered via the per-page QCF font (cmap U+FB51..U+FB53).
    QCF_BSML was AAT-only, no Chrome/Firefox ligature support. */
 .mushaf-line.basmallah-line {
-  font-size: 1.6em;
+  font-size: 1.25em;
   text-align: center;
   /* font-family is set inline on the inner span (per-page QCF font). */
 }
@@ -144,17 +143,16 @@
   background: linear-gradient(135deg, #f5e6c8, #e8c878, #f5e6c8);
   border: 1px solid #C8860A;
   border-radius: 4px;
-  padding: 6px 20px;
+  padding: 4px 14px;
   text-align: center;
   /* Direct PUA codepoint rendering — SurahNameV4 cmap maps U+E000 (سُورَةُ
      ornament) and U+E000+N (surah-name calligraphy) to the Madinah-style
      glyphs. No ligature feature required. */
   font-family: 'SurahNameV4', serif;
-  font-size: 36px;
-  line-height: 1;
+  font-size: 26px;
+  line-height: 1.1;
   color: #2a1800;
   width: 100%;
-  letter-spacing: 0.05em;
 }
 
 /* ── Basmallah text (inside basmallah-line) ────────────────────────────── */
