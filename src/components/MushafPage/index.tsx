@@ -1,10 +1,16 @@
-// v1.3
+// v1.4
 import { useEffect, useRef, useState } from 'react'
 import type { MushafPageData, MushafLine, MushafWord, TrackingState } from './types'
+import { SURAH_NAMES } from '../../types/hafiz'
 import './MushafPage.css'
 
 const _API_BASE = import.meta.env.VITE_API_URL ?? ''
 const _API_KEY  = import.meta.env.VITE_API_KEY  ?? ''
+
+// Fallback Arabic-Quran font stack used while QCF page font is loading
+// or has failed. Uthmani Unicode renders correctly here, never as the
+// raw FB5x presentation forms (which would look like ٱپـپ — wrong).
+const FALLBACK_FONT_STACK = "'Amiri Quran', 'Scheherazade New', 'Traditional Arabic', serif"
 
 // ---------------------------------------------------------------------------
 // Juz names (1–30)
@@ -47,7 +53,7 @@ function injectSurahNameFont() {
     @font-face {
       font-family: 'SurahNameV4';
       src: url('${_API_BASE}/fonts/surah-name-v4.ttf') format('truetype');
-      font-display: block;
+      font-display: block;     /* hide PUA chars while loading — never show empty boxes */
     }
   `
   document.head.appendChild(style)
@@ -71,7 +77,11 @@ function injectPageFont(
       @font-face {
         font-family: '${fontFamily}';
         src: url('${fontUrl}') format('woff2');
-        font-display: swap;
+        /* block (not swap) — qpc PUA codepoints render as wrong Arabic letters
+           (e.g. ﭑ→ٱ, ﭒ→پ) in fallback fonts. Better to show nothing for ~3s
+           than to flash broken Arabic. The 2-second timer below switches to
+           Uthmani Unicode (which IS readable in fallback) before block expires. */
+        font-display: block;
       }
     `
     document.head.appendChild(style)
@@ -112,13 +122,17 @@ function SurahBanner({ surahNumber }: { surahNumber: number | null }) {
   if (!surahNumber) return null
   const prefixGlyph = String.fromCharCode(SURAH_PREFIX_CP)
   const nameGlyph   = String.fromCharCode(SURAH_PREFIX_CP + surahNumber)
+  // Use dir="ltr" + reversed source order: PUA codepoints have bidi class L,
+  // so within an RTL container they're rendered in source order anyway. To
+  // make Arabic readers (right→left) see "سُورَةُ <name>" we put the name
+  // glyph first (visual LEFT) and the prefix glyph last (visual RIGHT).
   return (
     <div
       className="mushaf-surah-banner"
-      dir="rtl"
-      aria-label={`سورة رقم ${surahNumber}`}
+      dir="ltr"
+      aria-label={`سورة ${SURAH_NAMES[surahNumber] || surahNumber}`}
     >
-      {prefixGlyph}{nameGlyph}
+      {nameGlyph}{prefixGlyph}
     </div>
   )
 }
@@ -142,15 +156,21 @@ function WordToken({ word, isCurrent, isError, fontFamily, useFallbackFont, onWo
     isError   ? 'word-error'   : '',
   ].filter(Boolean).join(' ')
 
-  // QPC glyph codes only render with the per-page font; fallback to uthmani Unicode
+  // QPC glyph codes only render with the per-page font; on fallback we render
+  // Uthmani Unicode in a generic Arabic-Quran font (NEVER the QCF page font,
+  // because in fallback the page font isn't loaded and the Uthmani text would
+  // render in browser default which is often serif Latin → broken).
   const display = useFallbackFont ? word.text : (word.text_qpc || word.text)
+  const fontStack = useFallbackFont
+    ? FALLBACK_FONT_STACK
+    : `'${fontFamily}', ${FALLBACK_FONT_STACK}`
 
   return (
     <span
       className={classes}
       data-word-key={word.word_key}
       data-word-index={word.word_index}
-      style={{ fontFamily: useFallbackFont ? undefined : `'${fontFamily}', 'Scheherazade New', serif` }}
+      style={{ fontFamily: fontStack }}
       onClick={() => onWordClick?.(word.word_key)}
       dir="rtl"
     >
@@ -191,16 +211,19 @@ function MushafLineRow({ line, tracking, fontFamily, useFallbackFont, onWordClic
   }
 
   if (line.line_type === 'basmallah') {
-    // The per-page QCF_P{NNN} font has the basmallah as three direct cmap
-    // glyphs at U+FB51..U+FB53 (the qpcV2 codepoints). Use that instead of
-    // QCF_BSML — QCF_BSML uses Apple AAT (`morx`) ligatures which Chrome
-    // and Firefox cannot render, producing empty .notdef boxes.
+    // Per-page QCF_P{NNN} font has the basmallah at U+FB51..U+FB53 (qpcV2);
+    // on fallback render the Uthmani Unicode basmallah in a real Arabic font
+    // — never the QCF page font, which would leak the FB5x codepoints to a
+    // generic font that interprets them as wrong Arabic letters (ٱ پ ـپ).
+    const fontStack = useFallbackFont
+      ? FALLBACK_FONT_STACK
+      : `'${fontFamily}', ${FALLBACK_FONT_STACK}`
     return (
       <div className={lineClasses}>
         <span
           className="mushaf-basmallah-text"
           dir="rtl"
-          style={{ fontFamily: useFallbackFont ? undefined : `'${fontFamily}', 'Scheherazade New', serif` }}
+          style={{ fontFamily: fontStack }}
         >
           {useFallbackFont
             ? 'بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ'
@@ -312,8 +335,15 @@ export default function MushafPage({ pageNumber, tracking, onWordClick }: Mushaf
   }, [pageNumber])
 
   // Page header info
-  const juzName       = pageData?.juz_number ? (JUZ_NAMES[pageData.juz_number] ?? `الجزء ${pageData.juz_number}`) : ''
-  const surahHeaderLine = pageData?.lines?.find(l => l.line_type === 'surah_name')
+  const juzName = pageData?.juz_number ? (JUZ_NAMES[pageData.juz_number] ?? `الجزء ${pageData.juz_number}`) : ''
+  // Show surah name on EVERY page (not only on pages that start a new surah).
+  // For middle-of-surah pages we derive it from the first ayah-line's surah
+  // number — this matches Madinah Mushaf headers which always carry the
+  // current surah name in the top corner.
+  const dominantSurah = pageData?.lines
+    ?.find(l => l.line_type === 'ayah' && l.surah_number)
+    ?.surah_number ?? null
+  const headerSurahName = dominantSurah ? (SURAH_NAMES[dominantSurah] ?? '') : ''
 
   if (loading) return <LoadingSkeleton />
 
@@ -337,9 +367,9 @@ export default function MushafPage({ pageNumber, tracking, onWordClick }: Mushaf
       {/* ── Header ──────────────────────────────────────────────────── */}
       <div className="mushaf-header">
         <span className="mushaf-header-juz">{juzName}</span>
-        {surahHeaderLine?.surah_number && (
+        {headerSurahName && (
           <span className="mushaf-header-surah">
-            سُورَةٌ {surahHeaderLine.surah_number}
+            سُورَةُ {headerSurahName}
           </span>
         )}
       </div>
