@@ -113,12 +113,21 @@ function injectPageFont(
 // ---------------------------------------------------------------------------
 // Surah name banner (SurahNameV4 ligature font)
 // ---------------------------------------------------------------------------
+// Renders "سُورَةُ <name>" in correct Arabic reading order:
+//   ┌──────────────────────────────────┐
+//   │     سُورَةُ   ﴿calligraphic name﴾  │
+//   └──────────────────────────────────┘
+// The whole banner flows RTL so the prefix sits on the right; the
+// calligraphic span flips to LTR locally because the SurahNameV4 font
+// expects "surah-icon surahNNN" in LTR character order to ligate into
+// the surah-name glyph.
 function SurahBanner({ surahNumber }: { surahNumber: number | null }) {
   if (!surahNumber) return null
   const ligature = `surah-icon surah${String(surahNumber).padStart(3, '0')}`
   return (
-    <div className="mushaf-surah-banner" dir="ltr" aria-label={`سورة رقم ${surahNumber}`}>
-      {ligature}
+    <div className="mushaf-surah-banner" dir="rtl" aria-label={`سورة رقم ${surahNumber}`}>
+      <span className="surah-banner-prefix">سُورَةُ</span>
+      <span className="surah-banner-name" dir="ltr">{ligature}</span>
     </div>
   )
 }
