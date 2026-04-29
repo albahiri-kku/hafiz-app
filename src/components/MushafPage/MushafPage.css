@@ -1,12 +1,9 @@
-/* v1.1 — MushafPage styles */
+/* v1.2 — MushafPage styles */
 
 /* ── Font Declarations ─────────────────────────────────────────────────── */
 
-@font-face {
-  font-family: 'SurahNameV4';
-  src: url('/fonts/surah-name-v4.ttf') format('truetype');
-  font-display: block;
-}
+/* SurahNameV4 (surah-name banner) is injected at runtime so we can resolve
+   the URL against the API base in production. See MushafPage/index.tsx. */
 
 /* QCF per-page font — injected dynamically by the component for each page */
 /* See: MushafPage/index.tsx injectPageFont() */
