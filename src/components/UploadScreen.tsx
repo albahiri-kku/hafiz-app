@@ -1,6 +1,16 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react'
 import { SURAH_NAMES } from '../types/hafiz'
+import MushafPage from './MushafPage'
+import type { TrackingState } from './MushafPage/types'
 import '../pages/LandingPage.css'
+
+const _API_BASE = import.meta.env.VITE_API_URL ?? ''
+const _API_KEY  = import.meta.env.VITE_API_KEY  ?? ''
+const EMPTY_TRACKING: TrackingState = {
+  current_word_key:   null,
+  error_word_keys:    [],
+  active_ayah_words:  [],
+}
 
 // Strip diacritics + normalise alif/ya/ta variants so search matches typed letters
 // regardless of harakat or hamza form.
@@ -77,8 +87,54 @@ export default function UploadScreen({ onEvaluate, onBack, loading, error }: Pro
   const chunksRef = useRef<Blob[]>([])
   const timerRef = useRef<number | null>(null)
 
+  // Mushaf overlay (live-record companion)
+  const [mushafOpen, setMushafOpen] = useState(false)
+  const [mushafPage, setMushafPage] = useState<number | null>(null)
+  const [mushafLoading, setMushafLoading] = useState(false)
+  const [mushafError, setMushafError] = useState<string | null>(null)
+
   const maxAyah = SURAH_LENGTHS[surah] ?? 1
   const MAX_RECORD_SEC = 300
+
+  // Resolve (surah, ayahStart) → mushaf page when overlay is open or about to open.
+  // The same page-state is the hook Phase 2 will use to auto-advance pages
+  // when live tracking detects the reciter finished the last word on the page.
+  useEffect(() => {
+    if (!mushafOpen) return
+    let cancelled = false
+    setMushafLoading(true)
+    setMushafError(null)
+    fetch(`${_API_BASE}/mushaf/ayah/${surah}/${ayahStart}`, {
+      headers: _API_KEY ? { 'X-API-Key': _API_KEY } : {},
+    })
+      .then((r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`)
+        return r.json() as Promise<{ page_number: number }>
+      })
+      .then((data) => {
+        if (cancelled) return
+        setMushafPage(data.page_number)
+        setMushafLoading(false)
+      })
+      .catch((err) => {
+        if (cancelled) return
+        setMushafError(err?.message || 'تعذّر تحديد الصفحة')
+        setMushafLoading(false)
+      })
+    return () => { cancelled = true }
+  }, [mushafOpen, surah, ayahStart])
+
+  function openMushaf() {
+    if (autoDetect) return
+    setMushafOpen(true)
+  }
+  function closeMushaf() {
+    setMushafOpen(false)
+  }
+  function gotoPage(p: number) {
+    if (p < 1 || p > 604) return
+    setMushafPage(p)
+  }
 
   function handleSurahChange(v: number) {
     setSurah(v); setAyahStart(1); setAyahEnd(1)
@@ -323,6 +379,15 @@ export default function UploadScreen({ onEvaluate, onBack, loading, error }: Pro
                       {recording ? 'جارٍ التسجيل… تكلّم الآن' : `اضغط لبدء التسجيل · حد أقصى ${MAX_RECORD_SEC / 60} دقائق`}
                     </div>
                     {recordError && <div className="rec-err">{recordError}</div>}
+                    <button
+                      type="button"
+                      className="mushaf-open-btn"
+                      onClick={openMushaf}
+                      disabled={autoDetect}
+                      title={autoDetect ? 'عطّل الاكتشاف التلقائي لاختيار صفحة محدّدة' : ''}
+                    >
+                      <BookGlyph /> اِفتَح المُصحَف لِلقِراءة
+                    </button>
                   </>
                 ) : (
                   <div className="rec-preview">
@@ -426,6 +491,83 @@ export default function UploadScreen({ onEvaluate, onBack, loading, error }: Pro
           </div>
         </div>
       </section>
+
+      {mushafOpen && (
+        <div className="mushaf-overlay" role="dialog" aria-modal="true" aria-label="عرض المصحف للقراءة">
+          <div className="mushaf-overlay-topbar">
+            <button
+              type="button"
+              className="mushaf-overlay-close"
+              onClick={closeMushaf}
+              aria-label="إغلاق المصحف"
+            >
+              ✕
+            </button>
+            <div className="mushaf-overlay-page-nav" role="group" aria-label="تنقل بين الصفحات">
+              <button
+                type="button"
+                className="page-nav-btn"
+                onClick={() => mushafPage && gotoPage(mushafPage - 1)}
+                disabled={!mushafPage || mushafPage <= 1}
+                aria-label="الصفحة السابقة"
+              >‹</button>
+              <span className="page-nav-label">
+                {mushafPage ? `صفحة ${mushafPage}` : '…'}
+              </span>
+              <button
+                type="button"
+                className="page-nav-btn"
+                onClick={() => mushafPage && gotoPage(mushafPage + 1)}
+                disabled={!mushafPage || mushafPage >= 604}
+                aria-label="الصفحة التالية"
+              >›</button>
+            </div>
+            <div className="mushaf-overlay-timer" aria-live="polite">
+              {recording && <span className="rec-dot" aria-hidden />}
+              <span>{fmt(elapsedSec)}</span>
+            </div>
+          </div>
+
+          <div className="mushaf-overlay-stage">
+            {mushafLoading && <div className="mushaf-overlay-status">جارٍ تحديد الصفحة…</div>}
+            {mushafError && (
+              <div className="mushaf-overlay-status err">
+                ⚠ {mushafError}
+              </div>
+            )}
+            {!mushafLoading && !mushafError && mushafPage !== null && (
+              <MushafPage
+                pageNumber={mushafPage}
+                tracking={EMPTY_TRACKING}
+                onPageChange={gotoPage}
+              />
+            )}
+          </div>
+
+          <div className="mushaf-overlay-bottombar">
+            {file ? (
+              <button
+                type="button"
+                className="mushaf-overlay-mic done"
+                onClick={closeMushaf}
+                aria-label="انتهيت — العودة"
+              >
+                <CheckGlyph /> انتَهَيت — أَغلِق المُصحَف
+              </button>
+            ) : (
+              <button
+                type="button"
+                className={`mushaf-overlay-mic ${recording ? 'live' : ''}`}
+                onClick={recording ? stopRecording : startRecording}
+                aria-label={recording ? 'إيقاف التسجيل' : 'بدء التسجيل'}
+              >
+                {recording ? <StopIcon /> : <MicGlyph />}
+              </button>
+            )}
+            {recordError && <div className="mushaf-overlay-err">{recordError}</div>}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -635,6 +777,21 @@ function ArrowLeft() {
   return (
     <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden>
       <path d="M9 3L4 7l5 4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+function BookGlyph() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
+      <path d="M2 3h4a2 2 0 012 2v8a2 2 0 00-2-2H2V3zM14 3h-4a2 2 0 00-2 2v8a2 2 0 012-2h4V3z"
+        stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
+    </svg>
+  )
+}
+function CheckGlyph() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
+      <path d="M3 8.5l3 3L13 4" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   )
 }
