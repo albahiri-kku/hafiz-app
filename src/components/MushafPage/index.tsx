@@ -181,19 +181,32 @@ function MushafLineRow({ line, tracking, fontFamily, useFallbackFont, onWordClic
     )
   }
 
-  // ayah line
+  // ayah line — group consecutive words by ayah so Phase 2 ayah-level
+  // tracking can target [data-ayah-key] without touching word spans.
+  const ayahGroups: { ayahKey: string; words: MushafWord[] }[] = []
+  for (const w of line.words) {
+    const ayahKey = w.word_key.split(':').slice(0, 2).join(':')
+    const last = ayahGroups[ayahGroups.length - 1]
+    if (last && last.ayahKey === ayahKey) last.words.push(w)
+    else ayahGroups.push({ ayahKey, words: [w] })
+  }
+
   return (
     <div className={lineClasses}>
-      {line.words.map(word => (
-        <WordToken
-          key={word.word_key}
-          word={word}
-          isCurrent={tracking.current_word_key === word.word_key}
-          isError={tracking.error_word_keys.includes(word.word_key)}
-          fontFamily={fontFamily}
-          useFallbackFont={useFallbackFont}
-          onWordClick={onWordClick}
-        />
+      {ayahGroups.map(g => (
+        <span key={g.ayahKey} className="mushaf-ayah" data-ayah-key={g.ayahKey}>
+          {g.words.map(word => (
+            <WordToken
+              key={word.word_key}
+              word={word}
+              isCurrent={tracking.current_word_key === word.word_key}
+              isError={tracking.error_word_keys.includes(word.word_key)}
+              fontFamily={fontFamily}
+              useFallbackFont={useFallbackFont}
+              onWordClick={onWordClick}
+            />
+          ))}
+        </span>
       ))}
     </div>
   )
