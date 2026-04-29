@@ -130,11 +130,12 @@
   text-align-last: justify;
 }
 
-/* Basmallah: QCF_BSML ligature font */
+/* Basmallah: rendered via the per-page QCF font (cmap U+FB51..U+FB53).
+   QCF_BSML was AAT-only, no Chrome/Firefox ligature support. */
 .mushaf-line.basmallah-line {
-  font-family: 'QCF_BSML', 'Scheherazade New', serif;
-  font-size: 1.4em;
+  font-size: 1.6em;
   text-align: center;
+  /* font-family is set inline on the inner span (per-page QCF font). */
 }
 
 /* ── Surah name banner ─────────────────────────────────────────────────── */
@@ -145,25 +146,15 @@
   border-radius: 4px;
   padding: 6px 20px;
   text-align: center;
-  font-family: 'Traditional Arabic', 'Scheherazade New', serif;
-  font-size: 22px;
+  /* Direct PUA codepoint rendering — SurahNameV4 cmap maps U+E000 (سُورَةُ
+     ornament) and U+E000+N (surah-name calligraphy) to the Madinah-style
+     glyphs. No ligature feature required. */
+  font-family: 'SurahNameV4', serif;
+  font-size: 36px;
+  line-height: 1;
   color: #2a1800;
   width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 14px;
-}
-.mushaf-surah-banner .surah-banner-prefix {
-  font-family: 'Traditional Arabic', 'Scheherazade New', serif;
-  font-size: 22px;
-  color: #2a1800;
-}
-.mushaf-surah-banner .surah-banner-name {
-  font-family: 'SurahNameV4', serif;
-  font-size: 30px;
-  color: #2a1800;
-  line-height: 1;
+  letter-spacing: 0.05em;
 }
 
 /* ── Basmallah text (inside basmallah-line) ────────────────────────────── */

@@ -36,7 +36,6 @@ const toArabicIndic = (n: number): string =>
 // Falls back to 'Scheherazade New' / serif when woff2 not loaded yet.
 
 const _injectedPages = new Set<number>()
-let _bsmlInjected = false
 let _surahNameInjected = false
 
 function injectSurahNameFont() {
@@ -78,20 +77,8 @@ function injectPageFont(
     document.head.appendChild(style)
   }
 
-  // Inject BSML font once
-  if (!_bsmlInjected && !document.getElementById('qcf-font-bsml')) {
-    _bsmlInjected = true
-    const bsmlStyle = document.createElement('style')
-    bsmlStyle.id = 'qcf-font-bsml'
-    bsmlStyle.textContent = `
-      @font-face {
-        font-family: 'QCF_BSML';
-        src: url('${_API_BASE}/fonts/pages/QCF_BSML.woff2') format('woff2');
-        font-display: swap;
-      }
-    `
-    document.head.appendChild(bsmlStyle)
-  }
+  // (Previously injected QCF_BSML here — removed: AAT-only font, no Chrome
+  // support. The per-page QCF font already contains the basmallah glyphs.)
 
   // Verify the font actually loads (2 s timeout → fallback)
   if (!_injectedPages.has(pageNumber)) {
@@ -111,23 +98,27 @@ function injectPageFont(
 }
 
 // ---------------------------------------------------------------------------
-// Surah name banner (SurahNameV4 ligature font)
+// Surah name banner (SurahNameV4 — direct PUA codepoint rendering)
 // ---------------------------------------------------------------------------
-// Renders "سُورَةُ <name>" in correct Arabic reading order:
-//   ┌──────────────────────────────────┐
-//   │     سُورَةُ   ﴿calligraphic name﴾  │
-//   └──────────────────────────────────┘
-// The whole banner flows RTL so the prefix sits on the right; the
-// calligraphic span flips to LTR locally because the SurahNameV4 font
-// expects "surah-icon surahNNN" in LTR character order to ligate into
-// the surah-name glyph.
+// SurahNameV4's cmap has each calligraphic glyph at a stable PUA codepoint:
+//   U+E000          → calligraphic سُورَةُ ornament
+//   U+E000+surahNum → calligraphic surah-name glyph (e.g. U+E00E = إبراهيم)
+// Render the codepoints directly instead of relying on `liga` GSUB triggers
+// (which were the original "surah-icon surahNNN" pattern) — that path was
+// fragile across browsers and produced empty .notdef boxes when ligatures
+// failed to activate.
+const SURAH_PREFIX_CP = 0xE000
 function SurahBanner({ surahNumber }: { surahNumber: number | null }) {
   if (!surahNumber) return null
-  const ligature = `surah-icon surah${String(surahNumber).padStart(3, '0')}`
+  const prefixGlyph = String.fromCharCode(SURAH_PREFIX_CP)
+  const nameGlyph   = String.fromCharCode(SURAH_PREFIX_CP + surahNumber)
   return (
-    <div className="mushaf-surah-banner" dir="rtl" aria-label={`سورة رقم ${surahNumber}`}>
-      <span className="surah-banner-prefix">سُورَةُ</span>
-      <span className="surah-banner-name" dir="ltr">{ligature}</span>
+    <div
+      className="mushaf-surah-banner"
+      dir="rtl"
+      aria-label={`سورة رقم ${surahNumber}`}
+    >
+      {prefixGlyph}{nameGlyph}
     </div>
   )
 }
@@ -200,11 +191,20 @@ function MushafLineRow({ line, tracking, fontFamily, useFallbackFont, onWordClic
   }
 
   if (line.line_type === 'basmallah') {
+    // The per-page QCF_P{NNN} font has the basmallah as three direct cmap
+    // glyphs at U+FB51..U+FB53 (the qpcV2 codepoints). Use that instead of
+    // QCF_BSML — QCF_BSML uses Apple AAT (`morx`) ligatures which Chrome
+    // and Firefox cannot render, producing empty .notdef boxes.
     return (
       <div className={lineClasses}>
-        {/* QCF_BSML renders the Basmallah as a single ligature glyph */}
-        <span className="mushaf-basmallah-text" dir="rtl">
-          بِسۡمِ ٱللَّهِ ٱلرَّحۡمَـٰنِ ٱلرَّحِيمِ
+        <span
+          className="mushaf-basmallah-text"
+          dir="rtl"
+          style={{ fontFamily: useFallbackFont ? undefined : `'${fontFamily}', 'Scheherazade New', serif` }}
+        >
+          {useFallbackFont
+            ? 'بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ'
+            : 'ﭑﭒﭓ'}
         </span>
       </div>
     )
