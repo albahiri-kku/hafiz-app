@@ -41,35 +41,43 @@
 }
 
 /* ── Header (sits in the top cartouche pockets of the frame artwork) ─── */
+/* Two notched cream cartouches at the top of the frame artwork — one on
+   the right (juz) and one on the left (surah). Cartouches are centred at
+   roughly y ≈ 25/765 ≈ 3.3% from the top, each ~25% wide centred at
+   x ≈ 26% / x ≈ 74%. */
 
 .mushaf-header {
   position: absolute;
-  top: 1.5%;
-  left: 12%;
-  right: 12%;
+  top: 2%;
+  left: 14%;
+  right: 14%;
   height: 4%;
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 0;
   font-family: 'Traditional Arabic', 'Amiri Quran', 'Scheherazade New', serif;
-  font-size: clamp(9px, 1.6vw, 14px);
+  font-size: clamp(9px, 1.4vw, 13px);
   color: #4a3000;
   direction: rtl;
   z-index: 2;
+  pointer-events: none;
 }
 
-.mushaf-header-juz   { text-align: right; }
-.mushaf-header-surah { text-align: left;  }
+.mushaf-header-juz   { text-align: center; flex: 1; }
+.mushaf-header-surah { text-align: center; flex: 1; }
 
 /* ── Frame body — content area inside the white interior of the artwork ─ */
+/* The artwork's inner white area is bounded by the ornamental border
+   (~5–6% on each side at the artwork's native 550×765). We pad slightly
+   more so glyphs don't kiss the ornaments. */
 
 .mushaf-frame {
   position: absolute;
-  top: 6.5%;
-  bottom: 6%;
-  left: 8%;
-  right: 8%;
+  top: 8%;
+  bottom: 7%;
+  left: 11%;
+  right: 11%;
   background: transparent;
   border: none;
   outline: none;
@@ -124,27 +132,32 @@
    font's qpcV1 codepoints are page-specific glyphs, not stable basmallah
    slots, so we render the Unicode text directly. */
 .mushaf-line.basmallah-line {
-  font-size: 1.6em;
+  font-size: 1.25em;
   text-align: center;
-  margin: 6px 0;
-  line-height: 1.6;
+  margin: 4px 0;
+  line-height: 1.5;
+  white-space: nowrap;       /* keep on one line */
+  overflow: hidden;
+  text-overflow: clip;
 }
-.mushaf-basmallah-text { color: inherit; }
+.mushaf-basmallah-text { color: inherit; display: inline-block; }
 
 /* ── Surah name banner ─────────────────────────────────────────────────── */
 
 .mushaf-surah-banner {
   /* Decorative ornamental banner image — the artwork's central cream
      cartouche is exactly where the surah-name calligraphy lands.
-     Source image is 688×86 (≈8:1) so we lock that aspect ratio and
-     stretch the artwork to the page width. */
+     Source image is 688×86 (≈8:1). Banner is intentionally narrower
+     than the body (88%) so it sits inset within the page frame instead
+     of touching the ornamental border. */
   background-image: url('/icons/surah-banner-bg.png');
   background-size: 100% 100%;
   background-repeat: no-repeat;
   background-position: center;
   aspect-ratio: 688 / 86;
-  width: 100%;
-  margin: 4px 0;
+  width: 88%;
+  max-width: 460px;
+  margin: 6px auto;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -154,10 +167,8 @@
      glyphs. No ligature feature required. The calligraphic name is
      positioned over the central cream cartouche of the artwork. */
   font-family: 'SurahNameV4', serif;
-  /* Use viewport-relative size so the calligraphy scales with the banner
-     height, keeping the name nicely tucked into the cartouche on every
-     screen width. ~32% of the banner's own height. */
-  font-size: clamp(14px, 4.6vw, 30px);
+  /* Slightly smaller — fits inside the banner cartouche on all widths. */
+  font-size: clamp(12px, 3.4vw, 24px);
   line-height: 1;
   color: #2a1800;
   text-align: center;
@@ -198,19 +209,22 @@
 }
 
 /* ── Page-number footer (sits in the bottom cartouche of the artwork) ─── */
+/* Bottom cartouche centred at y ≈ 740/765 ≈ 96.7% from top, so the number
+   needs to sit at ≈ 3% from the bottom edge. */
 
 .mushaf-page-number {
   position: absolute;
-  bottom: 1.6%;
+  bottom: 2.6%;
   left: 0;
   right: 0;
   text-align: center;
   font-family: 'Traditional Arabic', 'Amiri Quran', 'Scheherazade New', serif;
-  font-size: clamp(10px, 1.8vw, 14px);
+  font-size: clamp(9px, 1.4vw, 13px);
   color: #4a3000;
   margin: 0;
   padding: 0;
   z-index: 2;
+  pointer-events: none;
 }
 
 /* ── Font fallback warning (only shown if woff2 fails to load) ─────────── */
