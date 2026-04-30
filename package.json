@@ -1,8 +1,9 @@
 {
-  "name": "hafiz-app",
+  "name": "bot-archive",
   "private": true,
   "version": "1.0.0",
   "type": "module",
+  "description": "أرشيف وثائق أمانة مجلس الأمناء - Board of Trustees Secretariat Document Archive",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
@@ -11,16 +12,13 @@
   "dependencies": {
     "html2canvas": "^1.4.1",
     "jspdf": "^4.2.1",
-    "qrcode": "^1.5.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^7.14.0"
   },
   "devDependencies": {
-    "@types/qrcode": "^1.5.6",
     "@types/react": "^18.3.1",
     "@types/react-dom": "^18.3.1",
-    "@vitejs/plugin-basic-ssl": "^1.2.0",
     "@vitejs/plugin-react": "^4.3.1",
     "autoprefixer": "^10.4.20",
     "postcss": "^8.4.47",

@@ -1,7 +1,6 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
-import basicSsl from '@vitejs/plugin-basic-ssl'
 
 export default defineConfig({
   base: '/',
@@ -9,17 +8,16 @@ export default defineConfig({
     outDir: 'dist',
   },
   plugins: [
-    basicSsl(),
     react(),
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['icons/*.png'],
       manifest: {
-        name: 'حافِظ — تقييم التلاوة القرآنية',
-        short_name: 'حافِظ',
-        description: 'تطبيق تقييم التلاوة القرآنية بالذكاء الاصطناعي',
-        theme_color: '#1a4731',
-        background_color: '#fdf8f0',
+        name: 'أرشيف أمانة مجلس الأمناء',
+        short_name: 'أرشيف الأمانة',
+        description: 'الأرشيف الرسمي لوثائق أمانة مجلس الأمناء واللوائح الجامعية',
+        theme_color: '#163322',
+        background_color: '#faf7f1',
         display: 'standalone',
         orientation: 'portrait',
         lang: 'ar',
@@ -32,9 +30,7 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
-        // Apply new SW immediately so users see fixes without having to
-        // close every tab. Without these, vite-plugin-pwa's autoUpdate
-        // only takes effect on next cold start.
+        globIgnores: ['**/documents/**'],
         skipWaiting: true,
         clientsClaim: true,
         cleanupOutdatedCaches: true,
@@ -52,24 +48,16 @@ export default defineConfig({
               expiration: { maxAgeSeconds: 60 * 60 * 24 * 365 },
             },
           },
+          {
+            urlPattern: /\/documents\/.*/,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'archive-documents',
+              expiration: { maxAgeSeconds: 60 * 60 * 24 * 30 },
+            },
+          },
         ],
       },
     }),
   ],
-  server: {
-    proxy: {
-      '/api': {
-        target: 'http://localhost:8000',
-        changeOrigin: true,
-      },
-      '/mushaf': {
-        target: 'http://localhost:8000',
-        changeOrigin: true,
-      },
-      '/fonts': {
-        target: 'http://localhost:8000',
-        changeOrigin: true,
-      },
-    },
-  },
 })
