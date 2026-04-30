@@ -93,10 +93,11 @@
   background: rgba(255, 215, 0, 0.08);
 }
 
-/* font-family is set inline on each WordToken (per-page QCF or fallback). */
+/* font-family is set inline on each WordToken (per-page QCF or fallback).
+   Each ayah-line is centred — same alignment as the surah-name banner and
+   the basmallah, so the whole page reads as a single centred column. */
 .mushaf-line.ayah-line {
-  text-align: justify;
-  text-align-last: justify;
+  text-align: center;
 }
 
 /* Basmallah: Uthmani Unicode in Amiri Quran (set inline). The per-page QCF
