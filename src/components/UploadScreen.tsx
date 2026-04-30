@@ -96,21 +96,39 @@ export default function UploadScreen({ onEvaluate, onBack, loading, error }: Pro
   const maxAyah = SURAH_LENGTHS[surah] ?? 1
   const MAX_RECORD_SEC = 300
 
+  // Warm up Modal as soon as the user enters live-record mode — the API has
+  // scale-to-zero so the first cold request can take 30+ s. A cheap GET on
+  // /mushaf/stats wakes the worker so subsequent calls (page lookup + page
+  // fetch) hit a warm container and complete in <1 s.
+  useEffect(() => {
+    if (mode !== 'record') return
+    fetch(`${_API_BASE}/mushaf/stats`, {
+      headers: _API_KEY ? { 'X-API-Key': _API_KEY } : {},
+    }).catch(() => { /* warm-up is best-effort */ })
+  }, [mode])
+
   // Resolve (surah, ayahStart) → mushaf page when overlay is open or about to open.
   // The same page-state is the hook Phase 2 will use to auto-advance pages
   // when live tracking detects the reciter finished the last word on the page.
+  // Single retry to absorb a Modal cold start that races with the warm-up ping.
   useEffect(() => {
     if (!mushafOpen) return
     let cancelled = false
     setMushafLoading(true)
     setMushafError(null)
-    fetch(`${_API_BASE}/mushaf/ayah/${surah}/${ayahStart}`, {
-      headers: _API_KEY ? { 'X-API-Key': _API_KEY } : {},
-    })
-      .then((r) => {
+    const fetchPage = (attempt = 1): Promise<{ page_number: number }> =>
+      fetch(`${_API_BASE}/mushaf/ayah/${surah}/${ayahStart}`, {
+        headers: _API_KEY ? { 'X-API-Key': _API_KEY } : {},
+      }).then((r) => {
         if (!r.ok) throw new Error(`HTTP ${r.status}`)
         return r.json() as Promise<{ page_number: number }>
+      }).catch((err) => {
+        if (attempt >= 2) throw err
+        return new Promise<{ page_number: number }>((resolve, reject) =>
+          setTimeout(() => fetchPage(attempt + 1).then(resolve).catch(reject), 1000)
+        )
       })
+    fetchPage()
       .then((data) => {
         if (cancelled) return
         setMushafPage(data.page_number)

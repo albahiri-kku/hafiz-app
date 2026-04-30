@@ -211,10 +211,15 @@ function MushafLineRow({ line, tracking, fontFamily, useFallbackFont, onWordClic
   }
 
   if (line.line_type === 'basmallah') {
-    // Per-page QCF_P{NNN} font has the basmallah at U+FB51..U+FB53 (qpcV2);
-    // on fallback render the Uthmani Unicode basmallah in a real Arabic font
-    // — never the QCF page font, which would leak the FB5x codepoints to a
-    // generic font that interprets them as wrong Arabic letters (ٱ پ ـپ).
+    // Per-page QCF_P{NNN} font has the basmallah as three glyphs at the qpcV1
+    // codepoints (`#"!` = U+0023, U+0022, U+0021) — these are the slots the
+    // V1 page font reserves for the calligraphic basmallah pieces, identical
+    // across every page that contains a basmallah line. The qpcV2 codepoints
+    // (U+FB51..U+FB53) point to QCF_BSML which uses Apple AAT layout that
+    // Chrome/Firefox can't render, so we don't use them.
+    // On fallback render the Uthmani Unicode basmallah in a real Arabic-Quran
+    // font — never the QCF page font (its 0x21..0x23 are page-specific
+    // glyphs, not the basmallah on pages without a basmala line).
     const fontStack = useFallbackFont
       ? FALLBACK_FONT_STACK
       : `'${fontFamily}', ${FALLBACK_FONT_STACK}`
@@ -227,7 +232,7 @@ function MushafLineRow({ line, tracking, fontFamily, useFallbackFont, onWordClic
         >
           {useFallbackFont
             ? 'بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ'
-            : 'ﭑﭒﭓ'}
+            : '#"!'}
         </span>
       </div>
     )
@@ -300,7 +305,8 @@ export default function MushafPage({ pageNumber, tracking, onWordClick }: Mushaf
   const [fontFamily, setFontFamily]     = useState('Scheherazade New')
   const abortRef = useRef<AbortController | null>(null)
 
-  // Fetch page data + inject font
+  // Fetch page data + inject font, with one retry on transient failure to
+  // survive Modal cold starts (~30 s on first request after scale-to-zero).
   useEffect(() => {
     setLoading(true)
     setError(null)
@@ -311,14 +317,23 @@ export default function MushafPage({ pageNumber, tracking, onWordClick }: Mushaf
     const ctrl = new AbortController()
     abortRef.current = ctrl
 
-    fetch(`${_API_BASE}/mushaf/page/${pageNumber}`, {
-      signal: ctrl.signal,
-      headers: _API_KEY ? { 'X-API-Key': _API_KEY } : {},
-    })
-      .then(res => {
+    const fetchPage = (attempt = 1): Promise<MushafPageData> =>
+      fetch(`${_API_BASE}/mushaf/page/${pageNumber}`, {
+        signal: ctrl.signal,
+        headers: _API_KEY ? { 'X-API-Key': _API_KEY } : {},
+      }).then(res => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
         return res.json() as Promise<MushafPageData>
+      }).catch(err => {
+        if (err?.name === 'AbortError' || attempt >= 2) throw err
+        // 1 s pause, then one retry — covers transient network blips and
+        // a Modal worker that was still warming up on the first try.
+        return new Promise<MushafPageData>((resolve, reject) =>
+          setTimeout(() => fetchPage(attempt + 1).then(resolve).catch(reject), 1000)
+        )
       })
+
+    fetchPage()
       .then(data => {
         setPageData(data)
         setLoading(false)
