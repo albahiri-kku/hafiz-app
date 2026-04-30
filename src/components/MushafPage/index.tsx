@@ -43,6 +43,7 @@ const toArabicIndic = (n: number): string =>
 
 const _injectedPages = new Set<number>()
 let _surahNameInjected = false
+let _basmallahInjected = false
 
 function injectSurahNameFont() {
   if (_surahNameInjected || document.getElementById('mushaf-surah-name-font')) return
@@ -59,6 +60,26 @@ function injectSurahNameFont() {
   document.head.appendChild(style)
 }
 
+/* QCF_P001 doubles as the "basmallah font": its cmap maps U+FB51..U+FB54
+   to the four calligraphic word-glyphs of the basmallah (the same glyphs
+   the body of Al-Fatihah ayah 1 uses). We inject it once, named
+   QCFBasmallah, so every basmala line on every page can render the
+   basmallah identically to Al-Fatihah's first ayah. */
+function injectBasmallahFont() {
+  if (_basmallahInjected || document.getElementById('qcf-font-basmallah')) return
+  _basmallahInjected = true
+  const style = document.createElement('style')
+  style.id = 'qcf-font-basmallah'
+  style.textContent = `
+    @font-face {
+      font-family: 'QCFBasmallah';
+      src: url('${_API_BASE}/fonts/pages/QCF_P001.woff2') format('woff2');
+      font-display: block;
+    }
+  `
+  document.head.appendChild(style)
+}
+
 function injectPageFont(
   pageNumber: number,
   onFail: () => void,
@@ -69,6 +90,7 @@ function injectPageFont(
   const styleId    = `qcf-font-page-${pageStr}`
 
   injectSurahNameFont()
+  injectBasmallahFont()
 
   if (!document.getElementById(styleId)) {
     const style = document.createElement('style')
@@ -211,27 +233,24 @@ function MushafLineRow({ line, tracking, fontFamily, useFallbackFont, onWordClic
   }
 
   if (line.line_type === 'basmallah') {
-    // Render basmallah as plain Uthmani Unicode in a Quran-style font.
-    //
-    // Why not use the per-page QCF font? Each per-page font's cmap maps
-    // codepoints sequentially to that page's content glyphs — `#"!`
-    // (U+0023..U+0021, the qpcV1 slot) on page 106 returns the first three
-    // word-glyphs of An-Nisa 4:176, NOT the basmallah. Different page,
-    // different glyphs at the same codepoints. Only the dedicated QCF_BSML
-    // font has stable basmallah codepoints, but it uses Apple AAT which
-    // Chrome and Firefox can't render.
-    //
-    // Falling back to Uthmani Unicode in Amiri Quran / Scheherazade gives
-    // every browser a clean, dignified basmallah that visually matches the
-    // first ayah of Al-Fatihah (also rendered in the same Uthmani style).
+    // Render the basmallah using the four calligraphic word-glyphs from
+    // QCF_P001 — exactly the same glyphs that render Al-Fatihah's first
+    // ayah words 1:1:1..1:1:4. Codepoints come straight from the dataset's
+    // qpcV1 for those words: U+FB51 (بِسْمِ) U+FB52 (ٱللَّهِ) U+FB53
+    // (ٱلرَّحْمَـٰنِ) U+FB54 (ٱلرَّحِيمِ). Visually identical to the
+    // basmallah on Al-Fatihah, on every page that has a basmala line.
     return (
       <div className={lineClasses}>
         <span
           className="mushaf-basmallah-text"
           dir="rtl"
-          style={{ fontFamily: FALLBACK_FONT_STACK }}
+          style={{ fontFamily: useFallbackFont
+            ? FALLBACK_FONT_STACK
+            : `'QCFBasmallah', ${FALLBACK_FONT_STACK}` }}
         >
-          بِسْمِ ٱللَّهِ ٱلرَّحْمَـٰنِ ٱلرَّحِيمِ
+          {useFallbackFont
+            ? 'بِسْمِ ٱللَّهِ ٱلرَّحْمَـٰنِ ٱلرَّحِيمِ'
+            : 'ﭑﭒﭓﭔ'}
         </span>
       </div>
     )
