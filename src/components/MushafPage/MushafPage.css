@@ -13,94 +13,81 @@
 /* See: MushafPage/index.tsx injectPageFont() */
 
 /* ── Page wrapper ──────────────────────────────────────────────────────── */
+/* The page uses the supplied Madinah-Mushaf-style ornamental artwork as its
+   background. The artwork is 550×765 (ratio ~0.72) with two cartouche-shaped
+   pockets at the top (juz on the right, surah-name on the left) and a
+   single page-number pocket at the bottom centre. Header / footer / body
+   are positioned absolutely so they land in those pockets and the inner
+   white area regardless of viewport width. */
 
 .mushaf-page {
   width: 100%;
   max-width: 720px;
   margin: 0 auto;
-  background: #fff;
+  background-image: url('/icons/page-frame-clean.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  background-color: transparent;
+  aspect-ratio: 550 / 765;
+  position: relative;
   /* Explicit dark text — overrides cream color inherited from .hafiz-landing */
   color: #1a1208;
-  font-size: 24px;
+  /* Body font-size scales with the page width so the Madinah glyphs stay
+     proportional to the artwork frame at every viewport size. */
+  font-size: clamp(14px, 3.4vw, 24px);
   direction: rtl;
   font-family: 'QCFPageFont', 'Amiri Quran', 'Scheherazade New', 'Traditional Arabic', serif;
   box-sizing: border-box;
-  padding: 0 10px;
 }
 
-/* ── Header (above frame) ──────────────────────────────────────────────── */
+/* ── Header (sits in the top cartouche pockets of the frame artwork) ─── */
 
 .mushaf-header {
+  position: absolute;
+  top: 1.5%;
+  left: 12%;
+  right: 12%;
+  height: 4%;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 4px 12px;
-  font-family: 'Traditional Arabic', 'Scheherazade New', serif;
-  font-size: 13px;
+  padding: 0;
+  font-family: 'Traditional Arabic', 'Amiri Quran', 'Scheherazade New', serif;
+  font-size: clamp(9px, 1.6vw, 14px);
   color: #4a3000;
   direction: rtl;
+  z-index: 2;
 }
 
-.mushaf-header-juz {
-  text-align: right;
-}
+.mushaf-header-juz   { text-align: right; }
+.mushaf-header-surah { text-align: left;  }
 
-.mushaf-header-surah {
-  text-align: left;
-}
-
-/* ── Ornamental frame ──────────────────────────────────────────────────── */
+/* ── Frame body — content area inside the white interior of the artwork ─ */
 
 .mushaf-frame {
-  border: 3px solid #8B4513;
-  outline: 1px solid #C8860A;
-  outline-offset: -6px;
-  padding: 12px 16px;
-  position: relative;
-  background: #fff;
-}
-
-.mushaf-frame::before,
-.mushaf-frame::after {
-  content: '❖';
   position: absolute;
-  color: #C8860A;
-  font-size: 14px;
-  line-height: 1;
+  top: 6.5%;
+  bottom: 6%;
+  left: 8%;
+  right: 8%;
+  background: transparent;
+  border: none;
+  outline: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
 }
+/* Old corner ornaments are no longer needed — the frame artwork carries
+   its own filigree. */
+.mushaf-frame::before, .mushaf-frame::after,
+.mushaf-frame-inner::before, .mushaf-frame-inner::after { content: none; }
 
-.mushaf-frame::before {
-  top: 3px;
-  right: 4px;
-}
-
-.mushaf-frame::after {
-  top: 3px;
-  left: 4px;
-}
-
-/* Bottom corners via pseudo-elements on inner child */
 .mushaf-frame-inner {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
   position: relative;
-}
-
-.mushaf-frame-inner::before,
-.mushaf-frame-inner::after {
-  content: '❖';
-  position: absolute;
-  color: #C8860A;
-  font-size: 14px;
-  line-height: 1;
-}
-
-.mushaf-frame-inner::before {
-  bottom: -10px;
-  right: 4px;
-}
-
-.mushaf-frame-inner::after {
-  bottom: -10px;
-  left: 4px;
 }
 
 /* ── Lines ─────────────────────────────────────────────────────────────── */
@@ -210,15 +197,20 @@
   color: #CC0000;
 }
 
-/* ── Page number footer ────────────────────────────────────────────────── */
+/* ── Page-number footer (sits in the bottom cartouche of the artwork) ─── */
 
 .mushaf-page-number {
+  position: absolute;
+  bottom: 1.6%;
+  left: 0;
+  right: 0;
   text-align: center;
-  font-family: 'Traditional Arabic', 'Scheherazade New', serif;
-  font-size: 14px;
+  font-family: 'Traditional Arabic', 'Amiri Quran', 'Scheherazade New', serif;
+  font-size: clamp(10px, 1.8vw, 14px);
   color: #4a3000;
-  margin-top: 8px;
-  margin-bottom: 4px;
+  margin: 0;
+  padding: 0;
+  z-index: 2;
 }
 
 /* ── Font fallback warning (only shown if woff2 fails to load) ─────────── */
