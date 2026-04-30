@@ -912,7 +912,7 @@
   flex: 1; min-height: 0;
   overflow-y: auto; -webkit-overflow-scrolling: touch;
   display: flex; align-items: flex-start; justify-content: center;
-  padding: 20px 12px 28px;
+  padding: 12px 8px 20px;
   direction: ltr;
 }
 /* Center the mushaf-page itself, not a stretched wrapper. */
@@ -920,7 +920,7 @@
   margin: 0 auto;
 }
 .mushaf-overlay-stage > * {
-  width: 100%; max-width: 720px;
+  width: 100%; max-width: 760px;
 }
 .mushaf-overlay-status {
   margin-top: 60px; font-size: 14px; color: #6b6452;
