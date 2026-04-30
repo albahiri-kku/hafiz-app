@@ -13,96 +13,59 @@
 /* See: MushafPage/index.tsx injectPageFont() */
 
 /* ── Page wrapper ──────────────────────────────────────────────────────── */
-/* The page uses the supplied Madinah-Mushaf-style ornamental artwork as its
-   background. The artwork is 550×765 (ratio ~0.72) with two cartouche-shaped
-   pockets at the top (juz on the right, surah-name on the left) and a
-   single page-number pocket at the bottom centre. Header / footer / body
-   are positioned absolutely so they land in those pockets and the inner
-   white area regardless of viewport width. */
+/* Plain page — no decorative frame. Earlier iterations tried using the
+   Madinah Mushaf ornamental frame as a background image; it caused
+   alignment headaches at every viewport size and was rolled back per
+   the user's decision. The page is now a clean white surface; only the
+   surah-name banner keeps its ornamental artwork. */
 
 .mushaf-page {
   width: 100%;
   max-width: 720px;
   margin: 0 auto;
-  background-image: url('/icons/page-frame-clean.png');
-  background-size: 100% 100%;
-  background-repeat: no-repeat;
-  background-color: transparent;
-  aspect-ratio: 550 / 765;
-  position: relative;
+  background: #fff;
   /* Explicit dark text — overrides cream color inherited from .hafiz-landing */
   color: #1a1208;
-  /* Body font-size scales with the page width so the Madinah glyphs stay
-     proportional to the artwork frame at every viewport size. */
   font-size: clamp(14px, 3.4vw, 24px);
   direction: rtl;
   font-family: 'QCFPageFont', 'Amiri Quran', 'Scheherazade New', 'Traditional Arabic', serif;
   box-sizing: border-box;
+  padding: 14px 18px;
+  border-radius: 6px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.08);
 }
 
-/* ── Header (sits in the top cartouche pockets of the frame artwork) ─── */
-/* Measured directly from the 550×765 frame artwork:
-     right cartouche (juz)  centre ≈ x 455 / y 22  → 82.7% / 2.9%
-     left cartouche (surah) centre ≈ x  95 / y 22  → 17.3% / 2.9%
-   Each cartouche is roughly 22% wide. We absolutely-position the two
-   spans independently so each lands precisely over its cartouche
-   regardless of the parent's flex layout. */
+/* ── Header (juz on right, surah on left, simple flex row) ──────────── */
 
 .mushaf-header {
-  /* No layout — children are individually positioned. */
-  display: contents;
-}
-
-.mushaf-header-juz,
-.mushaf-header-surah {
-  position: absolute;
-  top: 1.7%;
-  width: 22%;
-  text-align: center;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 4px 8px;
+  margin-bottom: 6px;
+  border-bottom: 1px solid rgba(168, 130, 50, 0.25);
   font-family: 'Traditional Arabic', 'Amiri Quran', 'Scheherazade New', serif;
-  font-size: clamp(8px, 1.2vw, 12px);
+  font-size: clamp(11px, 1.6vw, 14px);
   color: #4a3000;
   direction: rtl;
-  z-index: 2;
-  pointer-events: none;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
-.mushaf-header-juz   { right: 5.7%; }   /* centre at 16.7% from right ≈ 83.3% from left */
-.mushaf-header-surah { left:  5.7%; }   /* centre at 16.7% from left */
 
-/* ── Frame body — content area inside the white interior of the artwork ─ */
-/* The artwork has an ornamental border ~7% thick on the sides and ~6% on
-   the top/bottom, but the cartouches and pockets eat into that further.
-   To make sure no glyph ever touches the filigree AND the last ayah-line
-   doesn't get covered by the bottom cartouche, we pad more aggressively
-   on the bottom. */
+.mushaf-header-juz   { text-align: right; }
+.mushaf-header-surah { text-align: left;  }
+
+/* ── Frame body — just a content wrapper now, no border/ornaments ────── */
 
 .mushaf-frame {
-  position: absolute;
-  top: 8%;
-  bottom: 9%;
-  left: 13%;
-  right: 13%;
   background: transparent;
   border: none;
   outline: none;
   padding: 0;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
+  position: relative;
 }
-/* Old corner ornaments are no longer needed — the frame artwork carries
-   its own filigree. */
 .mushaf-frame::before, .mushaf-frame::after,
 .mushaf-frame-inner::before, .mushaf-frame-inner::after { content: none; }
 
 .mushaf-frame-inner {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-around;
   position: relative;
 }
 
@@ -216,23 +179,16 @@
   color: #CC0000;
 }
 
-/* ── Page-number footer (sits in the bottom cartouche of the artwork) ─── */
-/* Bottom cartouche centred at y ≈ 740/765 ≈ 96.7% from top, so the number
-   needs to sit at ≈ 3% from the bottom edge. */
+/* ── Page-number footer ────────────────────────────────────────────────── */
 
 .mushaf-page-number {
-  position: absolute;
-  bottom: 2.6%;
-  left: 0;
-  right: 0;
   text-align: center;
   font-family: 'Traditional Arabic', 'Amiri Quran', 'Scheherazade New', serif;
-  font-size: clamp(9px, 1.4vw, 13px);
+  font-size: clamp(11px, 1.6vw, 14px);
   color: #4a3000;
-  margin: 0;
-  padding: 0;
-  z-index: 2;
-  pointer-events: none;
+  margin: 10px 0 4px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(168, 130, 50, 0.25);
 }
 
 /* ── Font fallback warning (only shown if woff2 fails to load) ─────────── */
