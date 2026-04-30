@@ -1,6 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { ArchiveDocument } from '../../types/archive';
-import { downloadDocument } from '../../utils/download';
+import {
+  downloadDocument,
+  getOfficePreviewUrl,
+  isPdfFile,
+  isWordFile,
+} from '../../utils/download';
 import { formatHijri } from '../../utils/format';
 import { getCategory } from '../../data/categories';
 import {
@@ -10,6 +15,7 @@ import {
   IconShield,
   IconCalendar,
   IconExternal,
+  IconFile,
 } from './Icons';
 
 interface Props {
@@ -20,6 +26,10 @@ interface Props {
 
 export default function DocumentViewer({ doc, open, onClose }: Props) {
   const [downloading, setDownloading] = useState<'pdf' | 'word' | null>(null);
+
+  const officeUrl = useMemo(() => getOfficePreviewUrl(doc), [doc]);
+  const isWord = isWordFile(doc);
+  const isPdf = isPdfFile(doc);
 
   useEffect(() => {
     if (!open) return;
@@ -69,7 +79,7 @@ export default function DocumentViewer({ doc, open, onClose }: Props) {
       onClick={onClose}
     >
       <div
-        className="bg-white w-full md:max-w-4xl md:max-h-[90vh] md:rounded-2xl
+        className="bg-white w-full md:max-w-4xl md:max-h-[92vh] md:rounded-2xl
                    shadow-2xl flex flex-col overflow-hidden animate-slide-up"
         onClick={(e) => e.stopPropagation()}
       >
@@ -106,14 +116,26 @@ export default function DocumentViewer({ doc, open, onClose }: Props) {
               {doc.classification}
             </span>
           )}
+          {isWord && (
+            <span className="badge bg-blue-50 text-blue-700">
+              <IconFile size={12} />
+              Word .docx
+            </span>
+          )}
+          {isPdf && (
+            <span className="badge bg-red-50 text-red-700">
+              <IconFile size={12} />
+              PDF
+            </span>
+          )}
         </div>
 
         <div className="flex-1 overflow-y-auto bg-sand-50 px-4 py-6">
           <div
             id="doc-print-area"
-            className="bg-white shadow-soft max-w-3xl mx-auto p-8 md:p-12 prose-doc"
+            className="bg-white shadow-soft max-w-3xl mx-auto p-6 md:p-10 prose-doc"
           >
-            <div className="text-center border-b-2 border-royal-700 pb-6 mb-8">
+            <div className="text-center border-b-2 border-royal-700 pb-6 mb-6">
               <div className="text-xs tracking-widest text-royal-700 mb-2">
                 المملكة العربية السعودية — أمانة مجلس الأمناء
               </div>
@@ -130,12 +152,45 @@ export default function DocumentViewer({ doc, open, onClose }: Props) {
               <p className="!my-0 text-sm">{doc.summary}</p>
             </div>
 
-            {doc.filePath ? (
+            {isPdf && doc.filePath ? (
               <iframe
                 src={doc.filePath}
                 title={doc.title}
                 className="w-full h-[70vh] border border-royal-100 rounded-lg"
               />
+            ) : isWord && officeUrl ? (
+              <div>
+                <iframe
+                  src={officeUrl}
+                  title={doc.title}
+                  className="w-full h-[70vh] border border-royal-100 rounded-lg bg-white"
+                />
+                <p className="text-xs text-ink-700/60 mt-2 text-center">
+                  معاينة عبر Office Online — قد تستغرق ثوانٍ للتحميل
+                </p>
+              </div>
+            ) : isWord && doc.filePath ? (
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-6 text-center">
+                <IconFile size={42} className="text-blue-700 mx-auto mb-3" />
+                <h3 className="text-blue-900 mb-2">وثيقة Word رسمية</h3>
+                <p className="text-sm text-blue-900/80 mb-4 leading-relaxed">
+                  هذه وثيقة بصيغة Microsoft Word. لاستعراضها بالتنسيق الكامل
+                  والشعارات والجداول، نزّل النسخة الأصلية:
+                </p>
+                <button
+                  onClick={() => handleDownload('word')}
+                  disabled={downloading !== null}
+                  className="btn-primary"
+                >
+                  <IconDownload size={16} />
+                  {downloading === 'word'
+                    ? 'جارٍ التجهيز…'
+                    : 'تنزيل النسخة الأصلية (Word)'}
+                </button>
+                <p className="text-[11px] text-blue-900/60 mt-3">
+                  ستُتاح المعاينة المباشرة تلقائياً عند نشر الموقع على الإنترنت.
+                </p>
+              </div>
             ) : doc.body && doc.body.length > 0 ? (
               doc.body.map((s, i) => (
                 <div key={i}>
@@ -145,14 +200,7 @@ export default function DocumentViewer({ doc, open, onClose }: Props) {
               ))
             ) : (
               <div className="text-center text-ink-700/60 py-10">
-                <p>المحتوى التفصيلي للوثيقة سيُتاح قريباً.</p>
-                <p className="text-xs mt-2">
-                  يمكن للأمانة رفع نسخة الـ PDF الأصلية إلى مجلد
-                  <code className="mx-1 px-1.5 py-0.5 bg-sand-100 rounded font-mono">
-                    public/documents/
-                  </code>
-                  لتظهر تلقائياً.
-                </p>
+                <p>المحتوى التفصيلي للوثيقة سيُتاح عند ربط الملف الأصلي.</p>
               </div>
             )}
 
@@ -190,15 +238,19 @@ export default function DocumentViewer({ doc, open, onClose }: Props) {
           <button
             onClick={() => handleDownload('word')}
             disabled={downloading !== null}
-            className="btn-outline"
+            className={isWord ? 'btn-primary' : 'btn-outline'}
           >
             <IconDownload size={16} />
-            {downloading === 'word' ? 'جارٍ التجهيز…' : 'تنزيل Word'}
+            {downloading === 'word'
+              ? 'جارٍ التجهيز…'
+              : isWord
+                ? 'تنزيل النسخة الأصلية (Word)'
+                : 'تنزيل Word'}
           </button>
           <button
             onClick={() => handleDownload('pdf')}
             disabled={downloading !== null}
-            className="btn-primary"
+            className={isPdf ? 'btn-primary' : 'btn-outline'}
           >
             <IconDownload size={16} />
             {downloading === 'pdf' ? 'جارٍ التجهيز…' : 'تنزيل PDF'}

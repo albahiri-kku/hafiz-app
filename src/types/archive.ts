@@ -1,12 +1,12 @@
 export type CategoryId =
   | 'foundation'
+  | 'policies'
+  | 'committees'
+  | 'performance'
   | 'meetings'
   | 'decisions'
-  | 'reports'
+  | 'disclosures'
   | 'membership'
-  | 'finance'
-  | 'committees'
-  | 'policies'
   | 'correspondence'
   | 'regulations';
 

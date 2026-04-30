@@ -14,7 +14,11 @@ import {
   IconFile,
   IconShield,
 } from '../../components/archive/Icons';
-import { downloadDocument } from '../../utils/download';
+import {
+  downloadDocument,
+  isPdfFile,
+  isWordFile,
+} from '../../utils/download';
 
 export default function DocumentDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -150,20 +154,28 @@ export default function DocumentDetailPage() {
                 استعراض الوثيقة
               </button>
               <button
-                onClick={() => handleDownload('pdf')}
-                disabled={downloading !== null}
-                className="btn-outline w-full"
-              >
-                <IconDownload size={16} />
-                {downloading === 'pdf' ? 'جارٍ التجهيز…' : 'تنزيل PDF'}
-              </button>
-              <button
                 onClick={() => handleDownload('word')}
                 disabled={downloading !== null}
-                className="btn-outline w-full"
+                className={`${isWordFile(doc) ? 'btn-primary' : 'btn-outline'} w-full`}
               >
                 <IconDownload size={16} />
-                {downloading === 'word' ? 'جارٍ التجهيز…' : 'تنزيل Word'}
+                {downloading === 'word'
+                  ? 'جارٍ التجهيز…'
+                  : isWordFile(doc)
+                    ? 'تنزيل النسخة الأصلية (Word)'
+                    : 'تنزيل Word'}
+              </button>
+              <button
+                onClick={() => handleDownload('pdf')}
+                disabled={downloading !== null}
+                className={`${isPdfFile(doc) ? 'btn-primary' : 'btn-outline'} w-full`}
+              >
+                <IconDownload size={16} />
+                {downloading === 'pdf'
+                  ? 'جارٍ التجهيز…'
+                  : isPdfFile(doc)
+                    ? 'تنزيل النسخة الأصلية (PDF)'
+                    : 'تنزيل PDF'}
               </button>
               {doc.sourceUrl && (
                 <a
