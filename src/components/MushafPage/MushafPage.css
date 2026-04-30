@@ -41,49 +41,57 @@
 }
 
 /* ── Header (sits in the top cartouche pockets of the frame artwork) ─── */
-/* Two notched cream cartouches at the top of the frame artwork — one on
-   the right (juz) and one on the left (surah). Cartouches are centred at
-   roughly y ≈ 25/765 ≈ 3.3% from the top, each ~25% wide centred at
-   x ≈ 26% / x ≈ 74%. */
+/* Measured directly from the 550×765 frame artwork:
+     right cartouche (juz)  centre ≈ x 455 / y 22  → 82.7% / 2.9%
+     left cartouche (surah) centre ≈ x  95 / y 22  → 17.3% / 2.9%
+   Each cartouche is roughly 22% wide. We absolutely-position the two
+   spans independently so each lands precisely over its cartouche
+   regardless of the parent's flex layout. */
 
 .mushaf-header {
+  /* No layout — children are individually positioned. */
+  display: contents;
+}
+
+.mushaf-header-juz,
+.mushaf-header-surah {
   position: absolute;
-  top: 2%;
-  left: 14%;
-  right: 14%;
-  height: 4%;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0;
+  top: 1.7%;
+  width: 22%;
+  text-align: center;
   font-family: 'Traditional Arabic', 'Amiri Quran', 'Scheherazade New', serif;
-  font-size: clamp(9px, 1.4vw, 13px);
+  font-size: clamp(8px, 1.2vw, 12px);
   color: #4a3000;
   direction: rtl;
   z-index: 2;
   pointer-events: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-
-.mushaf-header-juz   { text-align: center; flex: 1; }
-.mushaf-header-surah { text-align: center; flex: 1; }
+.mushaf-header-juz   { right: 5.7%; }   /* centre at 16.7% from right ≈ 83.3% from left */
+.mushaf-header-surah { left:  5.7%; }   /* centre at 16.7% from left */
 
 /* ── Frame body — content area inside the white interior of the artwork ─ */
-/* The artwork's inner white area is bounded by the ornamental border
-   (~5–6% on each side at the artwork's native 550×765). We pad slightly
-   more so glyphs don't kiss the ornaments. */
+/* The artwork has an ornamental border ~7% thick on the sides and ~6% on
+   the top/bottom, but the cartouches and pockets eat into that further.
+   To make sure no glyph ever touches the filigree AND the last ayah-line
+   doesn't get covered by the bottom cartouche, we pad more aggressively
+   on the bottom. */
 
 .mushaf-frame {
   position: absolute;
   top: 8%;
-  bottom: 7%;
-  left: 11%;
-  right: 11%;
+  bottom: 9%;
+  left: 13%;
+  right: 13%;
   background: transparent;
   border: none;
   outline: none;
   padding: 0;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 /* Old corner ornaments are no longer needed — the frame artwork carries
    its own filigree. */
