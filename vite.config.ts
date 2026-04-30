@@ -32,6 +32,12 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        // Apply new SW immediately so users see fixes without having to
+        // close every tab. Without these, vite-plugin-pwa's autoUpdate
+        // only takes effect on next cold start.
+        skipWaiting: true,
+        clientsClaim: true,
+        cleanupOutdatedCaches: true,
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com/,
