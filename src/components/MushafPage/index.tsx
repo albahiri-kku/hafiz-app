@@ -211,28 +211,27 @@ function MushafLineRow({ line, tracking, fontFamily, useFallbackFont, onWordClic
   }
 
   if (line.line_type === 'basmallah') {
-    // Per-page QCF_P{NNN} font has the basmallah as three glyphs at the qpcV1
-    // codepoints (`#"!` = U+0023, U+0022, U+0021) — these are the slots the
-    // V1 page font reserves for the calligraphic basmallah pieces, identical
-    // across every page that contains a basmallah line. The qpcV2 codepoints
-    // (U+FB51..U+FB53) point to QCF_BSML which uses Apple AAT layout that
-    // Chrome/Firefox can't render, so we don't use them.
-    // On fallback render the Uthmani Unicode basmallah in a real Arabic-Quran
-    // font — never the QCF page font (its 0x21..0x23 are page-specific
-    // glyphs, not the basmallah on pages without a basmala line).
-    const fontStack = useFallbackFont
-      ? FALLBACK_FONT_STACK
-      : `'${fontFamily}', ${FALLBACK_FONT_STACK}`
+    // Render basmallah as plain Uthmani Unicode in a Quran-style font.
+    //
+    // Why not use the per-page QCF font? Each per-page font's cmap maps
+    // codepoints sequentially to that page's content glyphs — `#"!`
+    // (U+0023..U+0021, the qpcV1 slot) on page 106 returns the first three
+    // word-glyphs of An-Nisa 4:176, NOT the basmallah. Different page,
+    // different glyphs at the same codepoints. Only the dedicated QCF_BSML
+    // font has stable basmallah codepoints, but it uses Apple AAT which
+    // Chrome and Firefox can't render.
+    //
+    // Falling back to Uthmani Unicode in Amiri Quran / Scheherazade gives
+    // every browser a clean, dignified basmallah that visually matches the
+    // first ayah of Al-Fatihah (also rendered in the same Uthmani style).
     return (
       <div className={lineClasses}>
         <span
           className="mushaf-basmallah-text"
           dir="rtl"
-          style={{ fontFamily: fontStack }}
+          style={{ fontFamily: FALLBACK_FONT_STACK }}
         >
-          {useFallbackFont
-            ? 'بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ'
-            : '#"!'}
+          بِسْمِ ٱللَّهِ ٱلرَّحْمَـٰنِ ٱلرَّحِيمِ
         </span>
       </div>
     )

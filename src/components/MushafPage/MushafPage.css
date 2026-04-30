@@ -1,6 +1,10 @@
-/* v1.2 — MushafPage styles */
+/* v1.3 — MushafPage styles */
 
 /* ── Font Declarations ─────────────────────────────────────────────────── */
+
+/* Amiri Quran — high-quality Arabic Quran font for the basmallah line and
+   the fallback path when the QCF per-page font hasn't loaded yet. */
+@import url('https://fonts.googleapis.com/css2?family=Amiri+Quran&display=swap');
 
 /* SurahNameV4 (surah-name banner) is injected at runtime so we can resolve
    the URL against the API base in production. See MushafPage/index.tsx. */
@@ -12,16 +16,16 @@
 
 .mushaf-page {
   width: 100%;
-  max-width: 600px;
+  max-width: 720px;
   margin: 0 auto;
   background: #fff;
   /* Explicit dark text — overrides cream color inherited from .hafiz-landing */
   color: #1a1208;
-  font-size: 22px;
+  font-size: 24px;
   direction: rtl;
-  font-family: 'QCFPageFont', 'KFGQPC Uthman Taha Naskh', 'Scheherazade New', 'Traditional Arabic', serif;
+  font-family: 'QCFPageFont', 'Amiri Quran', 'Scheherazade New', 'Traditional Arabic', serif;
   box-sizing: border-box;
-  padding: 0 8px;
+  padding: 0 10px;
 }
 
 /* ── Header (above frame) ──────────────────────────────────────────────── */
@@ -129,30 +133,40 @@
   text-align-last: justify;
 }
 
-/* Basmallah: rendered via the per-page QCF font (cmap U+FB51..U+FB53).
-   QCF_BSML was AAT-only, no Chrome/Firefox ligature support. */
+/* Basmallah: Uthmani Unicode in Amiri Quran (set inline). The per-page QCF
+   font's qpcV1 codepoints are page-specific glyphs, not stable basmallah
+   slots, so we render the Unicode text directly. */
 .mushaf-line.basmallah-line {
-  font-size: 1.25em;
+  font-size: 1.6em;
   text-align: center;
-  /* font-family is set inline on the inner span (per-page QCF font). */
+  margin: 6px 0;
+  line-height: 1.6;
 }
+.mushaf-basmallah-text { color: inherit; }
 
 /* ── Surah name banner ─────────────────────────────────────────────────── */
 
 .mushaf-surah-banner {
-  background: linear-gradient(135deg, #f5e6c8, #e8c878, #f5e6c8);
-  border: 1px solid #C8860A;
-  border-radius: 4px;
-  padding: 4px 14px;
+  /* Decorative double-frame styled after the printed Madinah Mushaf
+     surah-header banner — outer dark frame, inner light cream panel. */
+  background:
+    linear-gradient(135deg, #f5e6c8 0%, #e8c878 50%, #f5e6c8 100%);
+  border: 2px solid #4a3000;
+  outline: 1px solid #C8860A;
+  outline-offset: -5px;
+  border-radius: 6px;
+  padding: 8px 24px;
   text-align: center;
   /* Direct PUA codepoint rendering — SurahNameV4 cmap maps U+E000 (سُورَةُ
      ornament) and U+E000+N (surah-name calligraphy) to the Madinah-style
      glyphs. No ligature feature required. */
   font-family: 'SurahNameV4', serif;
-  font-size: 26px;
-  line-height: 1.1;
+  font-size: 28px;
+  line-height: 1.2;
   color: #2a1800;
   width: 100%;
+  position: relative;
+  margin: 4px 0;
 }
 
 /* ── Basmallah text (inside basmallah-line) ────────────────────────────── */
