@@ -32,15 +32,15 @@ export default function RegulationsPage() {
   return (
     <div>
       <section className="bg-royal-900 text-white">
-        <div className="container-page py-14">
+        <div className="container-page py-10 sm:py-14">
           <div className="flex items-center gap-2 text-gold-300 text-xs mb-3">
             <IconShield size={14} />
             <span>المصدر الرسمي: مجلس شؤون الجامعات</span>
           </div>
-          <h1 className="text-3xl md:text-4xl text-white mb-3">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl text-white mb-3">
             اللوائح والأنظمة الجامعية
           </h1>
-          <p className="text-royal-100/90 max-w-3xl leading-relaxed mb-6">
+          <p className="text-sm sm:text-base text-royal-100/90 max-w-3xl leading-relaxed mb-6">
             مرجعية موحّدة لجميع اللوائح والأنظمة الصادرة عن مجلس شؤون الجامعات،
             مع روابط مباشرة إلى المصدر الرسمي للاطلاع والتنزيل.
           </p>
@@ -56,8 +56,8 @@ export default function RegulationsPage() {
         </div>
       </section>
 
-      <section className="container-page py-10">
-        <div className="grid md:grid-cols-[1fr_280px] gap-6 mb-8">
+      <section className="container-page py-8 sm:py-10">
+        <div className="grid md:grid-cols-[1fr_280px] gap-4 sm:gap-6 mb-6 sm:mb-8">
           <SearchBar
             value={q}
             onChange={setQ}

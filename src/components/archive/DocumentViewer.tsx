@@ -133,7 +133,7 @@ export default function DocumentViewer({ doc, open, onClose }: Props) {
         <div className="flex-1 overflow-y-auto bg-sand-50 px-4 py-6">
           <div
             id="doc-print-area"
-            className="bg-white shadow-soft max-w-3xl mx-auto p-6 md:p-10 prose-doc"
+            className="bg-white shadow-soft max-w-3xl mx-auto p-4 sm:p-6 md:p-10 prose-doc"
           >
             <div className="text-center border-b-2 border-royal-700 pb-6 mb-6">
               <div className="text-xs tracking-widest text-royal-700 mb-2">
@@ -156,14 +156,14 @@ export default function DocumentViewer({ doc, open, onClose }: Props) {
               <iframe
                 src={doc.filePath}
                 title={doc.title}
-                className="w-full h-[70vh] border border-royal-100 rounded-lg"
+                className="w-full h-[60vh] sm:h-[70vh] border border-royal-100 rounded-lg"
               />
             ) : isWord && officeUrl ? (
               <div>
                 <iframe
                   src={officeUrl}
                   title={doc.title}
-                  className="w-full h-[70vh] border border-royal-100 rounded-lg bg-white"
+                  className="w-full h-[60vh] sm:h-[70vh] border border-royal-100 rounded-lg bg-white"
                 />
                 <p className="text-xs text-ink-700/60 mt-2 text-center">
                   معاينة عبر Office Online — قد تستغرق ثوانٍ للتحميل
@@ -219,38 +219,39 @@ export default function DocumentViewer({ doc, open, onClose }: Props) {
           </div>
         </div>
 
-        <div className="border-t border-royal-100 px-6 py-3 bg-white flex flex-wrap items-center justify-end gap-2">
+        <div className="border-t border-royal-100 px-3 sm:px-6 py-3 bg-white grid grid-cols-2 sm:flex sm:flex-wrap items-stretch sm:items-center sm:justify-end gap-2 pb-safe">
           {doc.sourceUrl && (
             <a
               href={doc.sourceUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="btn-outline"
+              className="btn-outline justify-center"
             >
               <IconExternal size={16} />
-              المصدر
+              <span className="hidden sm:inline">المصدر</span>
+              <span className="sm:hidden">المصدر</span>
             </a>
           )}
-          <button onClick={handlePrint} className="btn-outline">
+          <button onClick={handlePrint} className="btn-outline justify-center">
             <IconPrint size={16} />
             طباعة
           </button>
           <button
             onClick={() => handleDownload('word')}
             disabled={downloading !== null}
-            className={isWord ? 'btn-primary' : 'btn-outline'}
+            className={`${isWord ? 'btn-primary' : 'btn-outline'} justify-center col-span-2 sm:col-span-1`}
           >
             <IconDownload size={16} />
             {downloading === 'word'
               ? 'جارٍ التجهيز…'
               : isWord
-                ? 'تنزيل النسخة الأصلية (Word)'
+                ? 'النسخة الأصلية (Word)'
                 : 'تنزيل Word'}
           </button>
           <button
             onClick={() => handleDownload('pdf')}
             disabled={downloading !== null}
-            className={isPdf ? 'btn-primary' : 'btn-outline'}
+            className={`${isPdf ? 'btn-primary' : 'btn-outline'} justify-center col-span-2 sm:col-span-1`}
           >
             <IconDownload size={16} />
             {downloading === 'pdf' ? 'جارٍ التجهيز…' : 'تنزيل PDF'}

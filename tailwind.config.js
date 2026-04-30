@@ -4,9 +4,9 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        ui: ['"Readex Pro"', '"Noto Sans Arabic"', 'sans-serif'],
-        display: ['"Reem Kufi"', '"Noto Sans Arabic"', 'serif'],
-        mono: ['"JetBrains Mono"', 'monospace'],
+        ui: ['Tajawal', '"Noto Sans Arabic"', 'system-ui', 'sans-serif'],
+        display: ['Tajawal', '"Noto Sans Arabic"', 'system-ui', 'sans-serif'],
+        mono: ['"JetBrains Mono"', 'ui-monospace', 'monospace'],
       },
       colors: {
         royal: {

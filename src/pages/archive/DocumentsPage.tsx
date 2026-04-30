@@ -43,60 +43,93 @@ export default function DocumentsPage() {
     });
   }, [active, query, sort]);
 
+  const allCategoryButtons = (
+    <>
+      <button
+        onClick={() => setActive('')}
+        className={`shrink-0 lg:w-full text-right px-3 py-2 rounded-lg text-sm flex items-center justify-between gap-2 transition-colors ${
+          active === ''
+            ? 'bg-royal-700 text-white'
+            : 'bg-white border border-royal-100 lg:border-0 hover:bg-royal-50 text-ink-800'
+        }`}
+      >
+        <span className="flex items-center gap-2 whitespace-nowrap">
+          <IconFolder size={16} />
+          الكل
+        </span>
+        <span className="text-xs opacity-70">
+          {formatNumber(documents.length)}
+        </span>
+      </button>
+      {categories.map((cat) => {
+        const count = documents.filter((d) => d.category === cat.id).length;
+        const selected = active === cat.id;
+        return (
+          <button
+            key={cat.id}
+            onClick={() => setActive(cat.id)}
+            className={`shrink-0 lg:w-full text-right px-3 py-2 rounded-lg text-sm flex items-center justify-between gap-2 lg:mt-0.5 transition-colors ${
+              selected
+                ? 'bg-royal-700 text-white'
+                : 'bg-white border border-royal-100 lg:border-0 hover:bg-royal-50 text-ink-800'
+            }`}
+          >
+            <span className="whitespace-nowrap lg:truncate">{cat.name}</span>
+            <span className="text-xs opacity-70">{formatNumber(count)}</span>
+          </button>
+        );
+      })}
+    </>
+  );
+
   return (
-    <div className="container-page py-10">
-      <header className="mb-8">
+    <div className="container-page py-8 sm:py-10">
+      <header className="mb-6 sm:mb-8">
         <div className="text-xs text-royal-700 mb-2">الأرشيف</div>
-        <h1 className="text-3xl mb-2">الوثائق</h1>
-        <p className="text-ink-700/70">
+        <h1 className="text-2xl sm:text-3xl mb-2">الوثائق</h1>
+        <p className="text-sm sm:text-base text-ink-700/70">
           استعرض جميع وثائق الأمانة وفق التصنيف، أو ابحث بالعنوان أو رقم المرجع.
         </p>
       </header>
 
+      {/* Mobile filters */}
+      <div className="lg:hidden space-y-3 mb-6">
+        <SearchBar value={query} onChange={setQuery} />
+        <div
+          className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 scroll-smooth"
+          style={{ scrollbarWidth: 'thin' }}
+        >
+          {allCategoryButtons}
+        </div>
+        <div className="flex items-center justify-between gap-2 text-sm">
+          <span className="text-ink-700/70">
+            <span className="text-royal-900 font-semibold">
+              {formatNumber(filtered.length)}
+            </span>{' '}
+            وثيقة
+          </span>
+          <select
+            value={sort}
+            onChange={(e) => setSort(e.target.value as typeof sort)}
+            className="input !py-1.5 !text-xs !w-auto"
+          >
+            <option value="newest">الأحدث أولاً</option>
+            <option value="oldest">الأقدم أولاً</option>
+            <option value="title">حسب العنوان</option>
+          </select>
+        </div>
+      </div>
+
       <div className="grid lg:grid-cols-[260px_1fr] gap-6">
-        <aside className="space-y-4">
+        {/* Desktop sidebar */}
+        <aside className="hidden lg:block space-y-4">
           <SearchBar value={query} onChange={setQuery} />
 
           <div className="card p-3">
             <div className="px-2 py-1 text-xs text-ink-700/60 font-semibold">
               التصنيفات
             </div>
-            <button
-              onClick={() => setActive('')}
-              className={`w-full text-right px-3 py-2 rounded-lg text-sm flex items-center justify-between ${
-                active === ''
-                  ? 'bg-royal-700 text-white'
-                  : 'hover:bg-royal-50 text-ink-800'
-              }`}
-            >
-              <span className="flex items-center gap-2">
-                <IconFolder size={16} />
-                الكل
-              </span>
-              <span className="text-xs opacity-70">
-                {formatNumber(documents.length)}
-              </span>
-            </button>
-            {categories.map((cat) => {
-              const count = documents.filter((d) => d.category === cat.id).length;
-              const selected = active === cat.id;
-              return (
-                <button
-                  key={cat.id}
-                  onClick={() => setActive(cat.id)}
-                  className={`w-full text-right px-3 py-2 rounded-lg text-sm flex items-center justify-between mt-0.5 ${
-                    selected
-                      ? 'bg-royal-700 text-white'
-                      : 'hover:bg-royal-50 text-ink-800'
-                  }`}
-                >
-                  <span className="truncate">{cat.name}</span>
-                  <span className="text-xs opacity-70">
-                    {formatNumber(count)}
-                  </span>
-                </button>
-              );
-            })}
+            {allCategoryButtons}
           </div>
 
           <div className="card p-3">
@@ -116,7 +149,7 @@ export default function DocumentsPage() {
         </aside>
 
         <section>
-          <div className="flex items-center justify-between mb-4 text-sm">
+          <div className="hidden lg:flex items-center justify-between mb-4 text-sm">
             <span className="text-ink-700/70">
               عُثر على{' '}
               <span className="text-royal-900 font-semibold">

@@ -80,19 +80,19 @@ export default function DocumentDetailPage() {
         )}
       </nav>
 
-      <div className="grid lg:grid-cols-[1fr_320px] gap-8">
-        <article className="card p-6 md:p-10">
-          <div className="flex items-start gap-4 mb-6">
-            <div className="w-14 h-14 rounded-xl bg-royal-50 text-royal-700 flex items-center justify-center shrink-0">
-              <IconFile size={26} />
+      <div className="grid lg:grid-cols-[1fr_320px] gap-6 lg:gap-8">
+        <article className="card p-4 sm:p-6 md:p-10">
+          <div className="flex items-start gap-3 sm:gap-4 mb-5 sm:mb-6">
+            <div className="w-11 h-11 sm:w-14 sm:h-14 rounded-xl bg-royal-50 text-royal-700 flex items-center justify-center shrink-0">
+              <IconFile className="sm:w-[26px] sm:h-[26px]" size={22} />
             </div>
-            <div className="flex-1">
+            <div className="flex-1 min-w-0">
               {doc.reference && (
                 <div className="text-xs font-mono text-gold-700 mb-1">
                   {doc.reference}
                 </div>
               )}
-              <h1 className="text-2xl md:text-3xl !mt-0 mb-2">{doc.title}</h1>
+              <h1 className="text-xl sm:text-2xl md:text-3xl !mt-0 mb-2 break-words">{doc.title}</h1>
               <div className="flex flex-wrap items-center gap-3 text-xs text-ink-700/70">
                 <span className="flex items-center gap-1">
                   <IconCalendar size={14} />

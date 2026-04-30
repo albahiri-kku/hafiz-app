@@ -21,18 +21,18 @@ export default function HomePage() {
     <div>
       <section className="gradient-royal text-white relative overflow-hidden">
         <div className="absolute inset-0 opacity-10 pattern-bg" />
-        <div className="container-page py-20 md:py-28 relative">
+        <div className="container-page py-12 sm:py-16 md:py-24 lg:py-28 relative">
           <div className="max-w-3xl">
-            <div className="inline-flex items-center gap-2 bg-white/10 border border-white/20 rounded-full px-3 py-1 text-xs mb-6">
+            <div className="inline-flex items-center gap-2 bg-white/10 border border-white/20 rounded-full px-3 py-1 text-xs mb-5 sm:mb-6">
               <IconShield size={14} />
               <span>الأرشيف الرسمي — أمانة مجلس الأمناء</span>
             </div>
-            <h1 className="text-3xl md:text-5xl text-white !leading-tight mb-5">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl text-white !leading-snug mb-4 sm:mb-5">
               مكتبة موحّدة لجميع وثائق المجلس،
               <br />
               <span className="text-gold-300">منظَّمة وآمنة وسهلة الوصول.</span>
             </h1>
-            <p className="text-royal-100/90 text-lg leading-relaxed mb-8">
+            <p className="text-royal-100/90 text-base sm:text-lg leading-relaxed mb-6 sm:mb-8">
               فهرس إلكتروني شامل للقرارات والمحاضر والسياسات والتقارير،
               مع اللوائح والأنظمة الجامعية الصادرة عن مجلس شؤون الجامعات —
               يمكن استعراضها وتنزيلها بصيغة PDF أو Word.

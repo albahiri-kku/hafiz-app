@@ -10,13 +10,25 @@
 
   body {
     @apply bg-sand-50 text-ink-800;
-    font-family: 'Readex Pro', 'Noto Sans Arabic', sans-serif;
+    font-family: 'Tajawal', 'Noto Sans Arabic', system-ui, sans-serif;
+    font-weight: 400;
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
   }
 
   h1, h2, h3, h4, h5, h6 {
-    font-family: 'Reem Kufi', 'Noto Sans Arabic', serif;
+    font-family: 'Tajawal', 'Noto Sans Arabic', system-ui, sans-serif;
+    font-weight: 800;
     @apply text-royal-900;
+    letter-spacing: -0.01em;
+    line-height: 1.35;
+  }
+
+  h1 { font-weight: 900; }
+
+  p, li {
+    line-height: 1.85;
   }
 
   button {
@@ -80,6 +92,9 @@
 }
 
 @layer utilities {
+  .pb-safe {
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom, 0px));
+  }
   .pattern-bg {
     background-color: #faf7f1;
     background-image:

@@ -9,12 +9,12 @@ export default function AboutPage() {
   return (
     <div>
       <section className="gradient-royal text-white">
-        <div className="container-page py-14">
+        <div className="container-page py-10 sm:py-14">
           <div className="text-xs text-gold-300 mb-3">عن الأمانة</div>
-          <h1 className="text-3xl md:text-4xl text-white">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl text-white">
             أمانة مجلس الأمناء — البوابة الموحّدة للوثائق
           </h1>
-          <p className="text-royal-100/90 max-w-3xl mt-4 leading-relaxed">
+          <p className="text-sm sm:text-base text-royal-100/90 max-w-3xl mt-4 leading-relaxed">
             تتولى الأمانة العامة لمجلس الأمناء حفظ وتوثيق جميع القرارات
             والمحاضر والسياسات الصادرة عن المجلس، وإتاحتها للمستفيدين المعتمدين
             من خلال هذا الأرشيف الإلكتروني.
@@ -22,7 +22,7 @@ export default function AboutPage() {
         </div>
       </section>
 
-      <section className="container-page py-12">
+      <section className="container-page py-10 sm:py-12">
         <div className="grid md:grid-cols-2 gap-6">
           <div className="card p-6">
             <div className="w-12 h-12 rounded-lg bg-royal-50 text-royal-700 flex items-center justify-center mb-3">

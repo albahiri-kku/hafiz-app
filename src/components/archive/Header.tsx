@@ -15,14 +15,14 @@ export default function Header() {
   return (
     <header className="bg-white border-b border-royal-100 sticky top-0 z-30 backdrop-blur bg-white/95">
       <div className="container-page">
-        <div className="flex items-center justify-between h-16">
-          <Link to="/" className="flex items-center gap-3 group">
-            <IconLogo size={40} />
-            <div className="leading-tight">
-              <div className="font-display text-lg text-royal-900">
+        <div className="flex items-center justify-between h-16 gap-2">
+          <Link to="/" className="flex items-center gap-2 sm:gap-3 group min-w-0">
+            <IconLogo size={36} className="shrink-0 sm:w-10 sm:h-10" />
+            <div className="leading-tight min-w-0">
+              <div className="font-display font-bold text-base sm:text-lg text-royal-900 truncate">
                 أرشيف أمانة مجلس الأمناء
               </div>
-              <div className="text-[11px] text-ink-700/60 font-medium">
+              <div className="hidden sm:block text-[11px] text-ink-700/60 font-medium truncate">
                 Board of Trustees Secretariat — Document Archive
               </div>
             </div>
