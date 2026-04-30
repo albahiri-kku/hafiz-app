@@ -147,26 +147,33 @@
 /* ── Surah name banner ─────────────────────────────────────────────────── */
 
 .mushaf-surah-banner {
-  /* Decorative double-frame styled after the printed Madinah Mushaf
-     surah-header banner — outer dark frame, inner light cream panel. */
-  background:
-    linear-gradient(135deg, #f5e6c8 0%, #e8c878 50%, #f5e6c8 100%);
-  border: 2px solid #4a3000;
-  outline: 1px solid #C8860A;
-  outline-offset: -5px;
-  border-radius: 6px;
-  padding: 8px 24px;
-  text-align: center;
+  /* Decorative ornamental banner image — the artwork's central cream
+     cartouche is exactly where the surah-name calligraphy lands.
+     Source image is 688×86 (≈8:1) so we lock that aspect ratio and
+     stretch the artwork to the page width. */
+  background-image: url('/icons/surah-banner-bg.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  background-position: center;
+  aspect-ratio: 688 / 86;
+  width: 100%;
+  margin: 4px 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
   /* Direct PUA codepoint rendering — SurahNameV4 cmap maps U+E000 (سُورَةُ
      ornament) and U+E000+N (surah-name calligraphy) to the Madinah-style
-     glyphs. No ligature feature required. */
+     glyphs. No ligature feature required. The calligraphic name is
+     positioned over the central cream cartouche of the artwork. */
   font-family: 'SurahNameV4', serif;
-  font-size: 28px;
-  line-height: 1.2;
+  /* Use viewport-relative size so the calligraphy scales with the banner
+     height, keeping the name nicely tucked into the cartouche on every
+     screen width. ~32% of the banner's own height. */
+  font-size: clamp(14px, 4.6vw, 30px);
+  line-height: 1;
   color: #2a1800;
-  width: 100%;
-  position: relative;
-  margin: 4px 0;
+  text-align: center;
 }
 
 /* ── Basmallah text (inside basmallah-line) ────────────────────────────── */
