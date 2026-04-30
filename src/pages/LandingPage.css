@@ -906,14 +906,21 @@
 }
 
 /* ───── Stage (the mushaf canvas) ───── */
+/* Reset RTL inheritance — flex centering should work in either direction,
+   but explicit ltr keeps justify-content predictable across browsers. */
 .mushaf-overlay-stage {
   flex: 1; min-height: 0;
   overflow-y: auto; -webkit-overflow-scrolling: touch;
   display: flex; align-items: flex-start; justify-content: center;
   padding: 20px 12px 28px;
+  direction: ltr;
+}
+/* Center the mushaf-page itself, not a stretched wrapper. */
+.mushaf-overlay-stage > .mushaf-page {
+  margin: 0 auto;
 }
 .mushaf-overlay-stage > * {
-  width: 100%; max-width: 760px;
+  width: 100%; max-width: 720px;
 }
 .mushaf-overlay-status {
   margin-top: 60px; font-size: 14px; color: #6b6452;
@@ -923,19 +930,21 @@
 
 /* ───── Bottom bar (mic) ───── */
 .mushaf-overlay-bottombar {
-  display: flex; flex-direction: column; align-items: center; gap: 6px;
-  padding: 14px 14px calc(env(safe-area-inset-bottom, 0px) + 14px);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+  padding: 18px 14px calc(env(safe-area-inset-bottom, 0px) + 18px);
   border-top: 1px solid rgba(212,175,55,0.25);
+  min-height: 96px;
 }
 .mushaf-overlay-mic {
-  width: 64px; height: 64px; border-radius: 50%;
+  width: 84px; height: 84px; border-radius: 50%;
   background: var(--gold, #d4af37);
   color: #0b1410; border: none;
   display: flex; align-items: center; justify-content: center;
-  cursor: pointer; box-shadow: 0 4px 18px rgba(0,0,0,0.45);
+  cursor: pointer; box-shadow: 0 6px 22px rgba(0,0,0,0.55), 0 0 0 4px rgba(212,175,55,0.18);
   transition: transform 0.15s, background 0.18s;
 }
-.mushaf-overlay-mic:hover { transform: scale(1.04); }
+.mushaf-overlay-mic svg { width: 32px; height: 32px; }
+.mushaf-overlay-mic:hover { transform: scale(1.05); }
 .mushaf-overlay-mic.live {
   background: #ff5b5b; color: #fff;
   animation: mushaf-mic-live 1.4s ease-in-out infinite;
