@@ -30,6 +30,7 @@ import MushafPage from './components/MushafPage'
 import UploadScreen from './components/UploadScreen'
 import ReportScreen from './components/ReportScreen'
 import LandingPage from './pages/LandingPage'
+import AskTajweed from './pages/AskTajweed'
 // NEW: institutional layer UI
 import LoginScreen from './components/LoginScreen'
 import MyAccount from './components/MyAccount'
@@ -46,7 +47,7 @@ const EMPTY_STATS: SessionStats = {
 
 // NEW: locally extend AppPhase with the two institutional screens
 // (no change to types/hafiz.ts required)
-type Phase = AppPhase | 'login' | 'account' | 'totp_enroll'
+type Phase = AppPhase | 'login' | 'account' | 'totp_enroll' | 'ask'
 
 // ─── URL ↔ phase mapping ────────────────────────────────────────────────────
 const PHASE_TO_PATH: Record<Phase, string> = {
@@ -61,6 +62,7 @@ const PHASE_TO_PATH: Record<Phase, string> = {
   login: '/login',                       // NEW
   account: '/account',                   // NEW
   totp_enroll: '/account/security/setup',// NEW (forced TOTP enrollment)
+  ask: '/ask',                           // NEW (اسأل Hafiz Phase 1.0 — pre-production)
 }
 
 function pathToPhase(pathname: string, search: string): Phase {
@@ -76,6 +78,7 @@ function pathToPhase(pathname: string, search: string): Phase {
   if (p === '/login')   return 'login'
   if (p === '/account') return 'account'
   if (p === '/account/security/setup') return 'totp_enroll'
+  if (p === '/ask') return 'ask'
   return 'landing'
 }
 
@@ -355,6 +358,10 @@ export default function App() {
         onBack={() => setPhase('landing')}
       />
     )
+  }
+
+  if (phase === 'ask') {
+    return <AskTajweed onBack={() => setPhase('landing')} />
   }
 
   if (phase === 'totp_enroll') {
