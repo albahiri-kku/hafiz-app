@@ -258,3 +258,11 @@
     font-size: 16px;
   }
 }
+
+
+/* Override: justify ayah lines so they fill the column (Wahy parity). */
+.mushaf-line.ayah-line {
+  text-align: justify;
+  text-align-last: justify;
+  text-justify: inter-word;
+}
