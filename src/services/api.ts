@@ -72,7 +72,7 @@ export const api = {
     request<MushafPageData>(`/mushaf/page/${pageNumber}`),
 
   getFontUrl: (pageNumber: number): string =>
-    `${API_BASE}/fonts/pages/QCF_P${String(pageNumber).padStart(3, '0')}.ttf`,
+    `${API_BASE}/fonts/pages/QCF_P${String(pageNumber).padStart(3, '0')}.woff2`,
 
   evaluate: async (sessionId: string, audioBlob: Blob): Promise<EvaluationResponse> => {
     const form = new FormData()
