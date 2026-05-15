@@ -196,7 +196,7 @@ function WordToken({ word, isCurrent, isError, fontFamily, useFallbackFont, onWo
       onClick={() => onWordClick?.(word.word_key)}
       dir="rtl"
     >
-      {display}
+      {display + ' '}
     </span>
   )
 }
