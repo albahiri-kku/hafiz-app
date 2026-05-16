@@ -1,268 +1,355 @@
-/* v1.3 — MushafPage styles */
+/* v1.3 — MushafPage styles */
+
+/* ── Font Declarations ─────────────────────────────────────────────────── */
+
+/* Amiri Quran — high-quality Arabic Quran font for the basmallah line and
+   the fallback path when the QCF per-page font hasn't loaded yet. */
+@import url('https://fonts.googleapis.com/css2?family=Amiri+Quran&display=swap');
+
+/* SurahNameV4 (surah-name banner) is injected at runtime so we can resolve
+   the URL against the API base in production. See MushafPage/index.tsx. */
+
+/* QCF per-page font — injected dynamically by the component for each page */
+/* See: MushafPage/index.tsx injectPageFont() */
+
+/* ── Page wrapper ──────────────────────────────────────────────────────── */
+/* Plain page — no decorative frame. Earlier iterations tried using the
+   Madinah Mushaf ornamental frame as a background image; it caused
+   alignment headaches at every viewport size and was rolled back per
+   the user's decision. The page is now a clean white surface; only the
+   surah-name banner keeps its ornamental artwork. */
+
+.mushaf-page {
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  background: #fff;
+  /* Explicit dark text — overrides cream color inherited from .hafiz-landing */
+  color: #1a1208;
+  font-size: clamp(14px, 3.4vw, 24px);
+  direction: rtl;
+  font-family: 'QCFPageFont', 'Amiri Quran', 'Scheherazade New', 'Traditional Arabic', serif;
+  box-sizing: border-box;
+  padding: 14px 18px;
+  border-radius: 6px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.08);
+}
+
+/* ── Header (juz on right, surah on left, simple flex row) ──────────── */
+
+.mushaf-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 4px 8px;
+  margin-bottom: 6px;
+  border-bottom: 1px solid rgba(168, 130, 50, 0.25);
+  font-family: 'Traditional Arabic', 'Amiri Quran', 'Scheherazade New', serif;
+  font-size: clamp(11px, 1.6vw, 14px);
+  color: #4a3000;
+  direction: rtl;
+}
+
+.mushaf-header-juz   { text-align: right; }
+.mushaf-header-surah { text-align: left;  }
+
+/* ── Frame body — just a content wrapper now, no border/ornaments ────── */
+
+.mushaf-frame {
+  background: transparent;
+  border: none;
+  outline: none;
+  padding: 0;
+  position: relative;
+}
+.mushaf-frame::before, .mushaf-frame::after,
+.mushaf-frame-inner::before, .mushaf-frame-inner::after { content: none; }
+
+.mushaf-frame-inner {
+  position: relative;
+}
+
+/* ── Lines ─────────────────────────────────────────────────────────────── */
+/* Each line is a single block whose words are justified to fill the width.
+   The QCF font is designed so the per-line glyphs already fit the line
+   width naturally; text-align: justify just absorbs any sub-pixel slack
+   without producing the ugly inter-word gaps that flex space-between did. */
+
+.mushaf-line {
+  display: block;
+  min-height: 1.8em;
+  padding: 2px 0;
+  direction: rtl;
+  border-radius: 2px;
+  transition: background 0.15s;
+  line-height: 1.85;
+}
+
+.mushaf-line.centered {
+  text-align: center;
+}
+
+.mushaf-line.ayah-active {
+  background: rgba(255, 215, 0, 0.08);
+}
+
+/* font-family is set inline on each WordToken (per-page QCF or fallback).
+   Each ayah-line is centred — same alignment as the surah-name banner and
+   the basmallah, so the whole page reads as a single centred column. */
+.mushaf-line.ayah-line {
+  text-align: center;
+}
+
+/* Basmallah: Uthmani Unicode in Amiri Quran (set inline). The per-page QCF
+   font's qpcV1 codepoints are page-specific glyphs, not stable basmallah
+   slots, so we render the Unicode text directly. */
+.mushaf-line.basmallah-line {
+  font-size: 1.25em;
+  text-align: center;
+  margin: 4px 0;
+  line-height: 1.5;
+  white-space: nowrap;       /* keep on one line */
+  overflow: hidden;
+  text-overflow: clip;
+}
+.mushaf-basmallah-text { color: inherit; display: inline-block; }
+
+/* ── Surah name banner ─────────────────────────────────────────────────── */
+
+.mushaf-surah-banner {
+  /* Decorative ornamental banner image — the artwork's central cream
+     cartouche is exactly where the surah-name calligraphy lands.
+     Source image is 688×86 (≈8:1). Banner is intentionally narrower
+     than the body (88%) so it sits inset within the page frame instead
+     of touching the ornamental border. */
+  background-image: url('/icons/surah-banner-bg.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  background-position: center;
+  aspect-ratio: 688 / 86;
+  width: 88%;
+  max-width: 460px;
+  margin: 6px auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  /* Direct PUA codepoint rendering — SurahNameV4 cmap maps U+E000 (سُورَةُ
+     ornament) and U+E000+N (surah-name calligraphy) to the Madinah-style
+     glyphs. No ligature feature required. The calligraphic name is
+     positioned over the central cream cartouche of the artwork. */
+  font-family: 'SurahNameV4', serif;
+  /* Slightly smaller — fits inside the banner cartouche on all widths. */
+  font-size: clamp(12px, 3.4vw, 24px);
+  line-height: 1;
+  color: #2a1800;
+  text-align: center;
+}
+
+/* ── Basmallah text (inside basmallah-line) ────────────────────────────── */
+
+.mushaf-basmallah-text {
+  text-align: center;
+  width: 100%;
+  color: #1a0e00;
+  direction: rtl;
+  /* Font is set on parent .basmallah-line */
+}
+
+/* ── Words ─────────────────────────────────────────────────────────────── */
+
+.mushaf-word {
+  cursor: pointer;
+  border-radius: 3px;
+  padding: 0 1px;
+  transition: background 0.15s;
+  display: inline;
+}
+
+.mushaf-word:hover {
+  background: rgba(180, 140, 0, 0.12);
+}
+
+.mushaf-word.word-current {
+  background: rgba(255, 215, 0, 0.40);
+  box-shadow: 0 0 0 1px rgba(200, 160, 0, 0.4);
+}
+
+.mushaf-word.word-error {
+  background: rgba(220, 50, 50, 0.20);
+  color: #CC0000;
+}
+
+/* ── Page-number footer ────────────────────────────────────────────────── */
+
+.mushaf-page-number {
+  text-align: center;
+  font-family: 'Traditional Arabic', 'Amiri Quran', 'Scheherazade New', serif;
+  font-size: clamp(11px, 1.6vw, 14px);
+  color: #4a3000;
+  margin: 10px 0 4px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(168, 130, 50, 0.25);
+}
+
+/* ── Font fallback warning (only shown if woff2 fails to load) ─────────── */
+
+.mushaf-font-warning {
+  font-size: 11px;
+  color: #a05000;
+  text-align: center;
+  padding: 2px 6px;
+  margin-bottom: 4px;
+  font-family: sans-serif;
+  direction: rtl;
+  /* Hidden by default — fonts now available via woff2 */
+  display: none;
+}
+
+/* Un-hide only when React sets fontFallback=true */
+.mushaf-font-warning.visible {
+  display: block;
+}
+
+/* ── Loading skeleton ──────────────────────────────────────────────────── */
+
+.mushaf-skeleton {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 8px;
+}
+
+.mushaf-skeleton-line {
+  background: linear-gradient(90deg, #f0e8d8 25%, #e8dcc8 50%, #f0e8d8 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+  border-radius: 4px;
+  height: 28px;
+  margin: 6px 0;
+}
+
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ── Mobile ─────────────────────────────────────────────────────────────── */
+
+@media (max-width: 600px) {
+  .mushaf-page {
+    font-size: 18px;
+    padding: 0 4px;
+  }
+  .mushaf-frame {
+    padding: 8px 10px;
+    outline-offset: -4px;
+  }
+  .mushaf-surah-banner {
+    font-size: 22px;
+    padding: 4px 10px;
+  }
+  .mushaf-basmallah {
+    font-size: 20px;
+  }
+}
+
+@media (max-width: 360px) {
+  .mushaf-page {
+    font-size: 16px;
+  }
+}
+
+
+/* Override: justify ayah lines so they fill the column (Wahy parity). */
+.mushaf-line.ayah-line {
+  text-align: justify;
+  text-align-last: justify;
+  text-justify: inter-word;
+}
+
+/* === Mushaf fullscreen overlay: viewport-fit + tap-to-show controls === */
 
-/* ── Font Declarations ─────────────────────────────────────────────────── */
-
-/* Amiri Quran — high-quality Arabic Quran font for the basmallah line and
-   the fallback path when the QCF per-page font hasn't loaded yet. */
-@import url('https://fonts.googleapis.com/css2?family=Amiri+Quran&display=swap');
-
-/* SurahNameV4 (surah-name banner) is injected at runtime so we can resolve
-   the URL against the API base in production. See MushafPage/index.tsx. */
-
-/* QCF per-page font — injected dynamically by the component for each page */
-/* See: MushafPage/index.tsx injectPageFont() */
-
-/* ── Page wrapper ──────────────────────────────────────────────────────── */
-/* Plain page — no decorative frame. Earlier iterations tried using the
-   Madinah Mushaf ornamental frame as a background image; it caused
-   alignment headaches at every viewport size and was rolled back per
-   the user's decision. The page is now a clean white surface; only the
-   surah-name banner keeps its ornamental artwork. */
-
-.mushaf-page {
-  width: 100%;
-  max-width: 720px;
-  margin: 0 auto;
-  background: #fff;
-  /* Explicit dark text — overrides cream color inherited from .hafiz-landing */
-  color: #1a1208;
-  font-size: clamp(14px, 3.4vw, 24px);
-  direction: rtl;
-  font-family: 'QCFPageFont', 'Amiri Quran', 'Scheherazade New', 'Traditional Arabic', serif;
-  box-sizing: border-box;
-  padding: 14px 18px;
-  border-radius: 6px;
-  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.08);
+.mushaf-overlay {
+  position: fixed;
+  inset: 0;
+  background: #0B1410;
+  display: flex;
+  flex-direction: column;
+  z-index: 9000;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
-/* ── Header (juz on right, surah on left, simple flex row) ──────────── */
+/* Topbar/bottombar fade in/out on tap */
+.mushaf-overlay > .mushaf-overlay-topbar,
+.mushaf-overlay > .mushaf-overlay-bottombar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 20;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+.mushaf-overlay > .mushaf-overlay-topbar    { top: 0; }
+.mushaf-overlay > .mushaf-overlay-bottombar { bottom: 0; }
+.mushaf-overlay.controls-visible > .mushaf-overlay-topbar,
+.mushaf-overlay.controls-visible > .mushaf-overlay-bottombar {
+  opacity: 1;
+  pointer-events: auto;
+}
 
-.mushaf-header {
+.mushaf-overlay > .mushaf-overlay-topbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0 4px 8px;
-  margin-bottom: 6px;
-  border-bottom: 1px solid rgba(168, 130, 50, 0.25);
-  font-family: 'Traditional Arabic', 'Amiri Quran', 'Scheherazade New', serif;
-  font-size: clamp(11px, 1.6vw, 14px);
-  color: #4a3000;
-  direction: rtl;
+  padding: max(14px, env(safe-area-inset-top)) 18px 14px;
+  background: linear-gradient(180deg, rgba(11,20,16,0.92) 0%, rgba(11,20,16,0) 100%);
+  color: #f5f0e0;
+}
+.mushaf-overlay > .mushaf-overlay-bottombar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 16px 16px max(28px, env(safe-area-inset-bottom));
+  background: linear-gradient(0deg, rgba(11,20,16,0.92) 0%, rgba(11,20,16,0) 100%);
 }
 
-.mushaf-header-juz   { text-align: right; }
-.mushaf-header-surah { text-align: left;  }
-
-/* ── Frame body — just a content wrapper now, no border/ornaments ────── */
-
-.mushaf-frame {
-  background: transparent;
-  border: none;
-  outline: none;
-  padding: 0;
-  position: relative;
-}
-.mushaf-frame::before, .mushaf-frame::after,
-.mushaf-frame-inner::before, .mushaf-frame-inner::after { content: none; }
-
-.mushaf-frame-inner {
-  position: relative;
-}
-
-/* ── Lines ─────────────────────────────────────────────────────────────── */
-/* Each line is a single block whose words are justified to fill the width.
-   The QCF font is designed so the per-line glyphs already fit the line
-   width naturally; text-align: justify just absorbs any sub-pixel slack
-   without producing the ugly inter-word gaps that flex space-between did. */
-
-.mushaf-line {
-  display: block;
-  min-height: 1.8em;
-  padding: 2px 0;
-  direction: rtl;
-  border-radius: 2px;
-  transition: background 0.15s;
-  line-height: 1.85;
-}
-
-.mushaf-line.centered {
-  text-align: center;
-}
-
-.mushaf-line.ayah-active {
-  background: rgba(255, 215, 0, 0.08);
-}
-
-/* font-family is set inline on each WordToken (per-page QCF or fallback).
-   Each ayah-line is centred — same alignment as the surah-name banner and
-   the basmallah, so the whole page reads as a single centred column. */
-.mushaf-line.ayah-line {
-  text-align: center;
-}
-
-/* Basmallah: Uthmani Unicode in Amiri Quran (set inline). The per-page QCF
-   font's qpcV1 codepoints are page-specific glyphs, not stable basmallah
-   slots, so we render the Unicode text directly. */
-.mushaf-line.basmallah-line {
-  font-size: 1.25em;
-  text-align: center;
-  margin: 4px 0;
-  line-height: 1.5;
-  white-space: nowrap;       /* keep on one line */
-  overflow: hidden;
-  text-overflow: clip;
-}
-.mushaf-basmallah-text { color: inherit; display: inline-block; }
-
-/* ── Surah name banner ─────────────────────────────────────────────────── */
-
-.mushaf-surah-banner {
-  /* Decorative ornamental banner image — the artwork's central cream
-     cartouche is exactly where the surah-name calligraphy lands.
-     Source image is 688×86 (≈8:1). Banner is intentionally narrower
-     than the body (88%) so it sits inset within the page frame instead
-     of touching the ornamental border. */
-  background-image: url('/icons/surah-banner-bg.png');
-  background-size: 100% 100%;
-  background-repeat: no-repeat;
-  background-position: center;
-  aspect-ratio: 688 / 86;
-  width: 88%;
-  max-width: 460px;
-  margin: 6px auto;
+/* Stage fills the viewport; mushaf page sizes to fit BOTH dimensions */
+.mushaf-overlay > .mushaf-overlay-stage {
+  flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  position: relative;
-  /* Direct PUA codepoint rendering — SurahNameV4 cmap maps U+E000 (سُورَةُ
-     ornament) and U+E000+N (surah-name calligraphy) to the Madinah-style
-     glyphs. No ligature feature required. The calligraphic name is
-     positioned over the central cream cartouche of the artwork. */
-  font-family: 'SurahNameV4', serif;
-  /* Slightly smaller — fits inside the banner cartouche on all widths. */
-  font-size: clamp(12px, 3.4vw, 24px);
-  line-height: 1;
-  color: #2a1800;
-  text-align: center;
-}
-
-/* ── Basmallah text (inside basmallah-line) ────────────────────────────── */
-
-.mushaf-basmallah-text {
-  text-align: center;
-  width: 100%;
-  color: #1a0e00;
-  direction: rtl;
-  /* Font is set on parent .basmallah-line */
-}
-
-/* ── Words ─────────────────────────────────────────────────────────────── */
-
-.mushaf-word {
-  cursor: pointer;
-  border-radius: 3px;
-  padding: 0 1px;
-  transition: background 0.15s;
-  display: inline;
-}
-
-.mushaf-word:hover {
-  background: rgba(180, 140, 0, 0.12);
-}
-
-.mushaf-word.word-current {
-  background: rgba(255, 215, 0, 0.40);
-  box-shadow: 0 0 0 1px rgba(200, 160, 0, 0.4);
-}
-
-.mushaf-word.word-error {
-  background: rgba(220, 50, 50, 0.20);
-  color: #CC0000;
-}
-
-/* ── Page-number footer ────────────────────────────────────────────────── */
-
-.mushaf-page-number {
-  text-align: center;
-  font-family: 'Traditional Arabic', 'Amiri Quran', 'Scheherazade New', serif;
-  font-size: clamp(11px, 1.6vw, 14px);
-  color: #4a3000;
-  margin: 10px 0 4px;
-  padding-top: 6px;
-  border-top: 1px solid rgba(168, 130, 50, 0.25);
-}
-
-/* ── Font fallback warning (only shown if woff2 fails to load) ─────────── */
-
-.mushaf-font-warning {
-  font-size: 11px;
-  color: #a05000;
-  text-align: center;
-  padding: 2px 6px;
-  margin-bottom: 4px;
-  font-family: sans-serif;
-  direction: rtl;
-  /* Hidden by default — fonts now available via woff2 */
-  display: none;
-}
-
-/* Un-hide only when React sets fontFallback=true */
-.mushaf-font-warning.visible {
-  display: block;
-}
-
-/* ── Loading skeleton ──────────────────────────────────────────────────── */
-
-.mushaf-skeleton {
-  max-width: 600px;
-  margin: 0 auto;
+  overflow: hidden;
   padding: 8px;
 }
 
-.mushaf-skeleton-line {
-  background: linear-gradient(90deg, #f0e8d8 25%, #e8dcc8 50%, #f0e8d8 75%);
-  background-size: 200% 100%;
-  animation: shimmer 1.4s infinite;
-  border-radius: 4px;
-  height: 28px;
-  margin: 6px 0;
+.mushaf-overlay .mushaf-overlay-stage .mushaf-page {
+  width: 100%;
+  height: auto;
+  max-width: min(720px, 100%);
+  max-height: 100%;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.4);
+  /* font-size scales to whichever dimension is more constraining */
+  font-size: min(clamp(13px, 3.6vw, 28px), calc(100dvh / 33));
+  padding: 10px 14px;
+  line-height: 1.75;
+  margin: 0;
 }
 
-@keyframes shimmer {
-  0%   { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
+.mushaf-overlay .mushaf-line {
+  min-height: 1.75em;
+  padding: 1px 0;
 }
-
-/* ── Mobile ─────────────────────────────────────────────────────────────── */
+.mushaf-overlay .mushaf-page-number {
+  margin: 6px 0 2px;
+  padding-top: 4px;
+}
 
 @media (max-width: 600px) {
-  .mushaf-page {
-    font-size: 18px;
-    padding: 0 4px;
-  }
-  .mushaf-frame {
-    padding: 8px 10px;
-    outline-offset: -4px;
-  }
-  .mushaf-surah-banner {
-    font-size: 22px;
-    padding: 4px 10px;
-  }
-  .mushaf-basmallah {
-    font-size: 20px;
-  }
-}
-
-@media (max-width: 360px) {
-  .mushaf-page {
-    font-size: 16px;
-  }
-}
-
-
-/* Override: justify ayah lines so they fill the column (Wahy parity). */
-.mushaf-line.ayah-line {
-  text-align: justify;
-  text-align-last: justify;
-  text-justify: inter-word;
+  .mushaf-overlay > .mushaf-overlay-stage { padding: 4px; }
+  .mushaf-overlay .mushaf-overlay-stage .mushaf-page { padding: 6px 10px; }
 }
