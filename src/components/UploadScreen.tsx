@@ -95,6 +95,7 @@ export default function UploadScreen({ onEvaluate, onBack, loading, error }: Pro
   const [controlsVisible, setControlsVisible] = useState(false)
   const touchStartXRef = useRef<number | null>(null)
   const touchStartYRef = useRef<number | null>(null)
+  const skipNextClickRef = useRef(false)
 
   const maxAyah = SURAH_LENGTHS[surah] ?? 1
   const MAX_RECORD_SEC = 300
@@ -170,13 +171,15 @@ export default function UploadScreen({ onEvaluate, onBack, loading, error }: Pro
     const dx = e.changedTouches[0].clientX - sx
     const dy = e.changedTouches[0].clientY - sy
     if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) {
+      skipNextClickRef.current = true
       if (dx < 0 && mushafPage < 604) setMushafPage(mushafPage + 1)
       else if (dx > 0 && mushafPage > 1) setMushafPage(mushafPage - 1)
-    } else if (Math.abs(dx) < 10 && Math.abs(dy) < 10) {
-      setControlsVisible(v => !v)
     }
   }
-  function onOverlayClick() { setControlsVisible(v => !v) }
+  function onOverlayClick() {
+    if (skipNextClickRef.current) { skipNextClickRef.current = false; return }
+    setControlsVisible(v => !v)
+  }
 
   function handleSurahChange(v: number) {
     setSurah(v); setAyahStart(1); setAyahEnd(1)
