@@ -63,19 +63,11 @@ function SiteHeader({ onStart, onSignIn }: { onStart: () => void; onSignIn?: () 
 
 function BrandMark() {
   return (
-    <svg className="brand-mark" viewBox="0 0 48 48" fill="none" aria-hidden>
-      <defs>
-        <linearGradient id="hl-bg-grad" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#E0BE74" />
-          <stop offset="100%" stopColor="#8B6F2F" />
-        </linearGradient>
-      </defs>
-      <g transform="translate(24 24)">
-        <rect x="-16" y="-16" width="32" height="32" rx="3" fill="none" stroke="url(#hl-bg-grad)" strokeWidth="1.5" />
-        <rect x="-16" y="-16" width="32" height="32" rx="3" fill="none" stroke="url(#hl-bg-grad)" strokeWidth="1.5" transform="rotate(45)" />
-        <circle r="3" fill="url(#hl-bg-grad)" />
-      </g>
-    </svg>
+    <img
+      className="brand-mark"
+      src="/icons/hafiz-logo-white.png"
+      alt="حافِظ"
+    />
   )
 }
 
